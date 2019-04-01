@@ -20,6 +20,10 @@ class CommandFailed(Exception):
         self.error_code = error_code
 
 
+def flatten_list(list_of_lists):
+    return [item for sublist in list_of_lists for item in sublist]
+
+
 def exec_cmd(cmd, file=None):
     print("Executing command:")
     print(cmd)
@@ -52,6 +56,58 @@ def exec_cmd_to_string(cmd):
     if result.returncode != 0:
         raise CommandFailed(cmd, result.returncode)
     return result.stdout.decode('utf-8')
+
+
+def extract_streams(input_file, output_file, selected_streams):
+    assert os.path.isfile(input_file)
+    assert not os.path.exists(output_file)
+
+    cmd = extract_streams_command(
+        input_file,
+        output_file,
+        selected_streams)
+
+    exec_cmd(cmd)
+
+
+def extract_streams_command(input_file,
+                            output_file,
+                            selected_streams):
+    """
+    Builds a ffmpeg command that can be used to extract a selected streams
+    from a container and put them in a newly created container of the same type
+
+    :param input_file: Container to extract the streams from. Must exist.
+    :param output_file: Container to put the streams in. Must not exist.
+    :param selected_streams: List of streams to extract.
+        List items should be valid stream selectors when prefixed with `0:`
+        See https://trac.ffmpeg.org/wiki/Map.
+        A few examples:
+           [0, 1, 2]     - first three streams
+           ['v']         - all video streams
+           ['a', 'd']    - all audio and data streams
+           ['v', 'a:2']  - all video streams and third audio stream
+    """
+
+    map_options = [
+        ["-map", f"0:{index}"]
+        for index in selected_streams
+    ]
+
+    cmd = (
+        [
+            FFMPEG_COMMAND,
+            "-nostdin",
+            "-i", input_file,
+        ] +
+        flatten_list(map_options) +
+        [
+            "-codec", "copy",
+            output_file,
+        ]
+    )
+
+    return cmd
 
 
 def split_video(input_file, output_dir, split_len):
@@ -178,6 +234,66 @@ def merge_videos_command(input_file, output):
     ]
 
     return cmd, input_file
+
+
+def replace_streams(input_file,
+                    replacement_source,
+                    output_file,
+                    stream_type):
+
+    assert os.path.isfile(input_file)
+    assert os.path.isfile(replacement_source)
+    assert not os.path.exists(output_file)
+
+    cmd = replace_streams_command(
+        input_file,
+        replacement_source,
+        output_file,
+        stream_type)
+
+    exec_cmd(cmd)
+
+
+def replace_streams_command(input_file,
+                            replacement_source,
+                            output_file,
+                            stream_type):
+    """
+    Builds a ffmpeg command that can be used to create a new video file with
+    all streams of a specific type replaced with streams of the same type from
+    another video file.
+
+    :param input_file: Container from which all the streams of types other than
+        the specified one will be taken. Must exist.
+    :param replacement_source: Container from which streams of the specified
+        type will be taken. Must exist.
+    :param output_file: Container to put the streams in. Must not exist.
+    :param stream_type: Stream type specifier.
+        See https://ffmpeg.org/ffmpeg.html#Stream-specifiers.
+        The following values are supported:
+            - `v` - same as `V`.
+            - `V` - video streams which are not attached pictures, video
+                    thumbnails or cover arts.
+            - `a` - audio streams.
+            - `s` - subtitle streams.
+            - `d` - data streams.
+            - `t` - attachments.
+    """
+    assert stream_type in ['v', 'V', 'a', 's', 'd', 't']
+
+    cmd = [
+        FFMPEG_COMMAND,
+        "-nostdin",
+        "-i", input_file,
+        "-i", replacement_source,
+        "-map", f"1:{stream_type}",
+        "-map", "0",
+        "-map", f"-0:{stream_type}",
+        "-codec", "copy",
+        output_file,
+    ]
+
+    return cmd
 
 
 def compute_psnr_command(video, reference_video, psnr_frames_file):
