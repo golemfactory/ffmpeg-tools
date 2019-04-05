@@ -77,15 +77,16 @@ def split(input, output_list_file, segment_time):
 
 
 def split_video_command(input, output_list_file, segment_time):
-    cmd = [FFMPEG_COMMAND,
-           "-nostdin",
-           "-i", input,
-           "-hls_time", "{}".format(segment_time),
-           "-hls_list_size", "0",
-           "-c", "copy",
-           "-mpegts_copyts", "1",
-           output_list_file
-          ]
+    cmd = [
+        FFMPEG_COMMAND,
+        "-nostdin",
+        "-i", input,
+        "-hls_time", "{}".format(segment_time),
+        "-hls_list_size", "0",
+        "-c", "copy",
+        "-mpegts_copyts", "1",
+        output_list_file
+    ]
 
     return cmd, output_list_file
 
@@ -97,13 +98,14 @@ def transcode_video(track, targs, output, use_playlist):
 
 
 def transcode_video_command(track, output_playlist_name, targs, use_playlist):
-    cmd = [FFMPEG_COMMAND,
-           "-nostdin",
-           # process an input file
-           "-i",
-           # input file
-           "{}".format(track)
-          ]
+    cmd = [
+        FFMPEG_COMMAND,
+        "-nostdin",
+        # process an input file
+        "-i",
+        # input file
+        "{}".format(track)
+    ]
 
     if use_playlist:
         playlist_cmd = [
@@ -161,51 +163,55 @@ def merge_videos(input_files, output):
 
 
 def merge_videos_command(input_file, output):
-    cmd = [FFMPEG_COMMAND,
-           "-nostdin",
-           "-i", input_file,
-           "-c", "copy",
-           "-mpegts_copyts", "1",
-           output
-          ]
+    cmd = [
+        FFMPEG_COMMAND,
+        "-nostdin",
+        "-i", input_file,
+        "-c", "copy",
+        "-mpegts_copyts", "1",
+        output
+    ]
 
     return cmd, input_file
 
 
 def compute_psnr_command(video, reference_video, psnr_frames_file):
-    cmd = [FFMPEG_COMMAND,
-           "-nostdin",
-           "-i", video,
-           "-i", reference_video,
-           "-lavfi",
-           "psnr=" + psnr_frames_file,
-           "-f", "null", "-"
-          ]
+    cmd = [
+        FFMPEG_COMMAND,
+        "-nostdin",
+        "-i", video,
+        "-i", reference_video,
+        "-lavfi",
+        "psnr=" + psnr_frames_file,
+        "-f", "null", "-"
+    ]
 
     return cmd
 
 
 def compute_ssim_command(video, reference_video, ssim_frames_file):
-    cmd = [FFMPEG_COMMAND,
-           "-nostdin",
-           "-i", video,
-           "-i", reference_video,
-           "-lavfi",
-           "ssim=" + ssim_frames_file,
-           "-f", "null", "-"
-          ]
+    cmd = [
+        FFMPEG_COMMAND,
+        "-nostdin",
+        "-i", video,
+        "-i", reference_video,
+        "-lavfi",
+        "ssim=" + ssim_frames_file,
+        "-f", "null", "-"
+    ]
 
     return cmd
 
 
 def get_metadata_command(video):
-    cmd = [FFPROBE_COMMAND,
-           "-v", "quiet",
-           "-print_format", "json",
-           "-show_format",
-           "-show_streams",
-           video
-          ]
+    cmd = [
+        FFPROBE_COMMAND,
+        "-v", "quiet",
+        "-print_format", "json",
+        "-show_format",
+        "-show_streams",
+        video
+    ]
 
     return cmd
 
