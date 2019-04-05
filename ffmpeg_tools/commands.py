@@ -68,19 +68,19 @@ def split_video(input_file, output_dir, split_len):
     return split_list_file
 
 
-def split(input, output_list_file, segment_time):
-    cmd, file_list = split_video_command(input, output_list_file,
+def split(input_file, output_list_file, segment_time):
+    cmd, file_list = split_video_command(input_file, output_list_file,
                                          segment_time)
     exec_cmd(cmd)
 
     return file_list
 
 
-def split_video_command(input, output_list_file, segment_time):
+def split_video_command(input_file, output_list_file, segment_time):
     cmd = [
         FFMPEG_COMMAND,
         "-nostdin",
-        "-i", input,
+        "-i", input_file,
         "-hls_time", "{}".format(segment_time),
         "-hls_list_size", "0",
         "-c", "copy",
@@ -158,7 +158,7 @@ def transcode_video_command(track, output_playlist_name, targs, use_playlist):
 
 
 def merge_videos(input_files, output):
-    cmd, list_file = merge_videos_command(input_files, output)
+    cmd, _list_file = merge_videos_command(input_files, output)
     exec_cmd(cmd)
 
 
