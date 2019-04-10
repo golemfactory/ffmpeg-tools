@@ -31,7 +31,6 @@ def exec_cmd(cmd, file=None):
     ret = pc.wait()
     if ret != 0:
         raise CommandFailed(cmd, ret)
-    return ret
 
 
 def exec_cmd_to_file(cmd, filepath):
@@ -94,7 +93,7 @@ def split_video_command(input_file, output_list_file, segment_time):
 def transcode_video(track, targs, output, use_playlist):
     cmd = transcode_video_command(track, output,
                                   targs, use_playlist)
-    return exec_cmd(cmd)
+    exec_cmd(cmd)
 
 
 def transcode_video_command(track, output_playlist_name, targs, use_playlist):
