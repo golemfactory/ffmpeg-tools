@@ -289,6 +289,7 @@ def replace_streams_command(input_file,
         "-map", f"1:{stream_type}",
         "-map", "0",
         "-map", f"-0:{stream_type}",
+        "-copy_unknown",
         "-codec", "copy",
         output_file,
     ]
