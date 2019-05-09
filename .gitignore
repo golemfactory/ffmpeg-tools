@@ -1,0 +1,4 @@
+ffmpeg_tools/__pycache__
+ffmpeg_tools/tests/__pycache__
+.pytest_cache
+ffmpeg_tools.egg-info
