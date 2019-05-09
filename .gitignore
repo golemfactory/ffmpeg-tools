@@ -2,3 +2,5 @@ ffmpeg_tools/__pycache__
 tests/__pycache__
 .pytest_cache
 ffmpeg_tools.egg-info
+build/
+dist/
