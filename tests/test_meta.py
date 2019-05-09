@@ -1,10 +1,7 @@
 import sys
 import pytest
 
-sys.path.append("ffmpeg_tools/")
-
 import ffmpeg_tools as ffmpeg
-import ffmpeg_tools.meta
 
 
 example_metadata = {

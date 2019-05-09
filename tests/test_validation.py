@@ -1,8 +1,6 @@
 from unittest import TestCase
 import sys
 
-sys.path.append("ffmpeg_tools/")
-
 from ffmpeg_tools.formats import list_supported_formats, list_supported_video_codecs, list_supported_audio_codecs
 from ffmpeg_tools.meta import get_metadata
 from ffmpeg_tools.validation import UnsupportedVideoCodec, UnsupportedVideoFormat, \
@@ -16,7 +14,7 @@ class TestInputValidation(TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
-        cls._filename = "Server/Tests/Resources/ForBiggerBlazes-[codec=h264].mp4"
+        cls._filename = "tests/resources/ForBiggerBlazes-[codec=h264].mp4"
         cls._metadata = get_metadata(cls._filename)
         cls._supported_formats = list_supported_formats()
         cls._format_metadata = {"format_name": "mov", "duration": "10"}

@@ -2,11 +2,9 @@ import sys
 import pytest
 from unittest import TestCase
 
-sys.path.append("ffmpeg_tools/")
-
 import ffmpeg_tools as ffmpeg
-import ffmpeg_tools.codecs
-import ffmpeg_tools.validation as validation
+# import ffmpeg_tools.codecs as codecs
+# import ffmpeg_tools.validation as validation
 
 
 class TestSupportedConversions(TestCase):
@@ -30,12 +28,12 @@ class TestGettingEncoder(TestCase):
         assert(ffmpeg.codecs.get_video_encoder("h264") == "libx264")
 
     def test_invalid_video_codec(self):
-        with self.assertRaises(validation.UnsupportedVideoCodec):
+        with self.assertRaises(ffmpeg.validation.UnsupportedVideoCodec):
             ffmpeg.codecs.get_video_encoder("bla")
 
     def test_valid_audio_codec(self):
         assert(ffmpeg.codecs.get_audio_encoder("mp3") == "libmp3lame")
 
     def test_invalid_audio_codec(self):
-        with self.assertRaises(validation.UnsupportedAudioCodec):
+        with self.assertRaises(ffmpeg.validation.UnsupportedAudioCodec):
             ffmpeg.codecs.get_audio_encoder("bla")
