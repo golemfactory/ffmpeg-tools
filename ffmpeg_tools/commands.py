@@ -70,13 +70,14 @@ def split(input, output_list_file, segment_time):
 
 def split_video_command(input, output_list_file, segment_time):
     cmd = [FFMPEG_COMMAND,
+           "-nostdin",
            "-i", input,
            "-hls_time", "{}".format(segment_time),
            "-hls_list_size", "0",
            "-c", "copy",
            "-mpegts_copyts", "1",
            output_list_file
-           ]
+          ]
 
     return cmd, output_list_file
 
@@ -89,11 +90,12 @@ def transcode_video(track, targs, output, use_playlist):
 
 def transcode_video_command(track, output_playlist_name, targs, use_playlist):
     cmd = [FFMPEG_COMMAND,
+           "-nostdin",
            # process an input file
            "-i",
            # input file
            "{}".format(track)
-           ]
+          ]
 
     if use_playlist:
         playlist_cmd = [
@@ -104,49 +106,41 @@ def transcode_video_command(track, output_playlist_name, targs, use_playlist):
         cmd.extend(playlist_cmd)
 
     # video settings
-    try:
+    if 'video' in targs and 'codec' in targs['video']:
         vcodec = targs['video']['codec']
         cmd.append("-c:v")
         cmd.append(codecs.get_video_encoder(vcodec))
-    except:
-        pass
-    try:
+
+    if 'frame_rate' in targs:
         fps = str(targs['frame_rate'])
         cmd.append("-r")
         cmd.append(fps)
-    except:
-        pass
-    try:
+
+    if 'video' in targs and 'bitrate' in targs['video']:
         vbitrate = targs['video']['bitrate']
         cmd.append("-b:v")
         cmd.append(vbitrate)
-    except:
-        pass
+
     # audio settings
-    try:
+    if 'audio' in targs and 'codec' in targs['audio']:
         acodec = targs['audio']['codec']
         cmd.append("-c:a")
         cmd.append(codecs.get_audio_encoder(acodec))
-    except:
-        pass
-    try:
+
+    if 'audio' in targs and 'bitrate' in targs['audio']:
         abitrate = targs['audio']['bitrate']
-        cmd.append("-c:a")
+        cmd.append("-b:a")
         cmd.append(abitrate)
-    except:
-        pass
-    try:
+
+    if 'resolution' in targs:
         res = targs['resolution']
         cmd.append("-vf")
         cmd.append("scale={}:{}".format(res[0], res[1]))
-    except:
-        pass
-    try:
+
+    if 'scaling_alg' in targs:
         scale = targs["scaling_alg"]
         cmd.append("-sws_flags")
         cmd.append("{}".format(scale))
-    except:
-        pass
 
     cmd.append("{}".format(output_playlist_name))
 
@@ -160,54 +154,51 @@ def merge_videos(input_files, output):
 
 def merge_videos_command(input_file, output):
     cmd = [FFMPEG_COMMAND,
+           "-nostdin",
            "-i", input_file,
            "-c", "copy",
            "-mpegts_copyts", "1",
            output
-           ]
+          ]
 
     return cmd, input_file
 
 
-def get_video_len_command(input_file):
-    cmd = [FFPROBE_COMMAND,
-           "-v", "error",
-           "-select_streams", "v:0",
-           "-show_entries", "stream=duration",
-           "-of", "default=noprint_wrappers=1:nokey=1",
-           input_file
-           ]
-
-    return cmd
-
-
-def get_video_len(input_file):
-    cmd = get_video_len_command(input_file)
-    result = exec_cmd_to_string(cmd)
-
-    return float(result)
-
-
 def compute_psnr_command(video, reference_video, psnr_frames_file):
     cmd = [FFMPEG_COMMAND,
+           "-nostdin",
            "-i", video,
            "-i", reference_video,
            "-lavfi",
            "psnr=" + psnr_frames_file,
            "-f", "null", "-"
-           ]
+          ]
+
+    return cmd
+
+
+def compute_psnr_command(video, reference_video, psnr_frames_file):
+    cmd = [FFMPEG_COMMAND,
+           "-nostdin",
+           "-i", video,
+           "-i", reference_video,
+           "-lavfi",
+           "psnr=" + psnr_frames_file,
+           "-f", "null", "-"
+          ]
 
     return cmd
 
 
 def compute_ssim_command(video, reference_video, ssim_frames_file):
     cmd = [FFMPEG_COMMAND,
+           "-nostdin",
            "-i", video,
            "-i", reference_video,
            "-lavfi",
            "ssim=" + ssim_frames_file,
            "-f", "null", "-"
-           ]
+          ]
 
     return cmd
 
@@ -219,9 +210,20 @@ def get_metadata_command(video):
            "-show_format",
            "-show_streams",
            video
-           ]
+          ]
 
     return cmd
+
+
+def get_video_len(input_file):
+    cmd = get_metadata_command(input_file)
+    result = exec_cmd_to_string(cmd)
+
+    # result should be json
+    metadata = json.loads(result)
+    format_meta = metadata["format"]
+
+    return float(format_meta["duration"])
 
 
 def filter_metric(cmd, regex, log_file):
