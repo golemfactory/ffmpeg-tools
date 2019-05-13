@@ -4,7 +4,7 @@ import subprocess
 import json
 
 from io import StringIO
-import codecs
+from . import codecs
 
 
 FFMPEG_COMMAND = "ffmpeg"
