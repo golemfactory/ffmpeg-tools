@@ -5,6 +5,7 @@ import json
 
 from io import StringIO
 from . import codecs
+from . import meta
 
 
 FFMPEG_COMMAND = "ffmpeg"
@@ -217,14 +218,8 @@ def get_metadata_command(video):
 
 
 def get_video_len(input_file):
-    cmd = get_metadata_command(input_file)
-    result = exec_cmd_to_string(cmd)
-
-    # result should be json
-    metadata = json.loads(result)
-    format_meta = metadata["format"]
-
-    return float(format_meta["duration"])
+    metadata = get_metadata_json(input_file)
+    return meta.get_duration(metadata)
 
 
 def filter_metric(cmd, regex, log_file):
@@ -259,3 +254,10 @@ def get_metadata(video, outputfile):
 def get_metadata_str(video):
     cmd = get_metadata_command(video)
     return exec_cmd_to_string(cmd)
+
+
+def get_metadata_json(video):
+    cmd = get_metadata_command(video)
+    metadata_str = exec_cmd_to_string(cmd)
+    return json.loads(metadata_str)
+
