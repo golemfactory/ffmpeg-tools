@@ -30,6 +30,15 @@ class TestSupportedVideoCodecs(object):
     def test_not_existing_codec(self):
         assert(ffmpeg.formats.is_supported_video_codec("mp4", "bla") == False)
 
+    def test_container_is_supported(self):
+        container = ffmpeg.formats.Container("mp4")
+        vcodec = "h264"
+        vcodec_class = ffmpeg.codecs.VideoCodec(vcodec)
+
+        assert container.is_supported_video_codec(vcodec)
+        assert container.is_supported_video_codec(vcodec_class)
+        assert not container.is_supported_video_codec("bla")
+
 
 class TestListingSupportedVideoCodecs(object):
 
@@ -50,6 +59,15 @@ class TestSupportedAudioCodecs(object):
 
     def test_not_existing_codec(self):
         assert(ffmpeg.formats.is_supported_audio_codec("mp4", "bla") == False)
+
+    def test_container_is_supported(self):
+        container = ffmpeg.formats.Container("mp4")
+        acodec = "mp3"
+        acodec_class = ffmpeg.codecs.AudioCodec(acodec)
+
+        assert container.is_supported_audio_codec(acodec)
+        assert container.is_supported_audio_codec(acodec_class)
+        assert not container.is_supported_audio_codec("bla")
 
 
 class TestResolutionsTools(object):

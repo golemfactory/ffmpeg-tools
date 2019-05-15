@@ -1,7 +1,7 @@
 import enum
 
 from . import validation
-
+from . import codecs
 
 
 
@@ -34,6 +34,18 @@ class Container(enum.Enum):
 
     def get_supported_audio_codecs(self):
         return _CONTAINER_SUPPORTED_CODECS[self.value]["audiocodecs"]
+
+    def is_supported_video_codec(self, vcodec):
+        if isinstance(vcodec, codecs.VideoCodec):
+            return vcodec.value in self.get_supported_video_codecs()
+        elif isinstance(vcodec, str):
+            return vcodec in self.get_supported_video_codecs()
+
+    def is_supported_audio_codec(self, acodec):
+        if isinstance(acodec, codecs.AudioCodec):
+            return acodec.value in self.get_supported_audio_codecs()
+        elif isinstance(acodec, str):
+            return acodec in self.get_supported_audio_codecs()
 
     @staticmethod
     def is_supported(vformat):
