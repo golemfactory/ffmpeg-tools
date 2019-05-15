@@ -20,3 +20,10 @@ class TestCommands(TestCase):
 
         assert os.path.exists(output_video)
 
+
+    def test_get_video_length(self):
+        input_video = "tests/resources/ForBiggerBlazes-[codec=h264].mp4"
+        length = ffmpeg.commands.get_video_len(input_video)
+
+        assert length == 15.021667
+

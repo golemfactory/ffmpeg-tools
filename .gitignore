@@ -4,3 +4,4 @@ tests/__pycache__
 ffmpeg_tools.egg-info
 build/
 dist/
+.cache
