@@ -27,3 +27,7 @@ class TestCommands(TestCase):
 
         assert length == 15.021667
 
+
+    def test_failed_command(self):
+        with self.assertRaises(ffmpeg.commands.CommandFailed):
+            ffmpeg.commands.get_video_len("bla")

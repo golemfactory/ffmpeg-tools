@@ -14,6 +14,12 @@ FFPROBE_COMMAND = "ffprobe"
 TMP_DIR = "/golem/work/tmp/"
 
 
+class CommandFailed(Exception):
+    def __init__(self, command, error_code):
+        super().__init__()
+        self.command = command
+        self.error_code = error_code
+
 
 
 def exec_cmd(cmd, file=None):
@@ -24,7 +30,7 @@ def exec_cmd(cmd, file=None):
 
     ret = pc.wait()
     if ret != 0:
-        exit(ret)
+        raise CommandFailed(cmd, ret)
     return ret
 
 
@@ -47,7 +53,7 @@ def exec_cmd_to_string(cmd):
     result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     if result.returncode != 0:
-        exit(result.returncode)
+        raise CommandFailed(cmd, result.returncode)
     return result.stdout.decode('utf-8')
 
 
