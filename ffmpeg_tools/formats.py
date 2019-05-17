@@ -17,6 +17,11 @@ class Container(enum.Enum):
     c_M4A = 'm4a'
     c_MJ2 = 'mj2'
 
+    # Sometimes ffmpeg can't tell us precise format, but returns
+    # group of similar formats. We need to heve them listed
+    # to allow them in validation functions.
+    c_QUICK_TIME = "mov,mp4,m4a,3gp,3g2,mj2"
+
 
     # Normally enum throws ValueError, when initialization value is invalid.
     # We want to return more meaningful exception. This function is called by
