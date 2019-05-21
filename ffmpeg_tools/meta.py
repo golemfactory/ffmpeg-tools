@@ -8,7 +8,7 @@ def get_metadata(video):
     try:
         metadata_str = commands.get_metadata_str(video)
         return json.loads(metadata_str)
-    except SystemExit:
+    except commands.CommandFailed:
         return {}
 
 

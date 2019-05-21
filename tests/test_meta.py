@@ -117,3 +117,7 @@ class TestMetadata(object):
     def test_get_format(self):
         assert(ffmpeg.meta.get_format(example_metadata) == "matroska,webm" )
 
+    def test_get_metadata_invalid_path(self):
+        assert(ffmpeg.meta.get_metadata("blabla") == {})
+
+
