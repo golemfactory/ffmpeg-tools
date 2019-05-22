@@ -55,11 +55,12 @@ class UnsupportedAudioCodecConversion(InvalidVideo):
 
 
 
-def validate_video(metadata, filename):
+def validate_video(metadata):
     try:
-        video_format = _get_extension_from_filename(filename)
-        validate_format(video_format=video_format)
         validate_format_metadata(metadata)
+        
+        video_format = meta.get_format(metadata)
+        validate_format(video_format)
         validate_video_stream_existence(metadata=metadata)
 
         for stream in metadata['streams']:

@@ -130,8 +130,11 @@ class TestInputValidation(TestCase):
 
 
     def test_validate_video_invalid_format(self):
+        metadata = dict(self._metadata)
+        metadata["format"] = {"format_name": "jpeg"}
+
         with self.assertRaises(UnsupportedVideoFormat):
-            validation.validate_video(metadata=self._metadata, filename="test.jpg")
+            validation.validate_video(metadata=metadata)
 
 
     def test_validate_video_valid_codecs(self):
@@ -141,7 +144,7 @@ class TestInputValidation(TestCase):
             for video_codec in video_codecs:
                 for audio_codec in audio_codecs:
                     metadata = {
-                        "format": self._format_metadata,
+                        "format": {"format_name": video_format},
                         "streams": [
                             {
                                 "codec_type": "video",
@@ -154,13 +157,12 @@ class TestInputValidation(TestCase):
                         ]
                     }
 
-                    self.assertTrue(validation.validate_video(filename="test.{}".format(video_format),
-                                                   metadata=metadata))
+                    self.assertTrue(validation.validate_video(metadata=metadata))
 
 
     def test_validate_video_invalid_audio_codec(self):
         with self.assertRaises(UnsupportedAudioCodec):
-            validation.validate_video(filename=self._filename, metadata={
+            validation.validate_video(metadata={
                 "format": self._format_metadata,
                 "streams": [
                     self._video_stream,
@@ -174,7 +176,7 @@ class TestInputValidation(TestCase):
 
     def test_validate_video_invalid_video_codec(self):
         with self.assertRaises(UnsupportedVideoCodec):
-            validation.validate_video(filename=self._filename, metadata={
+            validation.validate_video(metadata={
                 "format": self._format_metadata,
                 "streams": [
                     self._audio_stream,
@@ -196,13 +198,13 @@ class TestInputValidation(TestCase):
 
     def test_validate_video_without_format_metadata(self):
         with self.assertRaises(InvalidFormatMetadata):
-            validation.validate_video(filename=self._filename, metadata={
+            validation.validate_video(metadata={
                 "streams": [self._audio_stream, self._video_stream]
             })
 
 
     def test_validate_valid_video(self):
-        self.assertTrue(validation.validate_video(metadata=self._metadata, filename=self._filename))
+        self.assertTrue(validation.validate_video(metadata=self._metadata))
 
 
 
