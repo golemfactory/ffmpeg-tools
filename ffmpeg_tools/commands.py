@@ -185,19 +185,6 @@ def compute_psnr_command(video, reference_video, psnr_frames_file):
     return cmd
 
 
-def compute_psnr_command(video, reference_video, psnr_frames_file):
-    cmd = [FFMPEG_COMMAND,
-           "-nostdin",
-           "-i", video,
-           "-i", reference_video,
-           "-lavfi",
-           "psnr=" + psnr_frames_file,
-           "-f", "null", "-"
-          ]
-
-    return cmd
-
-
 def compute_ssim_command(video, reference_video, ssim_frames_file):
     cmd = [FFMPEG_COMMAND,
            "-nostdin",
