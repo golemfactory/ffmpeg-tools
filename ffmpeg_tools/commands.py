@@ -20,7 +20,6 @@ class CommandFailed(Exception):
         self.error_code = error_code
 
 
-
 def exec_cmd(cmd, file=None):
     print("Executing command:")
     print(cmd)
@@ -257,4 +256,3 @@ def get_metadata_json(video):
     cmd = get_metadata_command(video)
     metadata_str = exec_cmd_to_string(cmd)
     return json.loads(metadata_str)
-
