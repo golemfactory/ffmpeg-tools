@@ -3,7 +3,6 @@ import re
 import subprocess
 import json
 
-from io import StringIO
 from . import codecs
 from . import meta
 
