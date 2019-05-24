@@ -6,19 +6,28 @@ from . import codecs
 
 
 class Container(enum.Enum):
-    c_F4V = "f4v"
-    c_3GP = "3gp"
-    c_3G2 = "3g2"
-    c_MP4 = 'mp4'
-    c_AVI = 'avi'
-    c_MKV = 'mkv'
-    c_MPEG = 'mpeg'
-    c_MOV = 'mov'
-    c_WEBM = "webm"
+    # The values below are **muxer** names, which means that they can be passed
+    # to ffmpeg using the -f option to specify the target format.
+    c_3G2 = "3g2"           # 3GP2 (3GPP2 file format) muxer
+    c_3GP = "3gp"           # 3GP (3GPP file format) muxer
+    c_AVI = "avi"           # AVI (Audio Video Interleaved) muxer
+    c_F4V = "f4v"           # F4V Adobe Flash Video muxer
+    c_MATROSKA = "matroska" # Matroska; .mkv extension muxer
+    c_MP4 = "mp4"           # MP4 (MPEG-4 Part 14) muxer
+    c_MPEG = "mpeg"         # MPEG-1 Systems / MPEG program stream muxer
+    c_MOV = "mov"           # QuickTime / MOV muxer
+    c_WEBM = "webm"         # WebM muxer
 
-    # Sometimes ffmpeg can't tell us precise format, but returns
-    # group of similar formats. We need to heve them listed
-    # to allow them in validation functions.
+    # Unfortunately ffprobe can't read muxer name back from an existing container.
+    # what it gives us instead is a **demuxer** name. In many cases those names
+    # are the same but there are significant exceptions. The values below are
+    # those exceptions. We need them to be able to validate the format of an
+    # input file but they won't work when used as tgarget formats.
+    #
+    # Note that while these names may simply look like a list of
+    # muxer names, they're not reliable that way. For example 'mov,mp4,m4a,3gp,3g2,mj2'
+    # covers also files created by the 'f4v' muxer. And `mpegts' is both a
+    # muxer and demuxer but the demuxer handles also files created by the 'svcd' muxer.
     c_QUICK_TIME_DEMUXER = "mov,mp4,m4a,3gp,3g2,mj2" # QuickTime / MOV
     c_MATROSKA_WEBM_DEMUXER = "matroska,webm"        # Matroska / WebM
 
@@ -170,14 +179,14 @@ _MATROSKA_WEBM_CODECS = {
 
 
 _CONTAINER_SUPPORTED_CODECS = {
-    "matroska,webm": _MATROSKA_WEBM_CODECS,
-    "mp4": _MP4_CODECS,
-    "mov": _MOV_CODECS,
-    "mkv": _MKV_CODECS,
-    "3gp": _3GP_CODECS,
     "3g2": _3GP_CODECS,
-    "mov,mp4,m4a,3gp,3g2,mj2": _QUICKTIME_CODECS,
+    "3gp": _3GP_CODECS,
     "avi": _AVI_CODECS,
+    "matroska": _MKV_CODECS,
+    "matroska,webm": _MATROSKA_WEBM_CODECS,
+    "mov": _MOV_CODECS,
+    "mp4": _MP4_CODECS,
+    "mov,mp4,m4a,3gp,3g2,mj2": _QUICKTIME_CODECS,
     "mpeg": _MPEG_CODECS,
     "webm": _WEBM_CODECS,
 }

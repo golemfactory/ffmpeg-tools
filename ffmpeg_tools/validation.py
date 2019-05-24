@@ -112,13 +112,9 @@ def validate_format(video_format):
     return True
 
 
-def _get_format_names(metadata):
-    return meta.get_format(metadata).split(",")
-
-
 def validate_format_metadata(metadata):
     try:
-        if _get_format_names(metadata) == ['']:
+        if meta.get_format(metadata) in ['', None]:
             raise InvalidFormatMetadata(message="No format names")
     except KeyError:
         raise InvalidFormatMetadata("Invalid format metadata")
