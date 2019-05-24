@@ -3,7 +3,6 @@ import re
 import subprocess
 import json
 
-from io import StringIO
 from . import codecs
 from . import meta
 
@@ -21,7 +20,6 @@ class CommandFailed(Exception):
         self.error_code = error_code
 
 
-
 def exec_cmd(cmd, file=None):
     print("Executing command:")
     print(cmd)
@@ -31,7 +29,6 @@ def exec_cmd(cmd, file=None):
     ret = pc.wait()
     if ret != 0:
         raise CommandFailed(cmd, ret)
-    return ret
 
 
 def exec_cmd_to_file(cmd, filepath):
@@ -68,24 +65,25 @@ def split_video(input_file, output_dir, split_len):
     return split_list_file
 
 
-def split(input, output_list_file, segment_time):
-    cmd, file_list = split_video_command(input, output_list_file,
+def split(input_file, output_list_file, segment_time):
+    cmd, file_list = split_video_command(input_file, output_list_file,
                                          segment_time)
     exec_cmd(cmd)
 
     return file_list
 
 
-def split_video_command(input, output_list_file, segment_time):
-    cmd = [FFMPEG_COMMAND,
-           "-nostdin",
-           "-i", input,
-           "-hls_time", "{}".format(segment_time),
-           "-hls_list_size", "0",
-           "-c", "copy",
-           "-mpegts_copyts", "1",
-           output_list_file
-          ]
+def split_video_command(input_file, output_list_file, segment_time):
+    cmd = [
+        FFMPEG_COMMAND,
+        "-nostdin",
+        "-i", input_file,
+        "-hls_time", "{}".format(segment_time),
+        "-hls_list_size", "0",
+        "-c", "copy",
+        "-mpegts_copyts", "1",
+        output_list_file
+    ]
 
     return cmd, output_list_file
 
@@ -93,17 +91,18 @@ def split_video_command(input, output_list_file, segment_time):
 def transcode_video(track, targs, output, use_playlist):
     cmd = transcode_video_command(track, output,
                                   targs, use_playlist)
-    return exec_cmd(cmd)
+    exec_cmd(cmd)
 
 
 def transcode_video_command(track, output_playlist_name, targs, use_playlist):
-    cmd = [FFMPEG_COMMAND,
-           "-nostdin",
-           # process an input file
-           "-i",
-           # input file
-           "{}".format(track)
-          ]
+    cmd = [
+        FFMPEG_COMMAND,
+        "-nostdin",
+        # process an input file
+        "-i",
+        # input file
+        "{}".format(track)
+    ]
 
     if use_playlist:
         playlist_cmd = [
@@ -156,69 +155,60 @@ def transcode_video_command(track, output_playlist_name, targs, use_playlist):
 
 
 def merge_videos(input_files, output):
-    cmd, list_file = merge_videos_command(input_files, output)
+    cmd, _list_file = merge_videos_command(input_files, output)
     exec_cmd(cmd)
 
 
 def merge_videos_command(input_file, output):
-    cmd = [FFMPEG_COMMAND,
-           "-nostdin",
-           "-i", input_file,
-           "-c", "copy",
-           "-mpegts_copyts", "1",
-           output
-          ]
+    cmd = [
+        FFMPEG_COMMAND,
+        "-nostdin",
+        "-i", input_file,
+        "-c", "copy",
+        "-mpegts_copyts", "1",
+        output
+    ]
 
     return cmd, input_file
 
 
 def compute_psnr_command(video, reference_video, psnr_frames_file):
-    cmd = [FFMPEG_COMMAND,
-           "-nostdin",
-           "-i", video,
-           "-i", reference_video,
-           "-lavfi",
-           "psnr=" + psnr_frames_file,
-           "-f", "null", "-"
-          ]
-
-    return cmd
-
-
-def compute_psnr_command(video, reference_video, psnr_frames_file):
-    cmd = [FFMPEG_COMMAND,
-           "-nostdin",
-           "-i", video,
-           "-i", reference_video,
-           "-lavfi",
-           "psnr=" + psnr_frames_file,
-           "-f", "null", "-"
-          ]
+    cmd = [
+        FFMPEG_COMMAND,
+        "-nostdin",
+        "-i", video,
+        "-i", reference_video,
+        "-lavfi",
+        "psnr=" + psnr_frames_file,
+        "-f", "null", "-"
+    ]
 
     return cmd
 
 
 def compute_ssim_command(video, reference_video, ssim_frames_file):
-    cmd = [FFMPEG_COMMAND,
-           "-nostdin",
-           "-i", video,
-           "-i", reference_video,
-           "-lavfi",
-           "ssim=" + ssim_frames_file,
-           "-f", "null", "-"
-          ]
+    cmd = [
+        FFMPEG_COMMAND,
+        "-nostdin",
+        "-i", video,
+        "-i", reference_video,
+        "-lavfi",
+        "ssim=" + ssim_frames_file,
+        "-f", "null", "-"
+    ]
 
     return cmd
 
 
 def get_metadata_command(video):
-    cmd = [FFPROBE_COMMAND,
-           "-v", "quiet",
-           "-print_format", "json",
-           "-show_format",
-           "-show_streams",
-           video
-          ]
+    cmd = [
+        FFPROBE_COMMAND,
+        "-v", "quiet",
+        "-print_format", "json",
+        "-show_format",
+        "-show_streams",
+        video
+    ]
 
     return cmd
 
@@ -266,4 +256,3 @@ def get_metadata_json(video):
     cmd = get_metadata_command(video)
     metadata_str = exec_cmd_to_string(cmd)
     return json.loads(metadata_str)
-
