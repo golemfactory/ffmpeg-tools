@@ -113,38 +113,38 @@ def transcode_video_command(track, output_playlist_name, targs, use_playlist):
         cmd.extend(playlist_cmd)
 
     # video settings
-    if 'video' in targs and 'codec' in targs['video']:
+    if targs.get('video', {}).get('codec') is not None:
         vcodec = targs['video']['codec']
         cmd.append("-c:v")
         cmd.append(codecs.get_video_encoder(vcodec))
 
-    if 'frame_rate' in targs:
+    if targs.get('frame_rate') is not None:
         fps = str(targs['frame_rate'])
         cmd.append("-r")
         cmd.append(fps)
 
-    if 'video' in targs and 'bitrate' in targs['video']:
+    if targs.get('video', {}).get('bitrate') is not None:
         vbitrate = targs['video']['bitrate']
         cmd.append("-b:v")
         cmd.append(vbitrate)
 
     # audio settings
-    if 'audio' in targs and 'codec' in targs['audio']:
+    if targs.get('audio', {}).get('codec') is not None:
         acodec = targs['audio']['codec']
         cmd.append("-c:a")
         cmd.append(codecs.get_audio_encoder(acodec))
 
-    if 'audio' in targs and 'bitrate' in targs['audio']:
+    if targs.get('audio', {}).get('bitrate') is not None:
         abitrate = targs['audio']['bitrate']
         cmd.append("-b:a")
         cmd.append(abitrate)
 
-    if 'resolution' in targs:
+    if targs.get('resolution') is not None:
         res = targs['resolution']
         cmd.append("-vf")
         cmd.append("scale={}:{}".format(res[0], res[1]))
 
-    if 'scaling_alg' in targs:
+    if targs.get('scaling_alg') is not None:
         scale = targs["scaling_alg"]
         cmd.append("-sws_flags")
         cmd.append("{}".format(scale))
