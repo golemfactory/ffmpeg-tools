@@ -41,6 +41,14 @@ def get_format(metadata):
     return metadata["format"]["format_name"]
 
 
+def get_video_bitrates(metadata):
+    return [
+        stream_metadata.get("bit_rate")
+        for stream_metadata in metadata["streams"]
+        if stream_metadata["codec_type"] == "video"
+    ]
+
+
 def create_params(vformat, resolution, vcodec, acodec=None,
                   frame_rate=None, video_bitrate=None,
                   audio_bitrate=None, scaling_algorithm=None):
@@ -50,7 +58,7 @@ def create_params(vformat, resolution, vcodec, acodec=None,
 
     # Video parameters
     args["video"] = dict()
-    
+
     args["resolution"] = resolution
     args["video"]["codec"] = vcodec
 
@@ -62,13 +70,13 @@ def create_params(vformat, resolution, vcodec, acodec=None,
 
     if frame_rate:
         args["frame_rate"] = frame_rate
-        
+
     # Audio parameters
     args["audio"] = dict()
 
     if acodec:
         args["audio"]["codec"] = acodec
-    
+
     if audio_bitrate:
         args["audio"]["bitrate"] = audio_bitrate
 

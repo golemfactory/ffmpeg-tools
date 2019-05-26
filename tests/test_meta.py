@@ -32,6 +32,7 @@ example_metadata = {
             "time_base": "1/1000",
             "start_pts": 7,
             "start_time": "0.007000",
+            "bit_rate": "1135146",
             "disposition": {
                 "default": 1,
                 "dub": 0,
@@ -120,4 +121,5 @@ class TestMetadata(object):
     def test_get_metadata_invalid_path(self):
         assert(ffmpeg.meta.get_metadata("blabla") == {})
 
-
+    def test_get_video_bitrates(self):
+        assert ffmpeg.meta.get_video_bitrates(example_metadata) == ["1135146"]

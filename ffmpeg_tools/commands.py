@@ -1,3 +1,4 @@
+import copy
 import os
 import re
 import subprocess
@@ -88,9 +89,36 @@ def split_video_command(input_file, output_list_file, segment_time):
     return cmd, output_list_file
 
 
+def add_bitrate_from_video_if_missing(video_file, targs):
+    # NOTE: If user says bitrate=None, it's not missing.
+    # This makes it possible not to pass bitrate to ffmpeg.
+    if 'bitrate' in targs.get("video", {}):
+        return targs
+
+    metadata = get_metadata_json(video_file)
+    bitrates = meta.get_video_bitrates(metadata)
+
+    if len(bitrates) >= 2:
+        print(
+            f"WARNING: Multiple video streams detected. "
+            f"Skipping bitrate detection (would be ambiguous).",
+            file=sys.stderr)
+        return targs
+
+    updated_targs = copy.deepcopy(targs)
+    updated_targs["video"] = updated_targs.get("video", {})
+    updated_targs["video"]["bitrate"] = bitrates[0]
+
+    return updated_targs
+
+
 def transcode_video(track, targs, output, use_playlist):
-    cmd = transcode_video_command(track, output,
-                                  targs, use_playlist)
+    updated_targs = add_bitrate_from_video_if_missing(track, targs)
+    cmd = transcode_video_command(
+        track,
+        output,
+        updated_targs,
+        use_playlist)
     exec_cmd(cmd)
 
 
