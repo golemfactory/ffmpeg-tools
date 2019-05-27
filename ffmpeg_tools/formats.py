@@ -10,12 +10,18 @@ class Container(enum.Enum):
     # to ffmpeg using the -f option to specify the target format.
     c_3G2 = "3g2"           # 3GP2 (3GPP2 file format) muxer
     c_3GP = "3gp"           # 3GP (3GPP file format) muxer
+    c_ASF = "asf"           # ASF (Advanced / Active Streaming Format) muxer; .asf and .wmv extensions
     c_AVI = "avi"           # AVI (Audio Video Interleaved) muxer
     c_F4V = "f4v"           # F4V Adobe Flash Video muxer
+    c_FLV = "flv"           # FLV (Flash Video) muxer
+    c_IPOD = "ipod"         # iPod H.264 MP4 (MPEG-4 Part 14) muxer; .m4v extension
     c_MATROSKA = "matroska" # Matroska; .mkv extension muxer
+    c_MOV = "mov"           # QuickTime / MOV muxer
     c_MP4 = "mp4"           # MP4 (MPEG-4 Part 14) muxer
     c_MPEG = "mpeg"         # MPEG-1 Systems / MPEG program stream muxer
-    c_MOV = "mov"           # QuickTime / MOV muxer
+    c_MPEGTS = "mpegts"     # MPEG-TS (MPEG-2 Transport Stream) muxer
+    c_OGG = "ogg"           # Ogg Video muxer
+    c_SVCD = "svcd"         # MPEG-2 PS (SVCD) muxer; .vob extension
     c_WEBM = "webm"         # WebM muxer
 
     # Unfortunately ffprobe can't read muxer name back from an existing container.
@@ -123,9 +129,11 @@ _DEMUXER_MAP = {
     Container.c_3G2: Container.c_QUICK_TIME_DEMUXER,
     Container.c_3GP: Container.c_QUICK_TIME_DEMUXER,
     Container.c_F4V: Container.c_QUICK_TIME_DEMUXER,
+    Container.c_IPOD: Container.c_QUICK_TIME_DEMUXER,
     Container.c_MATROSKA: Container.c_MATROSKA_WEBM_DEMUXER,
     Container.c_MOV: Container.c_QUICK_TIME_DEMUXER,
     Container.c_MP4: Container.c_QUICK_TIME_DEMUXER,
+    Container.c_SVCD: Container.c_MPEG,
     Container.c_WEBM: Container.c_MATROSKA_WEBM_DEMUXER,
 }
 assert set(_DEMUXER_MAP).issubset(set(Container))
