@@ -156,11 +156,24 @@ assert set(_SAFE_INTERMEDIATE_FORMATS.values()).issubset(set(Container))
 assert set(_EXCLUSIVE_DEMUXERS).issubset(set(_SAFE_INTERMEDIATE_FORMATS))
 
 
+_ASF_CODECS = {
+    "videocodecs": [
+        "wmv1",
+        "wmv2",
+        "wmv3",
+    ],
+    "audiocodecs": [
+        "aac",
+        "wmav2",
+    ]
+}
+
 _MOV_CODECS = {
     "videocodecs": [
         "h264",
         "h265",
         "hevc",
+        "mjpeg",
         "mpeg1video",
         "mpeg2video",
 
@@ -168,6 +181,26 @@ _MOV_CODECS = {
     "audiocodecs": [
         "mp3",
         "aac",
+        "pcm_u8",
+    ]
+}
+
+_FLV_CODECS = {
+    "videocodecs": [
+        "flv1",
+    ],
+    "audiocodecs": [
+        "mp3",
+    ]
+}
+
+_M4V_CODECS = {
+    "videocodecs": [
+        "h264",
+    ],
+    "audiocodecs": [
+        "aac",
+        "mp3",
     ]
 }
 
@@ -190,20 +223,35 @@ _MKV_CODECS = {
         "hevc",
         "mpeg1video",
         "mpeg2video",
+        "mpeg4",
+        "theora",
     ],
     "audiocodecs": [
         "mp3",
         "aac",
+        "vorbis",
     ]
 }
 
 _WEBM_CODECS = {
     "videocodecs": [
+        "av1",
         "vp8",
         "vp9",
     ],
     "audiocodecs": [
         "opus",
+        "vorbis",
+        "vp8",
+    ]
+}
+
+_OGG_CODECS = {
+    "videocodecs": [
+        "theora",
+    ],
+    "audiocodecs": [
+        "vorbis",
     ]
 }
 
@@ -212,29 +260,38 @@ _AVI_CODECS = {
         "h264",
         "h265",
         "hevc",
+        "mjpeg",
         "mpeg1video",
         "mpeg2video",
+        "mpeg4",
     ],
     "audiocodecs": [
+        "mp3",
         "opus",
     ]
 }
 
 _3GP_CODECS = {
     "videocodecs": [
+        "h263",
         "h264",
+        "mpeg4",
     ],
     "audiocodecs": [
         "aac",
+        "amr_nb",
     ]
 }
 
 _MPEG_CODECS = {
     "videocodecs": [
+        "h264",
         "mpeg1video",
         "mpeg2video",
     ],
     "audiocodecs": [
+        "ac3",
+        "mp2",
         "mp3",
     ]
 }
@@ -244,10 +301,16 @@ _CONTAINER_SUPPORTED_CODECS = {
     "3g2": _3GP_CODECS,
     "3gp": _3GP_CODECS,
     "avi": _AVI_CODECS,
+    "asf": _ASF_CODECS,
+    "flv": _FLV_CODECS,
+    "ipod": _M4V_CODECS,
     "matroska": _MKV_CODECS,
     "mov": _MOV_CODECS,
     "mp4": _MP4_CODECS,
     "mpeg": _MPEG_CODECS,
+    "mpegts": _MPEG_CODECS,
+    "ogg": _OGG_CODECS,
+    "svcd": _MPEG_CODECS,
     "webm": _WEBM_CODECS,
 }
 assert set(_CONTAINER_SUPPORTED_CODECS) & {d.value for d in _EXCLUSIVE_DEMUXERS} == set(), \
