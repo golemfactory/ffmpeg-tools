@@ -197,9 +197,11 @@ _FLV_CODECS = {
 _M4V_CODECS = {
     "videocodecs": [
         "h264",
+        "mpeg4",
     ],
     "audiocodecs": [
         "aac",
+        "ac3",
         "mp3",
     ]
 }
@@ -218,17 +220,25 @@ _MP4_CODECS = {
 
 _MKV_CODECS = {
     "videocodecs": [
+        "flv1",
+        "h263",
         "h264",
         "h265",
         "hevc",
+        "mjpeg",
         "mpeg1video",
         "mpeg2video",
         "mpeg4",
         "theora",
+        "vp8",
+        "vp9",
+        "wmv1",
+        "wmv2",
     ],
     "audiocodecs": [
         "mp3",
         "aac",
+        "mp3",
         "vorbis",
     ]
 }
@@ -251,6 +261,7 @@ _OGG_CODECS = {
         "theora",
     ],
     "audiocodecs": [
+        "opus",
         "vorbis",
     ]
 }
@@ -288,6 +299,7 @@ _MPEG_CODECS = {
         "h264",
         "mpeg1video",
         "mpeg2video",
+        "mpeg4",
     ],
     "audiocodecs": [
         "ac3",
