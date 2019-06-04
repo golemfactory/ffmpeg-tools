@@ -49,6 +49,11 @@ class InvalidResolution(InvalidVideo):
         super().__init__(message="Unsupported resolution conversion from {} to {}.".format(src_resolution, target_resolution))
 
 
+class InvalidFrameRate(InvalidVideo):
+    def __init__(self, src_frame_rate, target_frame_rate):
+        super().__init__(message="Unsupported frame rate conversion from {} to {}.".format(src_frame_rate, target_frame_rate))
+
+
 class UnsupportedVideoCodecConversion(InvalidVideo):
     def __init__(self, src_codec, dst_codec):
         super().__init__(message="Unsupported video codec conversion from {} to {}".format(src_codec, dst_codec))
@@ -102,6 +107,10 @@ def validate_transcoding_params(src_params, dst_params):
 
     # Validate resolution change
     validate_resolution(src_params["resolution"], dst_params["resolution"])
+
+    # Validate frame rate change
+    if 'frame_rate' in dst_params:
+        validate_frame_rate(src_params["frame_rate"], dst_params["frame_rate"])
 
     # Throws exception in case of error
     return True
@@ -185,6 +194,19 @@ def validate_audio_codec(video_format, audio_codec):
 def validate_resolution(src_resolution, target_resolution):
     if not target_resolution in formats.list_matching_resolutions(src_resolution):
         raise InvalidResolution(src_resolution, target_resolution)
+    return True
+
+
+def validate_frame_rate(src_frame_rate, target_frame_rate):
+    target_rate_supported = any(
+        # This validation will accept both 24 and '24' for convenience.
+        # More complex values like '24/1' are not supported unless they're
+        # explicitly present on the supported resolution list.
+        target_frame_rate in [f, str(f)]
+        for f in formats.list_supported_frame_rates()
+    )
+    if not target_rate_supported:
+        raise InvalidFrameRate(src_frame_rate, target_frame_rate)
     return True
 
 
