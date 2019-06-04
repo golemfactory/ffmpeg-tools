@@ -361,6 +361,27 @@ _resolutions = {
     ]
 }
 
+_frame_rates = {
+    # NOTE 1: The same frame rate can often be represented a few slightly
+    # different ways. For example 24 FPS could be 24, '24', '24/1', '48/2'
+    # and so on. Since this list only represents the values we support
+    # converting to, we can be picky and choose just one representation as
+    # valid.
+
+    # NOTE 2: The common values of 23.976 and 29.97 used to refer to the NTSC
+    # frame rates are only approximations. In any situation other than just
+    # presenting them to the user we want to use the exact values: '24000/1001'
+    # and '30000/1001'.
+
+    '24000/1001', # 23.976 FPS (NTSC)
+    24,
+    25,
+    '30000/1001', # 29.97 FPS (NTSC)
+    30,
+    50,
+    60,
+}
+
 
 def list_supported_formats():
     return [c.value for c in Container]
@@ -421,3 +442,7 @@ def list_matching_resolutions(resolution):
         if resolution in resolutions_list:
             return resolutions_list
     return [resolution]
+
+
+def list_supported_frame_rates():
+    return _frame_rates
