@@ -212,6 +212,7 @@ _MP4_CODECS = {
         "h264",
         "h265",
         "hevc",
+        "mpeg4",
     ],
     "audiocodecs": [
         "aac",
