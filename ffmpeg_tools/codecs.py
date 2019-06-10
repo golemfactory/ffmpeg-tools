@@ -97,16 +97,14 @@ def get_audio_encoder(target_codec):
 
 
 def list_supported_video_conversions(codec):
-    try:
-        vcodec = VideoCodec(codec)
-        return vcodec.get_supported_conversions()
-    except:
+    if codec not in VideoCodec._value2member_map_:
         return []
+
+    return VideoCodec(codec).get_supported_conversions()
 
 
 def list_supported_audio_conversions(codec):
-    try:
-        acodec = AudioCodec(codec)
-        return acodec.get_supported_conversions()
-    except:
+    if codec not in AudioCodec._value2member_map_:
         return []
+
+    return AudioCodec(codec).get_supported_conversions()

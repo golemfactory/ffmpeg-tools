@@ -35,9 +35,15 @@ class Container(enum.Enum):
         return Container(name.lower())
 
     def get_supported_video_codecs(self):
+        if self.value not in _CONTAINER_SUPPORTED_CODECS:
+            return []
+
         return _CONTAINER_SUPPORTED_CODECS[self.value]["videocodecs"]
 
     def get_supported_audio_codecs(self):
+        if self.value not in _CONTAINER_SUPPORTED_CODECS:
+            return []
+
         return _CONTAINER_SUPPORTED_CODECS[self.value]["audiocodecs"]
 
     def is_supported_video_codec(self, vcodec):
@@ -163,11 +169,10 @@ def is_supported(vformat):
 
 
 def list_supported_video_codecs(vformat):
-    try:
-        container = Container(vformat)
-        return container.get_supported_video_codecs()
-    except:
+    if vformat not in Container._value2member_map_:
         return []
+
+    return Container(vformat).get_supported_video_codecs()
 
 
 def is_supported_video_codec(vformat, codec):
@@ -175,11 +180,10 @@ def is_supported_video_codec(vformat, codec):
 
 
 def list_supported_audio_codecs(vformat):
-    try:
-        container = Container(vformat)
-        return container.get_supported_audio_codecs()
-    except:
+    if vformat not in Container._value2member_map_:
         return []
+
+    return Container(vformat).get_supported_audio_codecs()
 
 
 def is_supported_audio_codec(vformat, codec):
