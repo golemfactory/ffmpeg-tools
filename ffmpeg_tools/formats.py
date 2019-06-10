@@ -75,6 +75,37 @@ class Container(enum.Enum):
     def list_supported_formats(vformat):
         return list_supported_formats()
 
+    def get_demuxer(self):
+        return _DEMUXER_MAP[self].value
+
+    def is_exclusive_demuxer(self):
+        return self in _EXCLUSIVE_DEMUXERS
+
+
+# This set containe demuxers that cannot be used as muxers in ffmpeg.
+_EXCLUSIVE_DEMUXERS = {
+    Container.c_QUICK_TIME_DEMUXER,
+    Container.c_MATROSKA_WEBM_DEMUXER,
+}
+
+
+# This dictionary defines which ffmpeg demuxer handles files encoded by which
+# muxer.
+_DEMUXER_MAP = {
+    Container.c_3G2: Container.c_QUICK_TIME_DEMUXER,
+    Container.c_3GP: Container.c_QUICK_TIME_DEMUXER,
+    Container.c_AVI: Container.c_AVI,
+    Container.c_F4V: Container.c_QUICK_TIME_DEMUXER,
+    Container.c_MATROSKA: Container.c_MATROSKA_WEBM_DEMUXER,
+    Container.c_MOV: Container.c_QUICK_TIME_DEMUXER,
+    Container.c_MP4: Container.c_QUICK_TIME_DEMUXER,
+    Container.c_MPEG: Container.c_MPEG,
+    Container.c_WEBM: Container.c_MATROSKA_WEBM_DEMUXER,
+}
+assert set(_DEMUXER_MAP).issubset(set(Container))
+assert set(_DEMUXER_MAP.values()).issubset(set(Container))
+assert set(_DEMUXER_MAP) & _EXCLUSIVE_DEMUXERS == set()
+
 
 _MOV_CODECS = {
     "videocodecs": [
