@@ -19,8 +19,8 @@ class Container(enum.Enum):
     # Sometimes ffmpeg can't tell us precise format, but returns
     # group of similar formats. We need to heve them listed
     # to allow them in validation functions.
-    c_QUICK_TIME = "mov,mp4,m4a,3gp,3g2,mj2"
-    c_MATROSKA_WEBM = "matroska,webm"
+    c_QUICK_TIME_DEMUXER = "mov,mp4,m4a,3gp,3g2,mj2" # QuickTime / MOV
+    c_MATROSKA_WEBM_DEMUXER = "matroska,webm"        # Matroska / WebM
 
 
     # Normally enum throws ValueError, when initialization value is invalid.
