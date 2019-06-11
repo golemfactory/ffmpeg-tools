@@ -36,6 +36,7 @@ class VideoCodec(enum.Enum):
 class AudioCodec(enum.Enum):
     AAC = 'aac'
     MP3 = 'mp3'
+    OPUS = 'opus'
 
 
     # Normally enum throws ValueError, when initialization value is invalid.
