@@ -65,10 +65,31 @@ class Container(enum.Enum):
         return list_supported_formats()
 
 
+_MOV_CODECS = {
+    "videocodecs": [
+        "h264",
+        "h265",
+        "HEVC",
+        "mpeg1video",
+        "mpeg2video",
 
-_QUICKTIME_CODECS = {
-    "videocodecs": ["h264", "h265", "HEVC", "mpeg1video", "mpeg2video"],
-    "audiocodecs": ["mp3", "aac"]
+    ],
+    "audiocodecs": [
+        "mp3",
+        "aac",
+    ]
+}
+
+_MP4_CODECS = {
+    "videocodecs": [
+        "h264",
+        "h265",
+        "HEVC",
+    ],
+    "audiocodecs": [
+        "aac",
+        "mp3",
+    ]
 }
 
 _MKV_CODECS = {
@@ -127,9 +148,23 @@ _MPEG_CODECS = {
     ]
 }
 
+_QUICKTIME_CODECS = {
+    "videocodecs": list(set(
+        _MOV_CODECS["videocodecs"] +
+        _MP4_CODECS["videocodecs"] +
+        _3GP_CODECS["videocodecs"]
+    )),
+    "audiocodecs": list(set(
+        _MOV_CODECS["audiocodecs"] +
+        _MP4_CODECS["audiocodecs"] +
+        _3GP_CODECS["audiocodecs"]
+    )),
+}
+
+
 _CONTAINER_SUPPORTED_CODECS = {
-    "mp4": _QUICKTIME_CODECS,
-    "mov": _QUICKTIME_CODECS,
+    "mp4": _MP4_CODECS,
+    "mov": _MOV_CODECS,
     "mkv": _MKV_CODECS,
     "3gp": _3GP_CODECS,
     "3g2": _3GP_CODECS,
