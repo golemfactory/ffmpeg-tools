@@ -20,6 +20,7 @@ class Container(enum.Enum):
     # group of similar formats. We need to heve them listed
     # to allow them in validation functions.
     c_QUICK_TIME = "mov,mp4,m4a,3gp,3g2,mj2"
+    c_MATROSKA_WEBM = "matroska,webm"
 
 
     # Normally enum throws ValueError, when initialization value is invalid.
@@ -162,8 +163,14 @@ _QUICKTIME_CODECS = {
     )),
 }
 
+_MATROSKA_WEBM_CODECS = {
+    "videocodecs": list(set(_MKV_CODECS["videocodecs"] + _WEBM_CODECS["videocodecs"])),
+    "audiocodecs": list(set(_MKV_CODECS["audiocodecs"] + _WEBM_CODECS["audiocodecs"])),
+}
+
 
 _CONTAINER_SUPPORTED_CODECS = {
+    "matroska,webm": _MATROSKA_WEBM_CODECS,
     "mp4": _MP4_CODECS,
     "mov": _MOV_CODECS,
     "mkv": _MKV_CODECS,
