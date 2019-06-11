@@ -44,12 +44,18 @@ class Container(enum.Enum):
         return Container(name.lower())
 
     def get_supported_video_codecs(self):
+        if self in _EXCLUSIVE_DEMUXERS:
+            return _list_supported_video_codecs_for_exclusive_demuxer(self)
+
         if self.value not in _CONTAINER_SUPPORTED_CODECS:
             return []
 
         return _CONTAINER_SUPPORTED_CODECS[self.value]["videocodecs"]
 
     def get_supported_audio_codecs(self):
+        if self in _EXCLUSIVE_DEMUXERS:
+            return _list_supported_audio_codecs_for_exclusive_demuxer(self)
+
         if self.value not in _CONTAINER_SUPPORTED_CODECS:
             return []
 
@@ -80,6 +86,13 @@ class Container(enum.Enum):
 
     def is_exclusive_demuxer(self):
         return self in _EXCLUSIVE_DEMUXERS
+
+    def get_matching_muxers(self):
+        return {
+            muxer
+            for muxer, demuxer in _DEMUXER_MAP.items()
+            if demuxer == self
+        }
 
 
 # This set containe demuxers that cannot be used as muxers in ffmpeg.
@@ -190,37 +203,19 @@ _MPEG_CODECS = {
     ]
 }
 
-_QUICKTIME_CODECS = {
-    "videocodecs": list(set(
-        _MOV_CODECS["videocodecs"] +
-        _MP4_CODECS["videocodecs"] +
-        _3GP_CODECS["videocodecs"]
-    )),
-    "audiocodecs": list(set(
-        _MOV_CODECS["audiocodecs"] +
-        _MP4_CODECS["audiocodecs"] +
-        _3GP_CODECS["audiocodecs"]
-    )),
-}
-
-_MATROSKA_WEBM_CODECS = {
-    "videocodecs": list(set(_MKV_CODECS["videocodecs"] + _WEBM_CODECS["videocodecs"])),
-    "audiocodecs": list(set(_MKV_CODECS["audiocodecs"] + _WEBM_CODECS["audiocodecs"])),
-}
-
 
 _CONTAINER_SUPPORTED_CODECS = {
     "3g2": _3GP_CODECS,
     "3gp": _3GP_CODECS,
     "avi": _AVI_CODECS,
     "matroska": _MKV_CODECS,
-    "matroska,webm": _MATROSKA_WEBM_CODECS,
     "mov": _MOV_CODECS,
     "mp4": _MP4_CODECS,
-    "mov,mp4,m4a,3gp,3g2,mj2": _QUICKTIME_CODECS,
     "mpeg": _MPEG_CODECS,
     "webm": _WEBM_CODECS,
 }
+assert set(_CONTAINER_SUPPORTED_CODECS) & {d.value for d in _EXCLUSIVE_DEMUXERS} == set(), \
+    "Supported codecs for exclusive demuxers can be determined automatically; no need to define them here"
 
 _resolutions = {
     "16:9": [
@@ -273,6 +268,16 @@ def is_supported_video_codec(vformat, codec):
     return codec in list_supported_video_codecs(vformat)
 
 
+def _list_supported_video_codecs_for_exclusive_demuxer(demuxer: Container):
+    assert demuxer in _EXCLUSIVE_DEMUXERS
+
+    return list(set(
+        codec
+        for muxer in demuxer.get_matching_muxers()
+        for codec in muxer.get_supported_video_codecs()
+    ))
+
+
 def list_supported_audio_codecs(vformat):
     if vformat not in Container._value2member_map_:
         return []
@@ -282,6 +287,16 @@ def list_supported_audio_codecs(vformat):
 
 def is_supported_audio_codec(vformat, codec):
     return codec in list_supported_audio_codecs(vformat)
+
+
+def _list_supported_audio_codecs_for_exclusive_demuxer(demuxer: Container):
+    assert demuxer in _EXCLUSIVE_DEMUXERS
+
+    return list(set(
+        codec
+        for muxer in demuxer.get_matching_muxers()
+        for codec in muxer.get_supported_audio_codecs()
+    ))
 
 
 def list_matching_resolutions(resolution):
