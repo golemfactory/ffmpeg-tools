@@ -14,8 +14,6 @@ class Container(enum.Enum):
     c_MKV = 'mkv'
     c_MPEG = 'mpeg'
     c_MOV = 'mov'
-    c_M4A = 'm4a'
-    c_MJ2 = 'mj2'
 
     # Sometimes ffmpeg can't tell us precise format, but returns
     # group of similar formats. We need to heve them listed
@@ -118,11 +116,9 @@ _MPEG_CODECS = {
 _CONTAINER_SUPPORTED_CODECS = {
     "mp4": _QUICKTIME_CODECS,
     "mov": _QUICKTIME_CODECS,
-    "m4a": _QUICKTIME_CODECS,
     "mkv": _QUICKTIME_CODECS,
     "3gp": _3GP_CODECS,
     "3g2": _3GP_CODECS,
-    "mj2": _QUICKTIME_CODECS,
     "mov,mp4,m4a,3gp,3g2,mj2": _QUICKTIME_CODECS,
     "avi": _AVI_CODECS,
     "mpeg": _MPEG_CODECS,
