@@ -14,6 +14,7 @@ class Container(enum.Enum):
     c_MKV = 'mkv'
     c_MPEG = 'mpeg'
     c_MOV = 'mov'
+    c_WEBM = "webm"
 
     # Sometimes ffmpeg can't tell us precise format, but returns
     # group of similar formats. We need to heve them listed
@@ -108,8 +109,8 @@ _MKV_CODECS = {
 
 _WEBM_CODECS = {
     "videocodecs": [
-        "vp9",
         "vp8",
+        "vp9",
     ],
     "audiocodecs": [
         "opus",
@@ -171,6 +172,7 @@ _CONTAINER_SUPPORTED_CODECS = {
     "mov,mp4,m4a,3gp,3g2,mj2": _QUICKTIME_CODECS,
     "avi": _AVI_CODECS,
     "mpeg": _MPEG_CODECS,
+    "webm": _WEBM_CODECS,
 }
 
 _resolutions = {
