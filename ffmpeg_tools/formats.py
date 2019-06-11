@@ -71,6 +71,20 @@ _QUICKTIME_CODECS = {
     "audiocodecs": ["mp3", "aac"]
 }
 
+_MKV_CODECS = {
+    "videocodecs": [
+        "h264",
+        "h265",
+        "HEVC",
+        "mpeg1video",
+        "mpeg2video",
+    ],
+    "audiocodecs": [
+        "mp3",
+        "aac",
+    ]
+}
+
 _WEBM_CODECS = {
     "videocodecs": [
         "vp9",
@@ -116,7 +130,7 @@ _MPEG_CODECS = {
 _CONTAINER_SUPPORTED_CODECS = {
     "mp4": _QUICKTIME_CODECS,
     "mov": _QUICKTIME_CODECS,
-    "mkv": _QUICKTIME_CODECS,
+    "mkv": _MKV_CODECS,
     "3gp": _3GP_CODECS,
     "3g2": _3GP_CODECS,
     "mov,mp4,m4a,3gp,3g2,mj2": _QUICKTIME_CODECS,
