@@ -20,6 +20,10 @@ class CommandFailed(Exception):
         self.error_code = error_code
 
 
+class InvalidArgument(Exception):
+    pass
+
+
 def flatten_list(list_of_lists):
     return [item for sublist in list_of_lists for item in sublist]
 
@@ -279,7 +283,12 @@ def replace_streams_command(input_file,
             - `d` - data streams.
             - `t` - attachments.
     """
-    assert stream_type in ['v', 'V', 'a', 's', 'd', 't']
+    VALID_STREAM_TYPES = {'v', 'V', 'a', 's', 'd', 't'}
+    if stream_type not in VALID_STREAM_TYPES:
+        raise InvalidArgument(
+            f"Invalid value of 'stream_type'. "
+            f"Should be one of: {', '.join(VALID_STREAM_TYPES)}"
+        )
 
     cmd = [
         FFMPEG_COMMAND,
