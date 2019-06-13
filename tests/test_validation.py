@@ -4,9 +4,11 @@ import sys
 from ffmpeg_tools.formats import list_supported_formats, list_supported_video_codecs, list_supported_audio_codecs
 from ffmpeg_tools.meta import get_metadata
 from ffmpeg_tools.validation import UnsupportedVideoCodec, UnsupportedVideoFormat, \
-    MissingVideoStream, UnsupportedAudioCodec, InvalidVideo, MissingVideoStream, InvalidFormatMetadata
+    UnsupportedTargetVideoFormat, MissingVideoStream, UnsupportedAudioCodec, \
+    InvalidVideo, MissingVideoStream, InvalidFormatMetadata
 
 import ffmpeg_tools.validation as validation
+import ffmpeg_tools.formats as formats
 import ffmpeg_tools.meta as meta
 
 
@@ -37,6 +39,19 @@ class TestInputValidation(TestCase):
     def test_validate_invalid_video_format(self):
         with self.assertRaises(UnsupportedVideoFormat):
             validation.validate_format("jpg")
+
+
+    def test_validate_target_format_should_accept_muxers(self):
+        assert not formats.Container.c_MP4.is_exclusive_demuxer()
+
+        self.assertTrue(validation.validate_target_format(formats.Container.c_MP4.value))
+
+
+    def test_validate_target_format_should_reject_exclusive_demuxers(self):
+        assert formats.Container.c_QUICK_TIME_DEMUXER.is_exclusive_demuxer()
+
+        with self.assertRaises(UnsupportedTargetVideoFormat):
+            validation.validate_target_format(formats.Container.c_QUICK_TIME_DEMUXER.value)
 
 
     def test_validate_valid_video_codecs(self):

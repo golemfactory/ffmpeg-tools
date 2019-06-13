@@ -19,6 +19,11 @@ class UnsupportedVideoFormat(InvalidVideo):
         super().__init__(message="Unsupported video format: {}".format(video_format))
 
 
+class UnsupportedTargetVideoFormat(InvalidVideo):
+    def __init__(self, video_format):
+        super().__init__(message="Muxing not supported for video format: {}".format(video_format))
+
+
 class UnsupportedVideoCodec(InvalidVideo):
     def __init__(self, video_codec, video_format):
         super().__init__(message="Unsupported video codec: {} for video format: {}".format(video_codec, video_format))
@@ -58,7 +63,7 @@ class UnsupportedAudioCodecConversion(InvalidVideo):
 def validate_video(metadata):
     try:
         validate_format_metadata(metadata)
-        
+
         video_format = meta.get_format(metadata)
         validate_format(video_format)
         validate_video_stream_existence(metadata=metadata)
@@ -72,7 +77,7 @@ def validate_video(metadata):
 
 
 def validate_transcoding_params(src_params, dst_params):
-    
+
     # Validate format
     validate_format(src_params["format"])
     validate_format(dst_params["format"])
@@ -109,6 +114,14 @@ def _get_extension_from_filename(filename):
 def validate_format(video_format):
     if video_format not in formats.list_supported_formats():
         raise UnsupportedVideoFormat(video_format=video_format)
+    return True
+
+
+def validate_target_format(video_format):
+    validate_format(video_format)
+
+    if formats.Container(video_format).is_exclusive_demuxer():
+        raise UnsupportedTargetVideoFormat(video_format=video_format)
     return True
 
 
