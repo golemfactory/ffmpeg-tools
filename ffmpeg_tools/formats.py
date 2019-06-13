@@ -102,6 +102,12 @@ class Container(enum.Enum):
         else:
             return muxers | {self}
 
+    def get_intermediate_muxer(self):
+        if self not in _SAFE_INTERMEDIATE_FORMATS:
+            return self.value
+
+        return _SAFE_INTERMEDIATE_FORMATS[self].value
+
 
 # This set containe demuxers that cannot be used as muxers in ffmpeg.
 _EXCLUSIVE_DEMUXERS = {
@@ -125,6 +131,21 @@ _DEMUXER_MAP = {
 assert set(_DEMUXER_MAP).issubset(set(Container))
 assert set(_DEMUXER_MAP.values()).issubset(set(Container))
 assert set(_DEMUXER_MAP) & _EXCLUSIVE_DEMUXERS == set()
+
+
+# It's not possible to tell ffmpeg to preserve the container type. We always
+# have to specify the muxer explicitly which is tricky because we only
+# know the demuxer and there's no 1:1 mapping between muxers and demuxers.
+# This dictionary tells us which muxer can handle all files supported
+# by a particular demuxer. If there's no entry for a particular demuxer,
+# the assumption is that it's also a muxer and it maps to itself.
+_SAFE_INTERMEDIATE_FORMATS = {
+    Container.c_MATROSKA_WEBM_DEMUXER: Container.c_MATROSKA,
+    Container.c_QUICK_TIME_DEMUXER: Container.c_MP4,
+}
+assert set(_SAFE_INTERMEDIATE_FORMATS).issubset(set(Container))
+assert set(_SAFE_INTERMEDIATE_FORMATS.values()).issubset(set(Container))
+assert set(_EXCLUSIVE_DEMUXERS).issubset(set(_SAFE_INTERMEDIATE_FORMATS))
 
 
 _MOV_CODECS = {
@@ -264,6 +285,10 @@ def is_supported(vformat):
     return Container.is_supported(vformat)
 
 
+def get_safe_intermediate_format_for_demuxer(demuxer):
+    return Container(demuxer).get_intermediate_muxer()
+
+
 def list_supported_video_codecs(vformat):
     if vformat not in Container._value2member_map_:
         return []
@@ -311,4 +336,3 @@ def list_matching_resolutions(resolution):
         if resolution in resolutions_list:
             return resolutions_list
     return [resolution]
-
