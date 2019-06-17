@@ -125,26 +125,29 @@ def extract_streams_command(input_file,
     return cmd
 
 
-def split_video(input_file, output_dir, split_len):
+def split_video(input_file, output_dir, split_len, container=None):
     [_, filename] = os.path.split(input_file)
     [basename, _] = os.path.splitext(filename)
 
     output_list_file = os.path.join(output_dir, basename + "-segment-list.txt")
 
-    split_list_file = split(input_file, output_list_file, split_len)
+    split_list_file = split(input_file, output_list_file, split_len, container)
 
     return split_list_file
 
 
-def split(input_file, output_list_file, segment_time):
+def split(input_file, output_list_file, segment_time, container=None):
     cmd, file_list = split_video_command(input_file, output_list_file,
-                                         segment_time)
+                                         segment_time, container)
     exec_cmd(cmd)
 
     return file_list
 
 
-def split_video_command(input_file, output_list_file, segment_time):
+def split_video_command(input_file,
+                        output_list_file,
+                        segment_time,
+                        container=None):
     (_, input_filename) = os.path.split(input_file)
     (input_basename, input_extension) = os.path.splitext(input_filename)
 
@@ -156,6 +159,9 @@ def split_video_command(input_file, output_list_file, segment_time):
         "-i", input_file,
         "-codec", "copy",
         "-f", "segment",
+    ] + ([
+        "-segment_format", container,
+    ] if container is not None else []) + [
         "-reset_timestamps", "1",
         "-segment_time", f"{segment_time}",
         "-segment_list_type", "flat",
