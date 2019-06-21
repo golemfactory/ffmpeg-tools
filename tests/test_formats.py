@@ -57,6 +57,26 @@ class TestContainer(TestCase):
             ffmpeg.formats.Container.c_QUICK_TIME_DEMUXER,
             ffmpeg.formats.Container.c_QUICK_TIME_DEMUXER.get_matching_muxers())
 
+    def test_get_intermediate_muxer_should_return_values_from_safe_intermediate_formats_dict(self):
+        demuxer = ffmpeg.formats.Container.c_MATROSKA_WEBM_DEMUXER
+        assert demuxer in ffmpeg.formats._SAFE_INTERMEDIATE_FORMATS
+
+        expected_intermediate_muxer = ffmpeg.formats._SAFE_INTERMEDIATE_FORMATS[demuxer]
+
+        self.assertEqual(
+            demuxer.get_intermediate_muxer(),
+            expected_intermediate_muxer.value)
+
+    def test_get_intermediate_muxer_should_return_self_if_demuxer_not_present_in_safe_intermediate_formats_dict(self):
+        demuxer = ffmpeg.formats.Container.c_AVI
+        assert demuxer not in ffmpeg.formats._SAFE_INTERMEDIATE_FORMATS
+
+        expected_intermediate_muxer = demuxer
+
+        self.assertEqual(
+            demuxer.get_intermediate_muxer(),
+            expected_intermediate_muxer.value)
+
 
 class TestSupportedFormats(object):
 
@@ -140,3 +160,12 @@ class TestResolutionsTools(object):
         # Function returns at least resolution, that was passed in parameter.
         assert( len( resolution_list ) == 1 )
 
+
+
+class TestHelperFunctions(TestCase):
+
+    def test_get_safe_intermediate_format_for_demuxer(self):
+        demuxer = ffmpeg.formats.Container.c_AVI
+        self.assertEqual(
+            ffmpeg.formats.get_safe_intermediate_format_for_demuxer(demuxer),
+            demuxer.get_intermediate_muxer())
