@@ -149,9 +149,17 @@ def split_video_command(input_file,
                         segment_time,
                         container=None):
     (_, input_filename) = os.path.split(input_file)
-    (input_basename, input_extension) = os.path.splitext(input_filename)
+    (input_basename, extension) = os.path.splitext(input_filename)
 
     (output_dir, _) = os.path.split(output_list_file)
+    if container is not None:
+        # ffmpeg with -segment_format option fails if the output file name
+        # pattern has no extension in it or has an extension not supported by
+        # ffmpeg. This seems to be a bug, even reported in
+        # (https://trac.ffmpeg.org/ticket/4483) but closed as invalid (why?).
+        # A simple workaround is to add any valid extension to the pattern.
+        # The -segment_format option has priority over the file extension.
+        extension += '.mkv'
 
     cmd = [
         FFMPEG_COMMAND,
@@ -166,7 +174,7 @@ def split_video_command(input_file,
         "-segment_time", f"{segment_time}",
         "-segment_list_type", "flat",
         "-segment_list", output_list_file,
-        f"{output_dir}/{input_basename}_%d{input_extension}",
+        f"{output_dir}/{input_basename}_%d{extension}",
     ]
 
     return cmd, output_list_file
