@@ -16,7 +16,7 @@ class TestCommands(TestCase):
         if os.path.exists(output_video):
             os.remove(output_video)
 
-        ffmpeg.commands.transcode_video(input_video, params, output_video, False)
+        ffmpeg.commands.transcode_video(input_video, params, output_video)
 
         assert os.path.exists(output_video)
 

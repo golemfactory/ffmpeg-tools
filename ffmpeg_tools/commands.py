@@ -118,7 +118,7 @@ def split_video(input_file, output_dir, split_len):
     [_, filename] = os.path.split(input_file)
     [basename, _] = os.path.splitext(filename)
 
-    output_list_file = os.path.join(output_dir, basename + "_.m3u8")
+    output_list_file = os.path.join(output_dir, basename + "-segment-list.txt")
 
     split_list_file = split(input_file, output_list_file, split_len)
 
@@ -147,7 +147,7 @@ def split_video_command(input_file, output_list_file, segment_time):
         "-f", "segment",
         "-reset_timestamps", "1",
         "-segment_time", f"{segment_time}",
-        "-segment_list_type", "m3u8",
+        "-segment_list_type", "flat",
         "-segment_list", output_list_file,
         f"{output_dir}/{input_basename}_%d{input_extension}",
     ]
@@ -155,13 +155,12 @@ def split_video_command(input_file, output_list_file, segment_time):
     return cmd, output_list_file
 
 
-def transcode_video(track, targs, output, use_playlist):
-    cmd = transcode_video_command(track, output,
-                                  targs, use_playlist)
+def transcode_video(track, targs, output):
+    cmd = transcode_video_command(track, output, targs)
     exec_cmd(cmd)
 
 
-def transcode_video_command(track, output_playlist_name, targs, use_playlist):
+def transcode_video_command(track, output_file, targs):
     cmd = [
         FFMPEG_COMMAND,
         "-nostdin",
@@ -170,14 +169,6 @@ def transcode_video_command(track, output_playlist_name, targs, use_playlist):
         # input file
         "{}".format(track)
     ]
-
-    if use_playlist:
-        playlist_cmd = [
-            # It states that all entries from list should be processed
-            "-hls_list_size", "0",
-            "-copyts"
-        ]
-        cmd.extend(playlist_cmd)
 
     # video settings
     if 'video' in targs and 'codec' in targs['video']:
@@ -216,7 +207,7 @@ def transcode_video_command(track, output_playlist_name, targs, use_playlist):
         cmd.append("-sws_flags")
         cmd.append("{}".format(scale))
 
-    cmd.append("{}".format(output_playlist_name))
+    cmd.append("{}".format(output_file))
 
     return cmd
 
