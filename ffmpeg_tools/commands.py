@@ -24,6 +24,14 @@ class InvalidArgument(Exception):
     pass
 
 
+class InvalidCommandOutput(Exception):
+    pass
+
+
+class FileAlreadyExists(Exception):
+    pass
+
+
 def flatten_list(list_of_lists):
     return [item for sublist in list_of_lists for item in sublist]
 
@@ -125,30 +133,74 @@ def extract_streams_command(input_file,
     return cmd
 
 
-def split_video(input_file, output_dir, split_len):
+def strip_suffix_from_segments_and_rename_files(output_list_file_path, suffix):
+    with open(output_list_file_path) as output_list_file:
+        file_paths = output_list_file.read().splitlines()
+
+    list_dir = os.path.dirname(output_list_file_path)
+
+    updated_file_list = []
+    for file_path in file_paths:
+        if not file_path.endswith(suffix):
+            # Should not happen if the list contains what we expect but we
+            # can't just assume that.
+            raise InvalidCommandOutput(
+                f"Segment name does not match the expected pattern: {file_path}")
+
+        # Segment paths are relative to the location of the list file
+        full_file_path = os.path.join(list_dir, file_path)
+
+        new_path = file_path[:-len(suffix)]
+        full_new_path = full_file_path[:-len(suffix)]
+        if os.path.exists(new_path):
+            # This should never happen but is not impossible (filesystem is not
+            # under our sole control) so an assert is not appropriate.
+            raise FileAlreadyExists(
+                f"Renaming '{file_path}' to '{new_path}' would overwrite the other file.")
+
+        os.rename(full_file_path, full_new_path)
+        updated_file_list.append(new_path)
+
+    with open(output_list_file_path, 'w') as output_list_file:
+        output_list_file.write("\n".join(updated_file_list))
+
+
+def split_video(input_file, output_dir, split_len, container=None):
     [_, filename] = os.path.split(input_file)
     [basename, _] = os.path.splitext(filename)
 
     output_list_file = os.path.join(output_dir, basename + "-segment-list.txt")
 
-    split_list_file = split(input_file, output_list_file, split_len)
+    split_list_file = split(input_file, output_list_file, split_len, container)
 
     return split_list_file
 
 
-def split(input_file, output_list_file, segment_time):
+def split(input_file, output_list_file, segment_time, container=None):
     cmd, file_list = split_video_command(input_file, output_list_file,
-                                         segment_time)
+                                         segment_time, container)
     exec_cmd(cmd)
+    strip_suffix_from_segments_and_rename_files(output_list_file, '.mkv')
 
     return file_list
 
 
-def split_video_command(input_file, output_list_file, segment_time):
+def split_video_command(input_file,
+                        output_list_file,
+                        segment_time,
+                        container=None):
     (_, input_filename) = os.path.split(input_file)
-    (input_basename, input_extension) = os.path.splitext(input_filename)
+    (input_basename, extension) = os.path.splitext(input_filename)
 
     (output_dir, _) = os.path.split(output_list_file)
+    if container is not None:
+        # ffmpeg with -segment_format option fails if the output file name
+        # pattern has no extension in it or has an extension not supported by
+        # ffmpeg. This seems to be a bug, even reported in
+        # (https://trac.ffmpeg.org/ticket/4483) but closed as invalid (why?).
+        # A simple workaround is to add any valid extension to the pattern.
+        # The -segment_format option has priority over the file extension.
+        extension += '.mkv'
 
     cmd = [
         FFMPEG_COMMAND,
@@ -156,11 +208,14 @@ def split_video_command(input_file, output_list_file, segment_time):
         "-i", input_file,
         "-codec", "copy",
         "-f", "segment",
+    ] + ([
+        "-segment_format", container,
+    ] if container is not None else []) + [
         "-reset_timestamps", "1",
         "-segment_time", f"{segment_time}",
         "-segment_list_type", "flat",
         "-segment_list", output_list_file,
-        f"{output_dir}/{input_basename}_%d{input_extension}",
+        f"{output_dir}/{input_basename}_%d{extension}",
     ]
 
     return cmd, output_list_file
