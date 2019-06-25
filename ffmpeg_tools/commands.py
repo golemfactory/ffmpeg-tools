@@ -62,21 +62,26 @@ def exec_cmd_to_string(cmd):
     return result.stdout.decode('utf-8')
 
 
-def extract_streams(input_file, output_file, selected_streams):
+def extract_streams(input_file,
+                    output_file,
+                    selected_streams,
+                    container=None):
     assert os.path.isfile(input_file)
     assert not os.path.exists(output_file)
 
     cmd = extract_streams_command(
         input_file,
         output_file,
-        selected_streams)
+        selected_streams,
+        container)
 
     exec_cmd(cmd)
 
 
 def extract_streams_command(input_file,
                             output_file,
-                            selected_streams):
+                            selected_streams,
+                            container=None):
     """
     Builds a ffmpeg command that can be used to extract a selected streams
     from a container and put them in a newly created container of the same type
@@ -91,6 +96,7 @@ def extract_streams_command(input_file,
            ['v']         - all video streams
            ['a', 'd']    - all audio and data streams
            ['v', 'a:2']  - all video streams and third audio stream
+    :param container: Video container type for the output file.
     """
 
     map_options = [
@@ -107,6 +113,11 @@ def extract_streams_command(input_file,
         flatten_list(map_options) +
         [
             "-codec", "copy",
+        ] +
+        ([
+            "-f", container,
+        ] if container is not None else []) +
+        [
             output_file,
         ]
     )
@@ -167,8 +178,10 @@ def transcode_video_command(track, output_file, targs):
         # process an input file
         "-i",
         # input file
-        "{}".format(track)
-    ]
+        "{}".format(track),
+    ] + ([
+        "-f", targs['container'],
+    ] if 'container' in targs else [])
 
     # video settings
     if 'video' in targs and 'codec' in targs['video']:
@@ -212,12 +225,15 @@ def transcode_video_command(track, output_file, targs):
     return cmd
 
 
-def merge_videos(input_files, output):
-    cmd, _list_file = merge_videos_command(input_files, output)
+def merge_videos(input_files, output, container=None):
+    cmd, _list_file = merge_videos_command(
+        input_files,
+        output,
+        container)
     exec_cmd(cmd)
 
 
-def merge_videos_command(input_file, output):
+def merge_videos_command(input_file, output, container=None):
     cmd = [
         FFMPEG_COMMAND,
         "-nostdin",
@@ -225,6 +241,9 @@ def merge_videos_command(input_file, output):
         "-safe", "0",
         "-i", input_file,
         "-c", "copy",
+    ] + ([
+        "-f", container,
+    ] if container is not None else []) + [
         output
     ]
 
@@ -234,7 +253,8 @@ def merge_videos_command(input_file, output):
 def replace_streams(input_file,
                     replacement_source,
                     output_file,
-                    stream_type):
+                    stream_type,
+                    container=None):
 
     assert os.path.isfile(input_file)
     assert os.path.isfile(replacement_source)
@@ -244,7 +264,8 @@ def replace_streams(input_file,
         input_file,
         replacement_source,
         output_file,
-        stream_type)
+        stream_type,
+        container)
 
     exec_cmd(cmd)
 
@@ -252,7 +273,8 @@ def replace_streams(input_file,
 def replace_streams_command(input_file,
                             replacement_source,
                             output_file,
-                            stream_type):
+                            stream_type,
+                            container=None):
     """
     Builds a ffmpeg command that can be used to create a new video file with
     all streams of a specific type replaced with streams of the same type from
@@ -292,6 +314,9 @@ def replace_streams_command(input_file,
         "-copy_unknown",
         "-c:v", "copy",
         "-c:d", "copy",
+    ] + ([
+        "-f", container,
+    ] if container is not None else []) + [
         output_file,
     ]
 

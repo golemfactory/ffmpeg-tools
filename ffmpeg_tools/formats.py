@@ -6,21 +6,30 @@ from . import codecs
 
 
 class Container(enum.Enum):
-    c_F4V = "f4v"
-    c_3GP = "3gp"
-    c_3G2 = "3g2"
-    c_MP4 = 'mp4'
-    c_AVI = 'avi'
-    c_MKV = 'mkv'
-    c_MPEG = 'mpeg'
-    c_MOV = 'mov'
-    c_M4A = 'm4a'
-    c_MJ2 = 'mj2'
+    # The values below are **muxer** names, which means that they can be passed
+    # to ffmpeg using the -f option to specify the target format.
+    c_3G2 = "3g2"           # 3GP2 (3GPP2 file format) muxer
+    c_3GP = "3gp"           # 3GP (3GPP file format) muxer
+    c_AVI = "avi"           # AVI (Audio Video Interleaved) muxer
+    c_F4V = "f4v"           # F4V Adobe Flash Video muxer
+    c_MATROSKA = "matroska" # Matroska; .mkv extension muxer
+    c_MP4 = "mp4"           # MP4 (MPEG-4 Part 14) muxer
+    c_MPEG = "mpeg"         # MPEG-1 Systems / MPEG program stream muxer
+    c_MOV = "mov"           # QuickTime / MOV muxer
+    c_WEBM = "webm"         # WebM muxer
 
-    # Sometimes ffmpeg can't tell us precise format, but returns
-    # group of similar formats. We need to heve them listed
-    # to allow them in validation functions.
-    c_QUICK_TIME = "mov,mp4,m4a,3gp,3g2,mj2"
+    # Unfortunately ffprobe can't read muxer name back from an existing container.
+    # what it gives us instead is a **demuxer** name. In many cases those names
+    # are the same but there are significant exceptions. The values below are
+    # those exceptions. We need them to be able to validate the format of an
+    # input file but they won't work when used as tgarget formats.
+    #
+    # Note that while these names may simply look like a list of
+    # muxer names, they're not reliable that way. For example 'mov,mp4,m4a,3gp,3g2,mj2'
+    # covers also files created by the 'f4v' muxer. And `mpegts' is both a
+    # muxer and demuxer but the demuxer handles also files created by the 'svcd' muxer.
+    c_QUICK_TIME_DEMUXER = "mov,mp4,m4a,3gp,3g2,mj2" # QuickTime / MOV
+    c_MATROSKA_WEBM_DEMUXER = "matroska,webm"        # Matroska / WebM
 
 
     # Normally enum throws ValueError, when initialization value is invalid.
@@ -35,9 +44,21 @@ class Container(enum.Enum):
         return Container(name.lower())
 
     def get_supported_video_codecs(self):
+        if self in _EXCLUSIVE_DEMUXERS:
+            return _list_supported_video_codecs_for_exclusive_demuxer(self)
+
+        if self.value not in _CONTAINER_SUPPORTED_CODECS:
+            return []
+
         return _CONTAINER_SUPPORTED_CODECS[self.value]["videocodecs"]
 
     def get_supported_audio_codecs(self):
+        if self in _EXCLUSIVE_DEMUXERS:
+            return _list_supported_audio_codecs_for_exclusive_demuxer(self)
+
+        if self.value not in _CONTAINER_SUPPORTED_CODECS:
+            return []
+
         return _CONTAINER_SUPPORTED_CODECS[self.value]["audiocodecs"]
 
     def is_supported_video_codec(self, vcodec):
@@ -60,17 +81,97 @@ class Container(enum.Enum):
     def list_supported_formats(vformat):
         return list_supported_formats()
 
+    def get_demuxer(self):
+        if self not in _DEMUXER_MAP:
+            return self.value
+
+        return _DEMUXER_MAP[self].value
+
+    def is_exclusive_demuxer(self):
+        return self in _EXCLUSIVE_DEMUXERS
+
+    def get_matching_muxers(self):
+        muxers = {
+            muxer
+            for muxer, demuxer in _DEMUXER_MAP.items()
+            if demuxer == self
+        }
+
+        if self.is_exclusive_demuxer():
+            return muxers
+        else:
+            return muxers | {self}
 
 
-_QUICKTIME_CODECS = {
-    "videocodecs": ["h264", "h265", "HEVC", "mpeg1video", "mpeg2video"],
-    "audiocodecs": ["mp3", "aac"]
+# This set containe demuxers that cannot be used as muxers in ffmpeg.
+_EXCLUSIVE_DEMUXERS = {
+    Container.c_QUICK_TIME_DEMUXER,
+    Container.c_MATROSKA_WEBM_DEMUXER,
+}
+
+
+# This dictionary defines which ffmpeg demuxer handles files encoded by which
+# muxer. If there's no entry for a particular demuxer, it means that it can
+# be used as a demuxer as well.
+_DEMUXER_MAP = {
+    Container.c_3G2: Container.c_QUICK_TIME_DEMUXER,
+    Container.c_3GP: Container.c_QUICK_TIME_DEMUXER,
+    Container.c_F4V: Container.c_QUICK_TIME_DEMUXER,
+    Container.c_MATROSKA: Container.c_MATROSKA_WEBM_DEMUXER,
+    Container.c_MOV: Container.c_QUICK_TIME_DEMUXER,
+    Container.c_MP4: Container.c_QUICK_TIME_DEMUXER,
+    Container.c_WEBM: Container.c_MATROSKA_WEBM_DEMUXER,
+}
+assert set(_DEMUXER_MAP).issubset(set(Container))
+assert set(_DEMUXER_MAP.values()).issubset(set(Container))
+assert set(_DEMUXER_MAP) & _EXCLUSIVE_DEMUXERS == set()
+
+
+_MOV_CODECS = {
+    "videocodecs": [
+        "h264",
+        "h265",
+        "HEVC",
+        "mpeg1video",
+        "mpeg2video",
+
+    ],
+    "audiocodecs": [
+        "mp3",
+        "aac",
+    ]
+}
+
+_MP4_CODECS = {
+    "videocodecs": [
+        "h264",
+        "h265",
+        "HEVC",
+    ],
+    "audiocodecs": [
+        "aac",
+        "mp3",
+    ]
+}
+
+_MKV_CODECS = {
+    "videocodecs": [
+        "h264",
+        "h265",
+        "HEVC",
+        "mpeg1video",
+        "mpeg2video",
+    ],
+    "audiocodecs": [
+        "mp3",
+        "aac",
+    ]
 }
 
 _WEBM_CODECS = {
     "videocodecs": [
-        "vp9",
         "vp8",
+        "vp9",
     ],
     "audiocodecs": [
         "opus",
@@ -109,18 +210,19 @@ _MPEG_CODECS = {
     ]
 }
 
+
 _CONTAINER_SUPPORTED_CODECS = {
-    "mp4": _QUICKTIME_CODECS,
-    "mov": _QUICKTIME_CODECS,
-    "m4a": _QUICKTIME_CODECS,
-    "mkv": _QUICKTIME_CODECS,
-    "3gp": _3GP_CODECS,
     "3g2": _3GP_CODECS,
-    "mj2": _QUICKTIME_CODECS,
-    "mov,mp4,m4a,3gp,3g2,mj2": _QUICKTIME_CODECS,
+    "3gp": _3GP_CODECS,
     "avi": _AVI_CODECS,
+    "matroska": _MKV_CODECS,
+    "mov": _MOV_CODECS,
+    "mp4": _MP4_CODECS,
     "mpeg": _MPEG_CODECS,
+    "webm": _WEBM_CODECS,
 }
+assert set(_CONTAINER_SUPPORTED_CODECS) & {d.value for d in _EXCLUSIVE_DEMUXERS} == set(), \
+    "Supported codecs for exclusive demuxers can be determined automatically; no need to define them here"
 
 _resolutions = {
     "16:9": [
@@ -163,27 +265,45 @@ def is_supported(vformat):
 
 
 def list_supported_video_codecs(vformat):
-    try:
-        container = Container(vformat)
-        return container.get_supported_video_codecs()
-    except:
+    if vformat not in Container._value2member_map_:
         return []
+
+    return Container(vformat).get_supported_video_codecs()
 
 
 def is_supported_video_codec(vformat, codec):
     return codec in list_supported_video_codecs(vformat)
 
 
+def _list_supported_video_codecs_for_exclusive_demuxer(demuxer: Container):
+    assert demuxer in _EXCLUSIVE_DEMUXERS
+
+    return list(set(
+        codec
+        for muxer in demuxer.get_matching_muxers()
+        for codec in muxer.get_supported_video_codecs()
+    ))
+
+
 def list_supported_audio_codecs(vformat):
-    try:
-        container = Container(vformat)
-        return container.get_supported_audio_codecs()
-    except:
+    if vformat not in Container._value2member_map_:
         return []
+
+    return Container(vformat).get_supported_audio_codecs()
 
 
 def is_supported_audio_codec(vformat, codec):
     return codec in list_supported_audio_codecs(vformat)
+
+
+def _list_supported_audio_codecs_for_exclusive_demuxer(demuxer: Container):
+    assert demuxer in _EXCLUSIVE_DEMUXERS
+
+    return list(set(
+        codec
+        for muxer in demuxer.get_matching_muxers()
+        for codec in muxer.get_supported_audio_codecs()
+    ))
 
 
 def list_matching_resolutions(resolution):
