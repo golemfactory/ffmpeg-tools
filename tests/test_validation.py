@@ -13,6 +13,7 @@ import ffmpeg_tools.frame_rate as frame_rate
 import ffmpeg_tools.validation as validation
 import ffmpeg_tools.formats as formats
 import ffmpeg_tools.meta as meta
+from tests.utils import get_absolute_resource_path
 from parameterized import parameterized
 
 
@@ -20,7 +21,7 @@ class TestInputValidation(TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
-        cls._filename = "tests/resources/ForBiggerBlazes-[codec=h264].mp4"
+        cls._filename = get_absolute_resource_path('ForBiggerBlazes-[codec=h264].mp4')
         cls._metadata = get_metadata(cls._filename)
         cls._supported_formats = list_supported_formats()
         cls._format_metadata = {"format_name": "mov", "duration": "10"}
@@ -231,7 +232,7 @@ class TestConversionValidation(TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
-        cls._metadata = get_metadata("tests/resources/ForBiggerBlazes-[codec=h264].mp4")
+        cls._metadata = get_metadata(get_absolute_resource_path("ForBiggerBlazes-[codec=h264].mp4"))
 
     def setUp(self) -> None:
         pass

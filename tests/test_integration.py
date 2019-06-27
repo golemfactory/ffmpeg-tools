@@ -8,6 +8,7 @@ from ffmpeg_tools import codecs
 from ffmpeg_tools import commands
 from ffmpeg_tools import formats
 from ffmpeg_tools import meta
+from tests.utils import get_absolute_resource_path
 
 
 class TestIntegration(TestCase):
@@ -30,7 +31,7 @@ class TestIntegration(TestCase):
 
     def test_extract_split_transcoding_merge_replace(self):
         num_segments = 3
-        input_path = "tests/resources/ForBiggerBlazes-[codec=h264].mp4"
+        input_path = get_absolute_resource_path("ForBiggerBlazes-[codec=h264].mp4")
         extract_step_output_path = os.path.join(self.work_dirs['extract'], "ForBiggerBlazes-[codec=h264][video-only].mp4")
         merge_step_output_path = os.path.join(self.work_dirs['merge'], "ForBiggerBlazes-[codec=h264][video-only]_TC.mkv")
         replace_step_output_path = os.path.join(self.work_dirs['replace'], "ForBiggerBlazes-[codec=h264]_TC.mkv")
