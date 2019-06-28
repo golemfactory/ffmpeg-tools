@@ -2,6 +2,14 @@ import enum
 
 from . import validation
 
+DATA_STREAM_WHITELIST = [
+    'bin_data'
+]
+
+
+SUBTITLE_STREAM_WHITELIST = [
+    'subrip'
+]
 
 
 class VideoCodec(enum.Enum):
