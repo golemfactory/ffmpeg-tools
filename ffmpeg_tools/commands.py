@@ -325,6 +325,32 @@ def replace_streams(input_file,
     exec_cmd(cmd)
 
 
+def get_list_of_streams_numbers_to_skip(
+    metadata,
+    strip_unsupported_data_streams,
+    strip_unsupported_subtitle_streams
+):
+    list_of_streams_to_skip = []
+    for stream_metadata in metadata.get('streams'):
+        if (
+            strip_unsupported_data_streams and
+            stream_metadata.get('codec_type') == 'data' and
+            stream_metadata.get('codec_name') not in
+            codecs.DATA_STREAM_WHITELIST
+        ):
+            list_of_streams_to_skip.append(stream_metadata.get('index'))
+
+        elif (
+            strip_unsupported_subtitle_streams and
+            stream_metadata.get('codec_type') == 'subtitle' and
+            stream_metadata.get('codec_name') not in
+            codecs.SUBTITLE_STREAM_WHITELIST
+        ):
+            list_of_streams_to_skip.append(stream_metadata.get('index'))
+
+    return list_of_streams_to_skip
+
+
 def replace_streams_command(input_file,
                             replacement_source,
                             output_file,
