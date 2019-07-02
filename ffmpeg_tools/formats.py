@@ -229,6 +229,7 @@ _MKV_CODECS = {
         "mpeg1video",
         "mpeg2video",
         "mpeg4",
+        "msmpeg4v2",
         "theora",
         "vp8",
         "vp9",
