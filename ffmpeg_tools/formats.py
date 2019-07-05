@@ -149,7 +149,7 @@ assert set(_DEMUXER_MAP) & _EXCLUSIVE_DEMUXERS == set()
 # the assumption is that it's also a muxer and it maps to itself.
 _SAFE_INTERMEDIATE_FORMATS = {
     Container.c_MATROSKA_WEBM_DEMUXER: Container.c_MATROSKA,
-    Container.c_QUICK_TIME_DEMUXER: Container.c_MP4,
+    Container.c_QUICK_TIME_DEMUXER: Container.c_MOV,
 }
 assert set(_SAFE_INTERMEDIATE_FORMATS).issubset(set(Container))
 assert set(_SAFE_INTERMEDIATE_FORMATS.values()).issubset(set(Container))
