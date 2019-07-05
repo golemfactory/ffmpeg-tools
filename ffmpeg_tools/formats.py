@@ -272,8 +272,6 @@ _OGG_CODECS = {
 _AVI_CODECS = {
     "videocodecs": [
         "h264",
-        "h265",
-        "hevc",
         "mjpeg",
         "mpeg1video",
         "mpeg2video",
