@@ -165,6 +165,7 @@ _ASF_CODECS = {
     "audiocodecs": [
         "aac",
         "wmav2",
+        "wmapro",
     ]
 }
 

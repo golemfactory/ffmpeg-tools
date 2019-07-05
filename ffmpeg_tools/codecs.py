@@ -54,6 +54,7 @@ class AudioCodec(enum.Enum):
     OPUS = "opus"      # Opus (Opus Interactive Audio Codec)
     PCM_U8 = "pcm_u8"  # PCM unsigned 8-bit
     WMAV2 = "wmav2"    # Windows Media Audio 2
+    WMAPRO = "wmapro"  # Windows Media Audio 9 Professional
     VORBIS = "vorbis"  # Vorbis
 
 
@@ -106,6 +107,7 @@ _AUDIO_ENCODERS = {
     "mp3": "libmp3lame",
     "opus": "libopus",
     "pcm_u8": "pcm_u8",
+    "wmapro": None,
     "wmav2": "wmav2",
     "vorbis": "libvorbis",
 }
