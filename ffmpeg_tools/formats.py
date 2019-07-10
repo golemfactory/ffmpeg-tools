@@ -1,4 +1,5 @@
 import enum
+from math import gcd
 
 from . import validation
 from . import codecs
@@ -362,6 +363,17 @@ _resolutions = {
     ]
 }
 
+_aspect_ratio_overrides = {
+    "16:9": [
+        [1366, 768],
+        [1360, 768]
+    ],
+    "21:9": [
+        [2560, 1080],
+        [3440, 1440]
+    ]
+}
+
 _frame_rates = {
     # NOTE 1: The same frame rate can often be represented a few slightly
     # different ways. For example 24 FPS could be 24, '24', '24/1', '48/2'
@@ -443,6 +455,19 @@ def list_matching_resolutions(resolution):
         if resolution in resolutions_list:
             return resolutions_list
     return [resolution]
+
+
+def get_effective_aspect_ratio(resolution: list) -> str:
+    for aspect, resolutions_list in _aspect_ratio_overrides.items():
+        if resolution in resolutions_list:
+            return aspect
+    return calculate_aspect_ratio(resolution)
+
+
+def calculate_aspect_ratio(resolution: list) -> str:
+    assert len(resolution) == 2
+    resolution_gcd = gcd(resolution[0], resolution[1])
+    return f"{resolution[0] // resolution_gcd}:{resolution[1] // resolution_gcd}"
 
 
 def list_supported_frame_rates():

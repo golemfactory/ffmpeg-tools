@@ -192,9 +192,14 @@ def validate_audio_codec(video_format, audio_codec):
 
 
 def validate_resolution(src_resolution, target_resolution):
-    if not target_resolution in formats.list_matching_resolutions(src_resolution):
-        raise InvalidResolution(src_resolution, target_resolution)
-    return True
+    """
+    Validate if aspect ratio of source resolution and
+    target resolution are the same.
+    """
+    if formats.get_effective_aspect_ratio(src_resolution) == \
+            formats.get_effective_aspect_ratio(target_resolution):
+        return True
+    raise InvalidResolution(src_resolution, target_resolution)
 
 
 def validate_frame_rate(src_frame_rate, target_frame_rate):
