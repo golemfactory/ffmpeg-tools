@@ -144,24 +144,6 @@ class TestSupportedAudioCodecs(object):
         assert not container.is_supported_audio_codec("bla")
 
 
-class TestResolutionsTools(object):
-
-    def test_listing(self):
-        resolution_list = ffmpeg.formats.list_matching_resolutions( [1920, 1080] )
-        assert( len( resolution_list ) > 2 )
-
-    def test_listing2(self):
-        resolution_list = ffmpeg.formats.list_matching_resolutions( [1280, 720] )
-        assert( len( resolution_list ) > 2 )
-
-    def test_listing_bad_propotions(self):
-        resolution_list = ffmpeg.formats.list_matching_resolutions( [2, 1] )
-
-        # Function returns at least resolution, that was passed in parameter.
-        assert( len( resolution_list ) == 1 )
-
-
-
 class TestHelperFunctions(TestCase):
 
     def test_get_safe_intermediate_format_for_demuxer(self):

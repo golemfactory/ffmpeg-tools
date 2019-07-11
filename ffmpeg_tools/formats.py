@@ -330,39 +330,6 @@ _CONTAINER_SUPPORTED_CODECS = {
 assert set(_CONTAINER_SUPPORTED_CODECS) & {d.value for d in _EXCLUSIVE_DEMUXERS} == set(), \
     "Supported codecs for exclusive demuxers can be determined automatically; no need to define them here"
 
-_resolutions = {
-    "16:9": [
-        [640, 360],
-        [1280, 720],
-        [1536, 864],
-        [1920, 1080],
-        [2048, 1152],
-        [2560, 1440],
-        [3840, 2160],
-        [1366, 768],
-        [1360, 768]
-    ],
-    "4:3": [
-        [320, 240],
-        [640, 480],
-        [800, 600],
-        [1024, 768]
-    ],
-    "16:10": [
-        [1280, 800],
-        [1440, 900],
-        [1680, 1050],
-        [1920, 1200]
-    ],
-    "5:4": [
-        [1280, 1024]
-    ],
-    "21:9": [
-        [2560, 1080],
-        [3440, 1440]
-    ]
-}
-
 _aspect_ratio_overrides = {
     "16:9": [
         [1366, 768],
@@ -448,13 +415,6 @@ def _list_supported_audio_codecs_for_exclusive_demuxer(demuxer: Container):
         for muxer in demuxer.get_matching_muxers()
         for codec in muxer.get_supported_audio_codecs()
     ))
-
-
-def list_matching_resolutions(resolution):
-    for aspect, resolutions_list in _resolutions.items():
-        if resolution in resolutions_list:
-            return resolutions_list
-    return [resolution]
 
 
 def get_effective_aspect_ratio(resolution: list) -> str:
