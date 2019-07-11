@@ -310,6 +310,7 @@ def replace_streams(input_file,
                     replacement_source,
                     output_file,
                     stream_type,
+                    targs,
                     container=None,
                     strip_unsupported_data_streams=False,
                     strip_unsupported_subtitle_streams=False):
@@ -323,6 +324,7 @@ def replace_streams(input_file,
         replacement_source,
         output_file,
         stream_type,
+        targs,
         container,
         strip_unsupported_data_streams,
         strip_unsupported_subtitle_streams)
@@ -356,6 +358,7 @@ def replace_streams_command(input_file,
                             replacement_source,
                             output_file,
                             stream_type,
+                            targs,
                             container=None,
                             strip_unsupported_data_streams=False,
                             strip_unsupported_subtitle_streams=False):
@@ -370,6 +373,8 @@ def replace_streams_command(input_file,
         type will be taken. Must exist.
     :param output_file: Container to put the streams in. Must not exist.
     :param stream_type: Stream type specifier.
+    :param targs: Dictionary with additional parameters used by command
+    :param container: Container of output file
         See https://ffmpeg.org/ffmpeg.html#Stream-specifiers.
         The following values are supported:
             - `v` - same as `V`.
@@ -422,6 +427,15 @@ def replace_streams_command(input_file,
     ] if container is not None else []) + [
         output_file,
     ]
+
+    if 'audio' in targs and 'codec' in targs['audio'] is not None:
+        acodec = targs['audio']['codec']
+        cmd.append("-c:a")
+        cmd.append(codecs.get_audio_encoder(acodec))
+    if 'audio' in targs and 'bitrate' in targs['audio'] is not None:
+        abitrate = targs['audio']['bitrate']
+        cmd.append("-b:a")
+        cmd.append(abitrate)
 
     return cmd
 

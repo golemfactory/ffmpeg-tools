@@ -149,6 +149,7 @@ class TestCommands(TestCase):
             "tests/resources/ForBiggerBlazes-[codec=h264][video-only].mkv",
             "tests/resources/ForBiggerBlazes-[codec=h264].mkv",
             "v",
+            {},
         )
 
         expected_command = [
@@ -174,6 +175,7 @@ class TestCommands(TestCase):
                 "tests/resources/ForBiggerBlazes-[codec=h264][video-only].mkv",
                 "tests/resources/ForBiggerBlazes-[codec=h264].mkv",
                 "v:1",
+                {},
             )
 
     def test_replace_streams_command_removes_streams_not_in_whitelist(self):
@@ -186,6 +188,7 @@ class TestCommands(TestCase):
                 "tests/resources/ForBiggerBlazes-[codec=h264][video-only].mkv",
                 "tests/resources/ForBiggerBlazes-[codec=h264].mkv",
                 "v",
+                {},
                 strip_unsupported_data_streams=True,
                 strip_unsupported_subtitle_streams=True
             )
