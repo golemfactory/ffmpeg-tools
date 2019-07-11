@@ -255,17 +255,6 @@ def transcode_video_command(track, output_file, targs):
         cmd.append("-b:v")
         cmd.append(vbitrate)
 
-    # audio settings
-    if 'audio' in targs and 'codec' in targs['audio']:
-        acodec = targs['audio']['codec']
-        cmd.append("-c:a")
-        cmd.append(codecs.get_audio_encoder(acodec))
-
-    if 'audio' in targs and 'bitrate' in targs['audio']:
-        abitrate = targs['audio']['bitrate']
-        cmd.append("-b:a")
-        cmd.append(abitrate)
-
     if 'resolution' in targs:
         res = targs['resolution']
         cmd.append("-vf")
