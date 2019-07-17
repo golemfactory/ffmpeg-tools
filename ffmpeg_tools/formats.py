@@ -152,7 +152,7 @@ _MOV_CODECS = {
     "videocodecs": [
         "h264",
         "h265",
-        "HEVC",
+        "hevc",
         "mpeg1video",
         "mpeg2video",
 
@@ -167,7 +167,7 @@ _MP4_CODECS = {
     "videocodecs": [
         "h264",
         "h265",
-        "HEVC",
+        "hevc",
     ],
     "audiocodecs": [
         "aac",
@@ -179,7 +179,7 @@ _MKV_CODECS = {
     "videocodecs": [
         "h264",
         "h265",
-        "HEVC",
+        "hevc",
         "mpeg1video",
         "mpeg2video",
     ],
@@ -203,7 +203,7 @@ _AVI_CODECS = {
     "videocodecs": [
         "h264",
         "h265",
-        "HEVC",
+        "hevc",
         "mpeg1video",
         "mpeg2video",
     ],

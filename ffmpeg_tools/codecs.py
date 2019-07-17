@@ -7,7 +7,7 @@ from . import validation
 class VideoCodec(enum.Enum):
     H_264 = 'h264'
     H_265 = 'h265'
-    HEVC = 'HEVC'
+    hevc = 'hevc'
     MPEG_1 = 'mpeg1video'
     MPEG_2 = 'mpeg2video'
     MPEG_4 = 'mpeg4'
@@ -63,7 +63,7 @@ class AudioCodec(enum.Enum):
 _VIDEO_ENCODERS = {
     "h264": "libx264",
     "h265": "libx265",
-    "HEVC": "libx265",
+    "hevc": "libx265",
     "mpeg1video": "mpeg1video",
     "mpeg2video": "mpeg2video",
     "mpeg4": "libxvid"
