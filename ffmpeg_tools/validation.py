@@ -217,13 +217,13 @@ def validate_frame_rate(src_frame_rate, target_frame_rate):
 
 def validate_video_codec_conversion(src_codec, dst_codec):
     codec = codecs.VideoCodec(src_codec)
-    if not dst_codec in codec.get_supported_conversions():
+    if dst_codec not in codec.get_supported_conversions():
         raise UnsupportedVideoCodecConversion(src_codec, dst_codec)
     return True
 
 
 def validate_audio_codec_conversion(src_codec, dst_codec):
     codec = codecs.AudioCodec(src_codec)
-    if not dst_codec in codec.get_supported_conversions():
+    if dst_codec not in codec.get_supported_conversions():
         raise UnsupportedAudioCodecConversion(src_codec, dst_codec)
     return True
