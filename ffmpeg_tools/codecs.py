@@ -114,8 +114,24 @@ _AUDIO_ENCODERS = {
 
 
 _VIDEO_SUPPORTED_CONVERSIONS = {
-    "h264" : [ "h264", "h265" ],
-
+    #              "av1", "flv1", "h263", "h264", "h265", "hevc", "mjpeg", "mpeg1video", "mpeg2video", "mpeg4", "msmpeg4v2", "theora", "vp8", "vp9", "wmv1", "wmv2", "wmv3"
+    "av1":        [                                                                                                                                                        ],
+    "flv1":       [       "flv1",         "h264", "h265", "hevc", "mjpeg", "mpeg1video", "mpeg2video", "mpeg4",                        "vp8", "vp9", "wmv1", "wmv2"        ],
+    "h263":       [       "flv1",         "h264", "h265", "hevc", "mjpeg", "mpeg1video", "mpeg2video", "mpeg4",                        "vp8", "vp9", "wmv1", "wmv2"        ],
+    "h264":       [       "flv1",         "h264", "h265", "hevc", "mjpeg", "mpeg1video", "mpeg2video", "mpeg4",                        "vp8", "vp9", "wmv1", "wmv2"        ],
+    "h265":       [       "flv1",         "h264", "h265", "hevc", "mjpeg", "mpeg1video", "mpeg2video", "mpeg4",                        "vp8", "vp9", "wmv1", "wmv2"        ],
+    "hevc":       [       "flv1",         "h264", "h265", "hevc", "mjpeg", "mpeg1video", "mpeg2video", "mpeg4",                        "vp8", "vp9", "wmv1", "wmv2"        ],
+    "mjpeg":      [       "flv1",         "h264", "h265", "hevc", "mjpeg", "mpeg1video", "mpeg2video", "mpeg4",                        "vp8", "vp9", "wmv1", "wmv2"        ],
+    "mpeg1video": [       "flv1",         "h264", "h265", "hevc", "mjpeg", "mpeg1video", "mpeg2video", "mpeg4",                        "vp8", "vp9", "wmv1", "wmv2"        ],
+    "mpeg2video": [       "flv1",         "h264", "h265", "hevc", "mjpeg", "mpeg1video", "mpeg2video", "mpeg4",                        "vp8", "vp9", "wmv1", "wmv2"        ],
+    "mpeg4":      [       "flv1",         "h264", "h265", "hevc", "mjpeg", "mpeg1video", "mpeg2video", "mpeg4",                        "vp8", "vp9", "wmv1", "wmv2"        ],
+    "msmpeg4v2":  [                                                                                                                                                        ],
+    "theora":     [       "flv1",         "h264", "h265", "hevc", "mjpeg", "mpeg1video", "mpeg2video", "mpeg4",                        "vp8", "vp9", "wmv1", "wmv2"        ],
+    "vp8":        [       "flv1",         "h264", "h265", "hevc", "mjpeg", "mpeg1video", "mpeg2video", "mpeg4",                        "vp8", "vp9", "wmv1", "wmv2"        ],
+    "vp9":        [       "flv1",         "h264", "h265", "hevc", "mjpeg", "mpeg1video", "mpeg2video", "mpeg4",                        "vp8", "vp9", "wmv1", "wmv2"        ],
+    "wmv1":       [       "flv1",         "h264", "h265", "hevc", "mjpeg", "mpeg1video", "mpeg2video", "mpeg4",                        "vp8", "vp9", "wmv1", "wmv2"        ],
+    "wmv2":       [       "flv1",         "h264", "h265", "hevc", "mjpeg", "mpeg1video", "mpeg2video", "mpeg4",                        "vp8", "vp9", "wmv1", "wmv2"        ],
+    "wmv3":       [       "flv1",         "h264", "h265", "hevc", "mjpeg", "mpeg1video", "mpeg2video", "mpeg4",                        "vp8", "vp9", "wmv1", "wmv2"        ],
 }
 
 _AUDIO_SUPPORTED_CONVERSIONS = {
