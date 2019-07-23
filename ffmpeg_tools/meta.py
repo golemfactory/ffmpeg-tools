@@ -19,6 +19,13 @@ def get_resolution(metadata):
     return [0, 0]
 
 
+def get_frame_rate(metadata):
+    for stream in metadata["streams"]:
+        if stream["codec_type"] == "video":
+            return stream["r_frame_rate"]
+    return None
+
+
 def get_duration(metadata, stream=0):
     return float(metadata["format"]["duration"])
 
@@ -50,7 +57,7 @@ def create_params(vformat, resolution, vcodec, acodec=None,
 
     # Video parameters
     args["video"] = dict()
-    
+
     args["resolution"] = resolution
     args["video"]["codec"] = vcodec
 
@@ -62,13 +69,13 @@ def create_params(vformat, resolution, vcodec, acodec=None,
 
     if frame_rate:
         args["frame_rate"] = frame_rate
-        
+
     # Audio parameters
     args["audio"] = dict()
 
     if acodec:
         args["audio"]["codec"] = acodec
-    
+
     if audio_bitrate:
         args["audio"]["bitrate"] = audio_bitrate
 

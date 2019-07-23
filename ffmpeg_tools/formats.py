@@ -10,12 +10,18 @@ class Container(enum.Enum):
     # to ffmpeg using the -f option to specify the target format.
     c_3G2 = "3g2"           # 3GP2 (3GPP2 file format) muxer
     c_3GP = "3gp"           # 3GP (3GPP file format) muxer
+    c_ASF = "asf"           # ASF (Advanced / Active Streaming Format) muxer; .asf and .wmv extensions
     c_AVI = "avi"           # AVI (Audio Video Interleaved) muxer
     c_F4V = "f4v"           # F4V Adobe Flash Video muxer
+    c_FLV = "flv"           # FLV (Flash Video) muxer
+    c_IPOD = "ipod"         # iPod H.264 MP4 (MPEG-4 Part 14) muxer; .m4v extension
     c_MATROSKA = "matroska" # Matroska; .mkv extension muxer
+    c_MOV = "mov"           # QuickTime / MOV muxer
     c_MP4 = "mp4"           # MP4 (MPEG-4 Part 14) muxer
     c_MPEG = "mpeg"         # MPEG-1 Systems / MPEG program stream muxer
-    c_MOV = "mov"           # QuickTime / MOV muxer
+    c_MPEGTS = "mpegts"     # MPEG-TS (MPEG-2 Transport Stream) muxer
+    c_OGG = "ogg"           # Ogg Video muxer
+    c_SVCD = "svcd"         # MPEG-2 PS (SVCD) muxer; .vob extension
     c_WEBM = "webm"         # WebM muxer
 
     # Unfortunately ffprobe can't read muxer name back from an existing container.
@@ -123,9 +129,11 @@ _DEMUXER_MAP = {
     Container.c_3G2: Container.c_QUICK_TIME_DEMUXER,
     Container.c_3GP: Container.c_QUICK_TIME_DEMUXER,
     Container.c_F4V: Container.c_QUICK_TIME_DEMUXER,
+    Container.c_IPOD: Container.c_QUICK_TIME_DEMUXER,
     Container.c_MATROSKA: Container.c_MATROSKA_WEBM_DEMUXER,
     Container.c_MOV: Container.c_QUICK_TIME_DEMUXER,
     Container.c_MP4: Container.c_QUICK_TIME_DEMUXER,
+    Container.c_SVCD: Container.c_MPEG,
     Container.c_WEBM: Container.c_MATROSKA_WEBM_DEMUXER,
 }
 assert set(_DEMUXER_MAP).issubset(set(Container))
@@ -141,18 +149,32 @@ assert set(_DEMUXER_MAP) & _EXCLUSIVE_DEMUXERS == set()
 # the assumption is that it's also a muxer and it maps to itself.
 _SAFE_INTERMEDIATE_FORMATS = {
     Container.c_MATROSKA_WEBM_DEMUXER: Container.c_MATROSKA,
-    Container.c_QUICK_TIME_DEMUXER: Container.c_MP4,
+    Container.c_QUICK_TIME_DEMUXER: Container.c_MOV,
 }
 assert set(_SAFE_INTERMEDIATE_FORMATS).issubset(set(Container))
 assert set(_SAFE_INTERMEDIATE_FORMATS.values()).issubset(set(Container))
 assert set(_EXCLUSIVE_DEMUXERS).issubset(set(_SAFE_INTERMEDIATE_FORMATS))
 
 
+_ASF_CODECS = {
+    "videocodecs": [
+        "wmv1",
+        "wmv2",
+        "wmv3",
+    ],
+    "audiocodecs": [
+        "aac",
+        "wmav2",
+        "wmapro",
+    ]
+}
+
 _MOV_CODECS = {
     "videocodecs": [
         "h264",
         "h265",
         "hevc",
+        "mjpeg",
         "mpeg1video",
         "mpeg2video",
 
@@ -160,6 +182,28 @@ _MOV_CODECS = {
     "audiocodecs": [
         "mp3",
         "aac",
+        "pcm_u8",
+    ]
+}
+
+_FLV_CODECS = {
+    "videocodecs": [
+        "flv1",
+    ],
+    "audiocodecs": [
+        "mp3",
+    ]
+}
+
+_M4V_CODECS = {
+    "videocodecs": [
+        "h264",
+        "mpeg4",
+    ],
+    "audiocodecs": [
+        "aac",
+        "ac3",
+        "mp3",
     ]
 }
 
@@ -168,6 +212,7 @@ _MP4_CODECS = {
         "h264",
         "h265",
         "hevc",
+        "mpeg4",
     ],
     "audiocodecs": [
         "aac",
@@ -177,56 +222,89 @@ _MP4_CODECS = {
 
 _MKV_CODECS = {
     "videocodecs": [
+        "flv1",
+        "h263",
         "h264",
         "h265",
         "hevc",
+        "mjpeg",
         "mpeg1video",
         "mpeg2video",
+        "mpeg4",
+        "msmpeg4v2",
+        "theora",
+        "vp8",
+        "vp9",
+        "wmv1",
+        "wmv2",
     ],
     "audiocodecs": [
         "mp3",
         "aac",
+        "mp3",
+        "vorbis",
     ]
 }
 
 _WEBM_CODECS = {
     "videocodecs": [
+        "av1",
         "vp8",
         "vp9",
     ],
     "audiocodecs": [
         "opus",
+        "vorbis",
+        "vp8",
+    ]
+}
+
+_OGG_CODECS = {
+    "videocodecs": [
+        "theora",
+    ],
+    "audiocodecs": [
+        "opus",
+        "vorbis",
     ]
 }
 
 _AVI_CODECS = {
     "videocodecs": [
         "h264",
-        "h265",
-        "hevc",
+        "mjpeg",
         "mpeg1video",
         "mpeg2video",
+        "mpeg4",
     ],
     "audiocodecs": [
+        "mp3",
         "opus",
     ]
 }
 
 _3GP_CODECS = {
     "videocodecs": [
+        "h263",
         "h264",
+        "mpeg4",
     ],
     "audiocodecs": [
         "aac",
+        "amr_nb",
     ]
 }
 
 _MPEG_CODECS = {
     "videocodecs": [
+        "h264",
         "mpeg1video",
         "mpeg2video",
+        "mpeg4",
     ],
     "audiocodecs": [
+        "ac3",
+        "mp2",
         "mp3",
     ]
 }
@@ -236,10 +314,16 @@ _CONTAINER_SUPPORTED_CODECS = {
     "3g2": _3GP_CODECS,
     "3gp": _3GP_CODECS,
     "avi": _AVI_CODECS,
+    "asf": _ASF_CODECS,
+    "flv": _FLV_CODECS,
+    "ipod": _M4V_CODECS,
     "matroska": _MKV_CODECS,
     "mov": _MOV_CODECS,
     "mp4": _MP4_CODECS,
     "mpeg": _MPEG_CODECS,
+    "mpegts": _MPEG_CODECS,
+    "ogg": _OGG_CODECS,
+    "svcd": _MPEG_CODECS,
     "webm": _WEBM_CODECS,
 }
 assert set(_CONTAINER_SUPPORTED_CODECS) & {d.value for d in _EXCLUSIVE_DEMUXERS} == set(), \
@@ -258,6 +342,8 @@ _resolutions = {
         [1360, 768]
     ],
     "4:3": [
+        [320, 240],
+        [640, 480],
         [800, 600],
         [1024, 768]
     ],
@@ -274,6 +360,27 @@ _resolutions = {
         [2560, 1080],
         [3440, 1440]
     ]
+}
+
+_frame_rates = {
+    # NOTE 1: The same frame rate can often be represented a few slightly
+    # different ways. For example 24 FPS could be 24, '24', '24/1', '48/2'
+    # and so on. Since this list only represents the values we support
+    # converting to, we can be picky and choose just one representation as
+    # valid.
+
+    # NOTE 2: The common values of 23.976 and 29.97 used to refer to the NTSC
+    # frame rates are only approximations. In any situation other than just
+    # presenting them to the user we want to use the exact values: '24000/1001'
+    # and '30000/1001'.
+
+    '24000/1001', # 23.976 FPS (NTSC)
+    24,
+    25,
+    '30000/1001', # 29.97 FPS (NTSC)
+    30,
+    50,
+    60,
 }
 
 
@@ -336,3 +443,7 @@ def list_matching_resolutions(resolution):
         if resolution in resolutions_list:
             return resolutions_list
     return [resolution]
+
+
+def list_supported_frame_rates():
+    return _frame_rates
