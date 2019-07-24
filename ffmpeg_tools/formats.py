@@ -331,7 +331,7 @@ assert set(_CONTAINER_SUPPORTED_CODECS) & {d.value for d in _EXCLUSIVE_DEMUXERS}
 
 _resolutions = {
     "16:9": [
-        [640, 260],
+        [640, 360],
         [1280, 720],
         [1536, 864],
         [1920, 1080],

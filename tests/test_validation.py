@@ -254,7 +254,7 @@ class TestConversionValidation(TestCase):
 
     def test_resolution_change(self):
         src_params = self.create_params("mp4", [1920, 1080], "h264", "mp3" )
-        dst_params = self.create_params("mp4", [640, 260], "h264", "mp3" )
+        dst_params = self.create_params("mp4", [640, 360], "h264", "mp3" )
 
         self.assertTrue(validation.validate_transcoding_params(src_params, dst_params))
 
@@ -262,7 +262,7 @@ class TestConversionValidation(TestCase):
     def test_no_audio_codec(self):
         # It is valid to not provide audio codec.
         src_params = self.create_params("mp4", [1920, 1080], "h264", None )
-        dst_params = self.create_params("mp4", [640, 260], "h264", None )
+        dst_params = self.create_params("mp4", [640, 360], "h264", None )
 
         self.assertTrue(validation.validate_transcoding_params(src_params, dst_params))
 
