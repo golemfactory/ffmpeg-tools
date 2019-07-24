@@ -135,8 +135,17 @@ _VIDEO_SUPPORTED_CONVERSIONS = {
 }
 
 _AUDIO_SUPPORTED_CONVERSIONS = {
-    "aac": [ "aac" ],
-    "mp3": [ "mp3" ],
+    #          "aac", "ac3", "amr_nb", "mp2", "mp3", "opus", "pcm_u8", "wmapro", "wmav2", "vorbis"
+    "aac":    ["aac", "ac3", "amr_nb", "mp2", "mp3", "opus", "pcm_u8",           "wmav2", "vorbis"],
+    "ac3":    ["aac", "ac3", "amr_nb", "mp2", "mp3", "opus", "pcm_u8",           "wmav2", "vorbis"],
+    "amr_nb": ["aac", "ac3", "amr_nb", "mp2", "mp3", "opus", "pcm_u8",           "wmav2", "vorbis"],
+    "mp2":    ["aac", "ac3", "amr_nb", "mp2", "mp3", "opus", "pcm_u8",           "wmav2", "vorbis"],
+    "mp3":    ["aac", "ac3", "amr_nb", "mp2", "mp3", "opus", "pcm_u8",           "wmav2", "vorbis"],
+    "opus":   ["aac", "ac3", "amr_nb", "mp2", "mp3", "opus", "pcm_u8",           "wmav2", "vorbis"],
+    "pcm_u8": ["aac", "ac3", "amr_nb", "mp2", "mp3", "opus", "pcm_u8",           "wmav2", "vorbis"],
+    "wmapro": ["aac", "ac3", "amr_nb", "mp2", "mp3", "opus", "pcm_u8",           "wmav2", "vorbis"],
+    "wmav2":  ["aac", "ac3", "amr_nb", "mp2", "mp3", "opus", "pcm_u8",           "wmav2", "vorbis"],
+    "vorbis": ["aac", "ac3", "amr_nb", "mp2", "mp3", "opus", "pcm_u8",           "wmav2", "vorbis"],
 }
 
 

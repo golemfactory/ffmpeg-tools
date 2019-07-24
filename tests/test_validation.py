@@ -8,6 +8,7 @@ from ffmpeg_tools.validation import UnsupportedVideoCodec, UnsupportedVideoForma
     UnsupportedTargetVideoFormat, MissingVideoStream, UnsupportedAudioCodec, \
     InvalidVideo, MissingVideoStream, InvalidFormatMetadata
 
+import ffmpeg_tools.codecs as codecs
 import ffmpeg_tools.validation as validation
 import ffmpeg_tools.formats as formats
 import ffmpeg_tools.meta as meta
@@ -254,9 +255,10 @@ class TestConversionValidation(TestCase):
 
 
     def test_invalid_audio_codec_change(self):
+        assert codecs.AudioCodec.WMAPRO.value not in codecs.AudioCodec.MP3.get_supported_conversions()
         src_params = self.create_params("mp4", [1920, 1080], "h264", "mp3" )
-        dst_params = self.create_params("mp4", [1920, 1080], "h264", "aac" )
-        with self.assertRaises(validation.UnsupportedAudioCodecConversion):
+        dst_params = self.create_params("mp4", [1920, 1080], "h264", "wmapro" )
+        with self.assertRaises(validation.UnsupportedAudioCodec):
             validation.validate_transcoding_params(src_params, dst_params, self._metadata)
 
 
