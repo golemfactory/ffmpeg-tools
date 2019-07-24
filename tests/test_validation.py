@@ -1,3 +1,4 @@
+import copy
 from unittest import TestCase
 import sys
 
@@ -315,3 +316,18 @@ class TestConversionValidation(TestCase):
 
         self.assertTrue(validation.validate_transcoding_params(src_params, dst_params, self._metadata))
 
+    def test_validate_audio_conversion_with_more_than_two_audio_channels(self):
+        src_params = self.create_params("mp4", [1920, 1080], "h264", "mp3")
+        dst_params = self.create_params("mp4", [1920, 1080], "h264", "aac")
+        unsupported_metadata = copy.deepcopy(self._metadata)
+        unsupported_metadata['streams'][1]['channels'] = validation._MAX_SUPPORTED_AUDIO_CHANNELS + 1
+        with self.assertRaises(validation.UnsupportedAudioChannelLayout):
+            validation.validate_transcoding_params(src_params, dst_params, unsupported_metadata)
+
+    def test_validate_conversion_without_audio_that_have_more_than_two_audio_channels(self):
+        src_params = self.create_params("mp4", [1920, 1080], "h264", "mp3")
+        dst_params = self.create_params("mp4", [1920, 1080], "h265", "mp3")
+        unsupported_metadata = copy.deepcopy(self._metadata)
+        unsupported_metadata['streams'][1]['channels'] = validation._MAX_SUPPORTED_AUDIO_CHANNELS + 1
+
+        self.assertTrue(validation.validate_transcoding_params(src_params, dst_params, unsupported_metadata))

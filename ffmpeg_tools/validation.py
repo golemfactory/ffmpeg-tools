@@ -5,7 +5,7 @@ from . import formats
 from . import codecs
 
 
-
+_MAX_SUPPORTED_AUDIO_CHANNELS = 2
 
 
 class InvalidVideo(Exception):
@@ -64,6 +64,14 @@ class UnsupportedAudioCodecConversion(InvalidVideo):
         super().__init__(message="Unsupported audio codec conversion from {} to {}".format(src_codec, dst_codec))
 
 
+class UnsupportedAudioChannelLayout(InvalidVideo):
+    def __init__(self, audio_channels):
+        super().__init__(
+            message="Unsupported audio channel layout conversion. "
+                    "Unable to reliably preserve the {}-channel audio found "
+                    "in the input file in combination with other target parameters.".format(audio_channels)
+        )
+
 
 def validate_video(metadata):
     try:
@@ -98,7 +106,11 @@ def validate_transcoding_params(src_params, dst_params, src_metadata):
     try:
         validate_audio_codec(src_params["format"], src_params["audio"]["codec"])
         validate_audio_codec(dst_params["format"], dst_params["audio"]["codec"])
-        validate_audio_codec_conversion(src_params["audio"]["codec"], dst_params["audio"]["codec"])
+        validate_audio_codec_conversion(
+            src_params["audio"]["codec"],
+            dst_params["audio"]["codec"],
+            meta.get_audio_stream(src_metadata)
+        )
     except KeyError as _:
         # We accept only KeyError, because it means, there were now value
         # in dictionary. Note that validate functions can still throw other
@@ -222,8 +234,15 @@ def validate_video_codec_conversion(src_codec, dst_codec):
     return True
 
 
-def validate_audio_codec_conversion(src_codec, dst_codec):
+def validate_audio_codec_conversion(src_codec, dst_codec, audio_stream):
     codec = codecs.AudioCodec(src_codec)
     if dst_codec not in codec.get_supported_conversions():
         raise UnsupportedAudioCodecConversion(src_codec, dst_codec)
+    if src_codec != dst_codec and \
+            audio_stream['channels'] > _MAX_SUPPORTED_AUDIO_CHANNELS:
+        # Multi-channel audio is not supported by all audio codecs.
+        # We want to avoid creating another list to keep this information,
+        # so we’ll just assume that if we found multi-channel audio in the input,
+        # it’s OK and otherwise it’s not supported.
+        raise UnsupportedAudioChannelLayout(audio_stream['channels'])
     return True
