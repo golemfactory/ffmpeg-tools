@@ -2,7 +2,8 @@ import setuptools
 
 
 tests_require = [
-    'pytest'
+    'pytest',
+    'parameterized',
 ]
 
 setuptools.setup(
