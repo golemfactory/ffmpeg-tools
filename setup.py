@@ -1,5 +1,10 @@
 import setuptools
 
+
+tests_require = [
+    'pytest'
+]
+
 setuptools.setup(
     name='ffmpeg-tools',
     version='0.14.1',
@@ -9,6 +14,6 @@ setuptools.setup(
     maintainer_email='tech@golem.network',
     packages=setuptools.find_packages(exclude=["tests/"]),
     python_requires='>=3.5',
-    zip_safe=False
+    zip_safe=False,
+    tests_require=tests_require,
 )
-
