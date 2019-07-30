@@ -48,6 +48,13 @@ def get_format(metadata):
     return metadata["format"]["format_name"]
 
 
+def get_audio_stream(metadata):
+    for stream in metadata['streams']:
+        if stream["codec_type"] == "audio":
+            return stream
+    return None
+
+
 def create_params(vformat, resolution, vcodec, acodec=None,
                   frame_rate=None, video_bitrate=None,
                   audio_bitrate=None, scaling_algorithm=None):
