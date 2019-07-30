@@ -10,6 +10,7 @@ from ffmpeg_tools.validation import UnsupportedVideoCodec, UnsupportedVideoForma
 import ffmpeg_tools.validation as validation
 import ffmpeg_tools.formats as formats
 import ffmpeg_tools.meta as meta
+from parameterized import parameterized
 
 
 class TestInputValidation(TestCase):
@@ -290,11 +291,17 @@ class TestConversionValidation(TestCase):
         with self.assertRaises(validation.InvalidResolution):
             validation.validate_transcoding_params(src_params, dst_params)
 
-
-    def test_nonstandard_resolution_change(self):
+    @parameterized.expand([
+        ([333, 333], [333, 333]),
+    ])
+    def test_nonstandard_resolution_change(
+            self,
+            src_resolution,
+            target_resolution,
+    ):
         # It is allowed to convert video with non standard resolution
         # to the same resolution.
-        src_params = self.create_params("mp4", [333, 333], "h264", "mp3" )
-        dst_params = self.create_params("mp4", [333, 333], "h264", "mp3" )
+        src_params = self.create_params("mp4", src_resolution, "h264", "mp3")
+        dst_params = self.create_params("mp4", target_resolution, "h264", "mp3")
 
         self.assertTrue(validation.validate_transcoding_params(src_params, dst_params))
