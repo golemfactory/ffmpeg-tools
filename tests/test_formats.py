@@ -3,6 +3,7 @@ import pytest
 from unittest import TestCase
 
 import ffmpeg_tools as ffmpeg
+from parameterized import parameterized
 
 
 class TestContainer(TestCase):
@@ -142,6 +143,36 @@ class TestSupportedAudioCodecs(object):
         assert container.is_supported_audio_codec(acodec)
         assert container.is_supported_audio_codec(acodec_class)
         assert not container.is_supported_audio_codec("bla")
+
+
+class TestAspectRatioCalculations(TestCase):
+
+    @parameterized.expand([
+        ([333, 333], "1:1"),
+        ([333, 666], "1:2"),
+        ([1366, 768], "16:9"),
+        ([1360, 768], "16:9"),
+        ([1920, 1080], "16:9"),
+        ([2560, 1080], "21:9"),
+        ([3440, 1440], "21:9"),
+    ])
+    def test_effective_aspect_ratio(self, resolution, expected_aspect_ratio):
+        aspect_ratio = ffmpeg.formats.get_effective_aspect_ratio(resolution)
+        self.assertEqual(aspect_ratio, expected_aspect_ratio)
+
+    @parameterized.expand([
+        ([333, 666], "1:2"),
+        ([1024, 768], "4:3"),
+        ([1920, 1080], "16:9"),
+        ([1280, 1024], "5:4"),
+        ([1360, 768], "85:48"),
+        ([1366, 768], "683:384"),
+        ([2560, 1080], "64:27"),
+        ([3440, 1440], "43:18"),
+    ])
+    def test_calculate_aspect_ratio(self, resolution, expected_aspect_ratio):
+        aspect_ratio = ffmpeg.formats.calculate_aspect_ratio(resolution)
+        self.assertEqual(aspect_ratio, expected_aspect_ratio)
 
 
 class TestHelperFunctions(TestCase):
