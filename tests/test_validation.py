@@ -293,6 +293,9 @@ class TestConversionValidation(TestCase):
 
     @parameterized.expand([
         ([333, 333], [333, 333]),
+        ([333, 666], [666, 1332]),
+        ([1920, 1080], [1366, 768]),
+        ([3840, 2160], [2560, 1440]),
     ])
     def test_nonstandard_resolution_change(
             self,
