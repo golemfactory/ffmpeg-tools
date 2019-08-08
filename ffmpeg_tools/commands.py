@@ -389,6 +389,18 @@ def replace_streams_command(input_file,
             f"Should be one of: {', '.join(VALID_STREAM_TYPES)}"
         )
 
+    metadata = get_metadata_json(input_file)
+    stream_numbers_to_strip = get_list_of_streams_numbers_to_skip(
+        metadata,
+        strip_unsupported_data_streams,
+        strip_unsupported_subtitle_streams,
+    )
+
+    map_options = [
+        ["-map", f"-0:{index}"]
+        for index in stream_numbers_to_strip
+    ]
+
     cmd = [
         FFMPEG_COMMAND,
         "-nostdin",
@@ -397,6 +409,7 @@ def replace_streams_command(input_file,
         "-map", f"1:{stream_type}",
         "-map", "0",
         "-map", f"-0:{stream_type}",
+    ] + flatten_list(map_options) + [
         "-copy_unknown",
         "-c:v", "copy",
         "-c:d", "copy",
