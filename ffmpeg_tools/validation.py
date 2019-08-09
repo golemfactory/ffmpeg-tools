@@ -98,6 +98,15 @@ def validate_video(metadata):
     return True
 
 
+def _get_dst_codec(dst_params: dict) -> Optional[str]:
+    assert not formats.Container(dst_params["format"]).is_exclusive_demuxer()
+
+    if dst_params.get("audio", {}).get("codec") is None:
+        return commands.query_muxer_info(dst_params["format"]).get('default_audio_codec')
+
+    return dst_params['audio']['codec']
+
+
 def validate_data_and_subtitle_streams(
     metadata,
     strip_unsupported_data_streams,
@@ -139,19 +148,24 @@ def validate_transcoding_params(
     # Validate audio codec. Audio codec can not be set and ffmpeg should
     # either remain with currently used codec or transcode using default behavior
     # if it is necessary.
-    try:
-        validate_audio_codec(src_params["format"], src_params["audio"]["codec"])
-        validate_audio_codec(dst_params["format"], dst_params["audio"]["codec"])
-        validate_audio_codec_conversion(
-            src_params["audio"]["codec"],
-            dst_params["audio"]["codec"],
-            meta.get_audio_stream(src_metadata)
-        )
-    except KeyError as _:
-        # We accept only KeyError, because it means, there were now value
-        # in dictionary. Note that validate functions can still throw other
-        # exceptions in case of invalid parameters.
-        pass
+
+    audio_stream = meta.get_audio_stream(src_metadata)
+    if audio_stream is not None:
+        dest_audio_codec = _get_dst_codec(dst_params)
+        try:
+            src_audio_codec = src_params['audio']['codec']
+            validate_audio_codec(src_params["format"], src_audio_codec)
+            validate_audio_codec(dst_params["format"], dest_audio_codec)
+            validate_audio_codec_conversion(
+                src_audio_codec,
+                dest_audio_codec,
+                audio_stream
+            )
+        except KeyError as _:
+            # We accept only KeyError, because it means, there were now value
+            # in dictionary. Note that validate functions can still throw other
+            # exceptions in case of invalid parameters.
+            pass
 
     # Validate resolution change
     validate_resolution(src_params["resolution"], dst_params["resolution"])

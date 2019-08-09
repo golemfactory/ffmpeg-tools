@@ -9,6 +9,7 @@ from ffmpeg_tools.validation import UnsupportedVideoCodec, UnsupportedVideoForma
     InvalidVideo, InvalidFormatMetadata
 
 import ffmpeg_tools.codecs as codecs
+import ffmpeg_tools.commands as commands
 import ffmpeg_tools.validation as validation
 import ffmpeg_tools.formats as formats
 import ffmpeg_tools.meta as meta
@@ -438,6 +439,36 @@ class TestConversionValidation(TestCase):
             ),
             expected_value
         )
+
+    def test_get_dst_codec_returns_audio_codec_from_dst_params_if_present(self):
+        assert commands.query_muxer_info("mp4")['default_audio_codec'] != "mp3", \
+            "Make sure we're not testing a case where both answers are the same"
+
+        params = self.create_params("mp4", [333, 333], "h264", acodec="mp3")
+        result = validation._get_dst_codec(params)
+        self.assertEqual(result, 'mp3')
+
+    def test_get_dst_codec_returns_default_audio_codec_if_no_dst_audio_params(self):
+        assert commands.query_muxer_info("mp4")['default_audio_codec'] == "aac"
+
+        params = self.create_params("mp4", [333, 333], "h264", acodec=None)
+        assert 'audio' not in params
+        self.assertEqual(validation._get_dst_codec(params), 'aac')
+
+    def test_get_dst_codec_returns_default_audio_codec_if_no_codec_in_dst_audio_params(self):
+        assert commands.query_muxer_info("mp4")['default_audio_codec'] == "aac"
+
+        params = self.create_params("mp4", [333, 333], "h264", audio_bitrate="192k")
+        assert 'codec' not in params['audio']
+        self.assertEqual(validation._get_dst_codec(params), 'aac')
+
+    def test_get_dst_codec_returns_default_audio_codec_if_codec_missing_from_dst_params(self):
+        assert commands.query_muxer_info("mp4")['default_audio_codec'] == "aac"
+
+        params = self.create_params("mp4", [333, 333], "h264", acodec="mp3")
+        params['audio']['codec'] = None
+        self.assertEqual(validation._get_dst_codec(params), 'aac')
+
 
 class TestValidateUnsupportedStreams(
     MetadataWithSupportedAndUnsupportedStreamsBase
