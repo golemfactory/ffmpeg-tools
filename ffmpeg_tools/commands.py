@@ -2,6 +2,7 @@ import os
 import re
 import subprocess
 import json
+from typing import Any, Dict, List
 
 from . import codecs
 from . import meta
@@ -11,6 +12,10 @@ FFMPEG_COMMAND = "ffmpeg"
 FFPROBE_COMMAND = "ffprobe"
 
 TMP_DIR = "/golem/work/tmp/"
+
+
+class NoMatchingEncoder(Exception):
+    pass
 
 
 class CommandFailed(Exception):
@@ -531,3 +536,61 @@ def get_metadata_json(video):
     cmd = get_metadata_command(video)
     metadata_str = exec_cmd_to_string(cmd)
     return json.loads(metadata_str)
+
+
+def get_query_muxer_info_command(muxer: str) -> List[str]:
+    cmd = [
+        FFMPEG_COMMAND,
+        '-nostdin',
+        '-hide_banner',
+        '-h', f'muxer={muxer}',
+    ]
+    return cmd
+
+
+def _parse_default_audio_codec_out_of_muxer_info(muxer_info: str) -> List[str]:
+    """
+    Looks for audio codec in ffmpeg output.
+    """
+
+    # Sample of expected text passed to the regex:
+    #
+    # Muxer 3g2 [3GP2 (3GPP2 file format)]:
+    #     Common extensions: 3g2.
+    #     Default video codec: h263.
+    #     Default audio codec: amr_nb.
+    # matroska muxer AVOptions:
+    return re.findall(
+        r"""
+        ^\s*                        # Leading whitespace
+        Default\ ?audio\ ?codec:\s* # Label
+        (.*[^\s.])\s*               # Codec name
+        \.?                         # Optional dot at the end of the line
+        \s*$                        # Trailing whitespace
+        """,
+        muxer_info,
+        re.X | re.MULTILINE
+    )
+
+
+def query_muxer_info(muxer: str) -> Dict[str, Any]:
+    """
+    Returns information about a specific muxer, parsed out of the output of `ffmpeg -h`.
+
+    Currently this includes the following fields (more may be added in the future):
+    - `default_audio_codec`: the name of the audio codec ffmpeg uses when creating
+        a video that uses this muxer and the name of the audio codec is not specified explicitly.
+    """
+
+    muxer_info_command = get_query_muxer_info_command(muxer)
+    muxer_info = exec_cmd_to_string(muxer_info_command)
+    audio_codecs = _parse_default_audio_codec_out_of_muxer_info(muxer_info)
+
+    if len(audio_codecs) != 1:
+        raise NoMatchingEncoder(
+            f"Found {len(audio_codecs)} things in ffmpeg output that could be the default audio codec name. "
+            f"Expected exactly one.")
+
+    return {
+        'default_audio_codec': audio_codecs[0],
+    }

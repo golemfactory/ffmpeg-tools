@@ -3,9 +3,13 @@ import os
 import tempfile
 
 from unittest import TestCase, mock
+
+from parameterized import parameterized
+
 import ffmpeg_tools as ffmpeg
 from ffmpeg_tools import codecs
 from ffmpeg_tools import commands
+from ffmpeg_tools import formats
 from ffmpeg_tools.codecs import DATA_STREAM_WHITELIST, SUBTITLE_STREAM_WHITELIST
 from ffmpeg_tools.commands import get_lists_of_unsupported_stream_numbers
 from tests.test_meta import example_metadata
@@ -284,3 +288,57 @@ class TestGetListOfStreamNumbersToSkip(
         stream_number = get_lists_of_unsupported_stream_numbers(
             self.metadata_with_unsupported_streams)
         self.assertEqual(stream_number, ([2], [3]))
+
+
+class TestQueryMuxerInfo(TestCase):
+
+    def test_function_should_return_valid_encoder(self):
+        sample_ffmpeg_output = (
+            'Muxer 3g2 [3GP2 (3GPP2 file format)]:\n'
+            '   Common extensions: 3g2.\n'
+            '   Default video codec: h263.\n'
+            '   Default audio codec: amr_nb.\n'
+            'matroska muxer AVOptions:'
+        )
+
+        with mock.patch.object(commands, 'exec_cmd_to_string', return_value=sample_ffmpeg_output):
+            muxer_info = commands.query_muxer_info(formats.Container.c_3G2)
+            self.assertEqual(muxer_info['default_audio_codec'], 'amr_nb')
+
+    def test_muxer_not_recognized_by_ffmpeg_should_cause_an_exception(self):
+        with self.assertRaises(commands.NoMatchingEncoder):
+            commands.query_muxer_info('non_existent_container')
+
+    def test_demuxer_should_cause_an_exception(self):
+        with self.assertRaises(commands.NoMatchingEncoder):
+            commands.query_muxer_info(formats.Container.c_MATROSKA_WEBM_DEMUXER.value)
+
+    @parameterized.expand([
+        ('   Default audio codec: amr_nb.\n', ['amr_nb']),
+        ('   Default audio codec: vorbis.\n', ['vorbis']),
+        ('   Default audio codec: amr_nb\n', ['amr_nb']),
+        ('Default audio codec: amr_nb.\n', ['amr_nb']),
+        ('Default audio codec: amr_nb\n', ['amr_nb']),
+        ('blabla Default audio codec: amr_nb.\n', []),
+        ('Default audio codec: amr_nb.FAILED.\n', ['amr_nb.FAILED']),
+        ('Default audiocodec: amr_nb.\n', ['amr_nb']),
+        ('Default audio codec amr_nb.\n', []),
+        ('Default audio codec: amr nb.\n', ['amr nb']),
+        ('Default audio codec: amr_nb.\n', ['amr_nb']),
+        ('Default audio codec: amr_nb_.\n', ['amr_nb_']),
+        ('Default audio codec: amr_nb_\n', ['amr_nb_']),
+        ('Default audio codec: amr_nb. Default audio codec: mp2 \n', ['amr_nb. Default audio codec: mp2']),
+        ('    Default audio codec: amr_nb-x!\n', ['amr_nb-x!']),
+    ])
+    def test_default_audio_encoder_parsing_corner_cases(
+        self,
+        input_line,
+        expected_result,
+    ):
+        text = (
+            f'some text before sample line \n'
+            f'{input_line}'
+            f'some text after sample line \n'
+        )
+        result = commands._parse_default_audio_codec_out_of_muxer_info(text)
+        self.assertEqual(result, expected_result)
