@@ -261,6 +261,15 @@ class TestConversionValidation(TestCase):
         self.assertTrue(validation.validate_transcoding_params(dst_params, metadata))
 
 
+    def test_container_change_when_target_is_an_exclusive_demuxer(self):
+        assert formats.Container.c_MATROSKA_WEBM_DEMUXER.is_exclusive_demuxer()
+
+        metadata = self.modify_metadata_with_passed_values("matroska", [1920, 1080], "h264", "mp3")
+        dst_params = self.create_params(formats.Container.c_MATROSKA_WEBM_DEMUXER.value, [1920, 1080], "h264")
+        with self.assertRaises(UnsupportedTargetVideoFormat):
+            validation.validate_transcoding_params(dst_params, metadata)
+
+
     def test_video_codec_change(self):
         metadata = self.modify_metadata_with_passed_values("mp4", [1920, 1080], "h264", "mp3", 60)
         dst_params = self.create_params("mp4", [1920, 1080], "h265", "mp3", 60)
