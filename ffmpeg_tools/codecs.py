@@ -52,6 +52,9 @@ class VideoCodec(enum.Enum):
     def get_supported_conversions(self):
         return _VIDEO_SUPPORTED_CONVERSIONS.get(self.value, [])
 
+    def can_convert(self, video_codec_value):
+        return video_codec_value in self.get_supported_conversions()
+
 
 class AudioCodec(enum.Enum):
     AAC = "aac"        # AAC (Advanced Audio Coding)

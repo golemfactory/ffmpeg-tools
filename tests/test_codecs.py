@@ -5,7 +5,6 @@ from unittest import TestCase
 import ffmpeg_tools as ffmpeg
 
 
-
 class TestSupportedConversions(TestCase):
 
     def test_list_video_conversion(self):
@@ -19,6 +18,14 @@ class TestSupportedConversions(TestCase):
 
     def test_list_audio_conversion_invalid_codec(self):
         assert( len( ffmpeg.codecs.list_supported_audio_conversions("blabla") ) == 0 )
+
+    def test_can_convert_correct_video_codec(self):
+        assert "h264" in ffmpeg.codecs._VIDEO_SUPPORTED_CONVERSIONS["h264"]
+        self.assertTrue(ffmpeg.codecs.VideoCodec("h264").can_convert("h264"))
+
+    def test_can_convert_unsupported_video_codec(self):
+        assert "msmpeg4v2" not in ffmpeg.codecs._VIDEO_SUPPORTED_CONVERSIONS["h264"]
+        self.assertFalse(ffmpeg.codecs.VideoCodec("h264").can_convert("msmpeg4v2"))
 
 
 class TestGettingEncoder(TestCase):
