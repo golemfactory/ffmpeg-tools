@@ -85,7 +85,7 @@ def validate_transcoding_params(src_params, dst_params):
 
     # Validate format
     validate_format(src_params["format"])
-    validate_format(dst_params["format"])
+    validate_target_format(dst_params["format"])
 
     # Validate video codec
     validate_video_codec(src_params["format"], src_params["video"]["codec"])
