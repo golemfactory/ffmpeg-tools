@@ -303,13 +303,7 @@ def _try_get_frame_rate_based_for_corner_cases(src_frame_rate, dst_video_codec):
 
 
 def validate_frame_rate(src_frame_rate, target_frame_rate):
-    target_rate_supported = any(
-        # This validation will accept both 24 and '24' for convenience.
-        # More complex values like '24/1' are not supported unless they're
-        # explicitly present on the supported resolution list.
-        target_frame_rate in [f, str(f)]
-        for f in formats.list_supported_frame_rates()
-    )
+    target_rate_supported = normalize_frame_rate(target_frame_rate) in formats.list_supported_frame_rates()
     if not target_rate_supported:
         raise InvalidFrameRate(src_frame_rate, target_frame_rate)
     return True
