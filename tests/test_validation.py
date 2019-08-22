@@ -379,3 +379,37 @@ class TestValidateUnsupportedStreams(
             strip_unsupported_data_streams=True,
             strip_unsupported_subtitle_streams=True,
         )
+
+
+class TestNormalizeFramerate(TestCase):
+
+    @parameterized.expand(formats._frame_rates)
+    def test_function_returns_unchanged_values_normalized_frame_rates(self, dividend, divisor):
+        input_frame_rate = (dividend, divisor)
+        normalized_frame_rate = validation.normalize_frame_rate(input_frame_rate)
+        self.assertEqual(input_frame_rate, normalized_frame_rate)
+
+    @parameterized.expand([
+        (30, formats.FrameRate(30, 1)),
+        ('30', formats.FrameRate(30, 1)),
+        ('30/1', formats.FrameRate(30, 1)),
+        ('60/2', formats.FrameRate(30, 1)),
+        ('62/4', formats.FrameRate(31, 2)),
+    ])
+    def test_function_returns_correct_normalized_frame_rates(self, user_input, expected):
+        normalized = validation.normalize_frame_rate(user_input)
+        self.assertEqual(normalized, expected)
+
+    @parameterized.expand([
+        (29.5,),
+        ('29.5',),
+        ('30/1/2',),
+        ('30/1.5',),
+        ((29.5, 1),),
+        (('29.5', 1),),
+        ((29, 1.5),),
+        ((29, '1.5'),),
+    ])
+    def test_incorrect_input_values_raises_exception(self, invalid_frame_rate):
+        with self.assertRaises(validation.InvalidFrameRate):
+            validation.normalize_frame_rate(invalid_frame_rate)

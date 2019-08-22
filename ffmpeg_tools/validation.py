@@ -1,4 +1,5 @@
 import os
+from math import gcd
 
 from . import meta
 from . import formats
@@ -251,6 +252,38 @@ def validate_resolution(src_resolution, target_resolution):
             formats.get_effective_aspect_ratio(target_resolution):
         return True
     raise InvalidResolution(src_resolution, target_resolution)
+
+
+def normalize_frame_rate(dst_frame_rate, src_frame_rate=None):
+    if isinstance(dst_frame_rate, int):
+        return formats.FrameRate(dst_frame_rate, 1)
+
+    if (
+        isinstance(dst_frame_rate, tuple) and
+        len(dst_frame_rate) == 2 and
+        isinstance(dst_frame_rate[0], int) and
+        isinstance(dst_frame_rate[1], int)
+    ):
+        return formats.FrameRate(*dst_frame_rate)
+
+    if isinstance(dst_frame_rate, str):
+        if '/' in dst_frame_rate:
+            (dividend, divisor) = dst_frame_rate.split('/', 1)
+            try:
+                _gcd: int = gcd(int(dividend), int(divisor))
+                return formats.FrameRate(
+                    int(dividend) // _gcd,
+                    int(divisor) // _gcd,
+                )
+            except ValueError:
+                raise InvalidFrameRate(dst_frame_rate, src_frame_rate)
+        else:
+            try:
+                return formats.FrameRate(int(dst_frame_rate), 1)
+            except ValueError:
+                raise InvalidFrameRate(dst_frame_rate, src_frame_rate)
+
+    raise InvalidFrameRate(dst_frame_rate, src_frame_rate)
 
 
 def validate_frame_rate(src_frame_rate, target_frame_rate):
