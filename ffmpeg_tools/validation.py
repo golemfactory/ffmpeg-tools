@@ -155,11 +155,7 @@ def validate_transcoding_params(
     # Validate resolution change
     validate_resolution(src_params["resolution"], dst_params["resolution"])
 
-    # Validate frame rate change
-    if 'frame_rate' in dst_params:
-        validate_frame_rate(src_params["frame_rate"], dst_params["frame_rate"])
-
-    # Throws exception in case of error
+    validate_frame_rate(dst_params, src_params["frame_rate"])
 
     validate_data_and_subtitle_streams(
         src_metadata,
@@ -302,9 +298,21 @@ def _try_get_frame_rate_based_for_corner_cases(src_frame_rate, dst_video_codec):
     return None
 
 
-def validate_frame_rate(src_frame_rate, target_frame_rate):
-    target_rate_supported = normalize_frame_rate(target_frame_rate) in formats.list_supported_frame_rates()
-    if not target_rate_supported:
+def _get_frame_rate_based_on_src_frame_rate(src_frame_rate, dst_params):
+    target_frame_rate = _try_get_frame_rate_based_for_corner_cases(
+        src_frame_rate,
+        dst_params['video']['codec'],
+    )
+    return target_frame_rate if target_frame_rate is not None else src_frame_rate
+
+
+def validate_frame_rate(dst_params, src_frame_rate):
+    if 'frame_rate' in dst_params:
+        target_frame_rate = dst_params['frame_rate']
+    else:
+        target_frame_rate = _get_frame_rate_based_on_src_frame_rate(src_frame_rate, dst_params)
+
+    if normalize_frame_rate(target_frame_rate) not in formats.list_supported_frame_rates():
         raise InvalidFrameRate(src_frame_rate, target_frame_rate)
     return True
 
