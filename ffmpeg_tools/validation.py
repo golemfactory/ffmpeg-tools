@@ -3,6 +3,7 @@ import os
 from . import meta
 from . import formats
 from . import codecs
+from . import commands
 
 
 _MAX_SUPPORTED_AUDIO_CHANNELS = 2
@@ -64,6 +65,12 @@ class UnsupportedAudioCodecConversion(InvalidVideo):
         super().__init__(message="Unsupported audio codec conversion from {} to {}".format(src_codec, dst_codec))
 
 
+class UnsupportedStream(InvalidVideo):
+    def __init__(self, stream_type, index):
+        super().__init__(message="Unsupported {} stream. Stream index: {}."
+                         .format(stream_type, index))
+
+
 class UnsupportedAudioChannelLayout(InvalidVideo):
     def __init__(self, audio_channels):
         super().__init__(
@@ -89,7 +96,27 @@ def validate_video(metadata):
     return True
 
 
-def validate_transcoding_params(dst_params, src_metadata):
+def validate_data_and_subtitle_streams(
+    metadata,
+    strip_unsupported_data_streams,
+    strip_unsupported_subtitle_streams,
+):
+    (unsupported_data_streams, unsupported_subtitle_streams) = (
+        commands.get_lists_of_unsupported_stream_numbers(metadata)
+    )
+    if not strip_unsupported_data_streams and len(unsupported_data_streams) != 0:
+        raise UnsupportedStream('data', unsupported_data_streams)
+
+    if not strip_unsupported_subtitle_streams and len(unsupported_subtitle_streams) != 0:
+        raise UnsupportedStream('subtitle', unsupported_subtitle_streams)
+
+
+def validate_transcoding_params(
+    dst_params,
+    src_metadata,
+    strip_unsupported_data_streams=False,
+    strip_unsupported_subtitle_streams=False,
+):
 
     src_params = meta.create_params(
         meta.get_format(src_metadata),
@@ -132,6 +159,11 @@ def validate_transcoding_params(dst_params, src_metadata):
         validate_frame_rate(src_params["frame_rate"], dst_params["frame_rate"])
 
     # Throws exception in case of error
+
+    validate_data_and_subtitle_streams(
+        src_metadata,
+        strip_unsupported_data_streams,
+        strip_unsupported_subtitle_streams)
     return True
 
 
