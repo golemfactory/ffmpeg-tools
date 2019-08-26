@@ -6,7 +6,7 @@ from unittest import TestCase, mock
 import ffmpeg_tools as ffmpeg
 from ffmpeg_tools import commands
 from ffmpeg_tools.codecs import DATA_STREAM_WHITELIST, SUBTITLE_STREAM_WHITELIST
-from ffmpeg_tools.commands import get_list_of_streams_numbers_to_skip
+from ffmpeg_tools.commands import get_lists_of_unsupported_stream_numbers
 from tests.test_meta import example_metadata
 
 BIN_DATA_EXAMPLE_STREAM = {
@@ -122,16 +122,17 @@ class TestCommands(TestCase):
             )
 
     def test_replace_streams_command_removes_streams_not_in_whitelist(self):
-        with mock.patch(
-            'ffmpeg_tools.commands.get_list_of_streams_numbers_to_skip') as \
-             _get_list_of_streams_numbers_to_skip:
-            _get_list_of_streams_numbers_to_skip.return_value = [2, 3]
+        with mock.patch('ffmpeg_tools.commands.get_lists_of_unsupported_stream_numbers') as _get_lists_of_unsupported_streams_numbers:
+            
+            _get_lists_of_unsupported_streams_numbers.return_value = ([2], [3])
 
             command = ffmpeg.commands.replace_streams_command(
                 "tests/resources/ForBiggerBlazes-[codec=h264].mp4",
                 "tests/resources/ForBiggerBlazes-[codec=h264][video-only].mkv",
                 "tests/resources/ForBiggerBlazes-[codec=h264].mkv",
                 "v",
+                strip_unsupported_data_streams=True,
+                strip_unsupported_subtitle_streams=True
             )
 
             expected_command = [
@@ -174,29 +175,18 @@ class TestGetListOfStreamsNumbersToSkip(TestCase):
             'some default unsupported name'
 
     def test_function_does_not_strip_whitelisted_streams(self):
-        stream_number = get_list_of_streams_numbers_to_skip(
+        stream_number = get_lists_of_unsupported_stream_numbers(
             self.metadata_without_unsupported_streams,
-            strip_unsupported_data_streams=True,
-            strip_unsupported_subtitle_streams=True)
-        self.assertEqual(stream_number, [])
+        )
+        self.assertEqual(stream_number, ([], []))
 
     def test_function_strips_non_whitelisted_streams(self):
-        stream_number = get_list_of_streams_numbers_to_skip(
+        stream_number = get_lists_of_unsupported_stream_numbers(
             self.metadata_with_unsupported_streams,
-            strip_unsupported_data_streams=True,
-            strip_unsupported_subtitle_streams=True)
-        self.assertEqual(stream_number, [2, 3])
+        )
+        self.assertEqual(stream_number, ([2], [3]))
 
     def test_function_returns_correct_numbers_streams_metadata(self):
-        stream_number = get_list_of_streams_numbers_to_skip(
-            self.metadata_with_unsupported_streams,
-            strip_unsupported_data_streams=True,
-            strip_unsupported_subtitle_streams=True)
-        self.assertEqual(stream_number, [2, 3])
-
-    def test_function_returns_does_not_check_streams_if_not_specified(self):
-        stream_number = get_list_of_streams_numbers_to_skip(
-            self.metadata_with_unsupported_streams,
-            strip_unsupported_data_streams=False,
-            strip_unsupported_subtitle_streams=False)
-        self.assertEqual(stream_number, [])
+        stream_number = get_lists_of_unsupported_stream_numbers(
+            self.metadata_with_unsupported_streams)
+        self.assertEqual(stream_number, ([2], [3]))
