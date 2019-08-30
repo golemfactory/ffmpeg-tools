@@ -211,6 +211,7 @@ _MOV_CODECS = {
         "pcm_u8",
     ],
     'subtitlecodecs': [
+        'mov_text'
     ],
 }
 
@@ -236,6 +237,7 @@ _M4V_CODECS = {
         "mp3",
     ],
     'subtitlecodecs': [
+        'subrip',
     ],
 }
 
@@ -279,6 +281,9 @@ _MKV_CODECS = {
         "vorbis",
     ],
     'subtitlecodecs': [
+        'ass',
+        'subrip',
+        'webvtt',
     ],
 }
 
@@ -294,6 +299,7 @@ _WEBM_CODECS = {
         "vp8",
     ],
     'subtitlecodecs': [
+        'webvtt',
     ],
 }
 
@@ -306,6 +312,7 @@ _OGG_CODECS = {
         "vorbis",
     ],
     'subtitlecodecs': [
+        'subrip',
     ],
 }
 
@@ -336,6 +343,7 @@ _3GP_CODECS = {
         "amr_nb",
     ],
     'subtitlecodecs': [
+        'mov_text'
     ],
 }
 

@@ -186,6 +186,10 @@ _AUDIO_SUPPORTED_CONVERSIONS = {
 }
 
 _SUBTITLE_SUPPORTED_CONVERSIONS = {
+    'subrip':   ['subrip', 'ass',             'webvtt'],
+    'ass':      ['subrip', 'ass', 'mov_text', 'webvtt'],
+    'mov_text': ['subrip', 'ass', 'mov_text', 'webvtt'],
+    'webvtt':   ['subrip', 'ass', 'mov_text', 'webvtt'],
 }
 
 _PRESERVE_QUALITY_COMMAND = {
