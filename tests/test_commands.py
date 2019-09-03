@@ -556,3 +556,49 @@ class TestQueryMuxerInfo(TestCase):
         )
         result = commands._parse_default_audio_codec_out_of_muxer_info(text)
         self.assertEqual(result, expected_result)
+
+
+class TestEncoderInfo(TestCase):
+    def test_should_return_sample_rates(self):
+        sample_ffmpeg_output = (
+            'Encoder libmp3lame [libmp3lame MP3 (MPEG audio layer 3)]:\n'
+            'General capabilities: delay small\n'
+            'Threading capabilities: none\n'
+            'Supported sample rates: 44100 48000 32000 22050 24000 16000 11025 12000 8000\n'
+            'Supported sample formats: s32p fltp s16p\n'
+            'Supported channel layouts: mono stereo\n'
+        )
+        expected_encoder_info = {'sample_rates': {44100, 48000, 32000, 22050, 24000, 16000, 11025, 12000, 8000}}
+
+        with mock.patch.object(commands, 'exec_cmd_to_string', return_value=sample_ffmpeg_output):
+            encoder_info = commands.encoder_info('mp3')
+
+        self.assertEqual(encoder_info, expected_encoder_info)
+
+    def test_sample_rates_field_should_be_omitted_if_not_found_in_ffmpeg_output(self):
+        sample_ffmpeg_output = (
+            'Encoder libx264[libx264 H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10]:\n'
+            'General capabilities: delay threads\n'
+            'Threading capabilities: auto\n'
+        )
+
+        with mock.patch.object(commands, 'exec_cmd_to_string', return_value=sample_ffmpeg_output):
+            encoder_info = commands.encoder_info('h264')
+            self.assertEqual({'sample_rates': []}, encoder_info)
+
+    @parameterized.expand([
+        ('Supported sample rates: 44100 48000 32000 22050 24000 16000 11025 12000 8000\n', ['44100 48000 32000 22050 24000 16000 11025 12000 8000']),
+        ('Supported sample rates: 44100 48000 \n', ['44100 48000']),
+        ('Supported sample rates: 44100 48000. \n', ['44100 48000']),
+        ('  Supported sample rates: 44100 48000. \n', ['44100 48000']),
+        ('Supported sample rates: 44100 48000. something after \n', ['44100 48000. something after']),
+        ('Supported sample rates: 44100 48000 Supported sample rates: 16000 24000 \n', ['44100 48000 Supported sample rates: 16000 24000']),
+    ])
+    def test_sample_rate_parsing_corner_cases(self, input_line, expected_result):
+        sample_ffmpeg_output = (
+            'some text before sample line \n'
+            f'{input_line}'
+            'some text after sample line \n'
+        )
+        result = commands._parse_supported_sample_rates_out_of_codec_info(sample_ffmpeg_output)
+        self.assertEqual(result, expected_result)

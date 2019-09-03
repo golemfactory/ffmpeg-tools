@@ -717,3 +717,39 @@ def query_muxer_info(muxer: str) -> Dict[str, Any]:
     return {
         'default_audio_codec': audio_codecs[0],
     }
+
+
+def _parse_supported_sample_rates_out_of_codec_info(codec_info):
+    # This looks for supported sample rates in ffmpeg output. Part of sample:
+    # 'Threading capabilities: none\n'
+    # 'Supported sample rates: 44100 48000 32000 22050 24000 16000 11025 \n'
+    # 'Supported sample formats: s32p fltp s16p\n'
+    return re.findall(
+        r"""
+        ^\s*
+        Supported\ ?sample\ ?rates:\s*
+        (.*[^\s.])\s*
+        \.?
+        \s*$
+        """,
+        codec_info,
+        re.X | re.MULTILINE
+    )
+
+
+def encoder_info(audio_codec_name):
+
+    codec_info = exec_cmd_to_string(
+        ['ffmpeg', '-h', f'encoder={audio_codec_name}']
+    )
+    audio_codecs = _parse_supported_sample_rates_out_of_codec_info(codec_info)
+
+    # Returned list should be empty (if sample rates not found, for e.g. video
+    # codecs) or contain only one element. This information should be only once
+    assert len(audio_codecs) <= 1
+
+    if len(audio_codecs) == 0:
+        return {'sample_rates': []}
+    elif len(audio_codecs) == 1:
+        sample_rates = {int(sr) for sr in audio_codecs[0].strip().split(" ")}
+        return {'sample_rates': sample_rates}
