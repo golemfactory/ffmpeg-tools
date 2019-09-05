@@ -97,6 +97,12 @@ class UnsupportedStream(InvalidVideo):
                          .format(stream_type, index))
 
 
+class UnsupportedSampleRate(InvalidVideo):
+    def __init__(self, sample_rate, codec):
+        super().__init__(message="Codec {} does not the support sample rate {}."
+                         .format(codec, sample_rate))
+
+
 class UnsupportedAudioChannelLayout(InvalidVideo):
     def __init__(self, audio_channels):
         super().__init__(

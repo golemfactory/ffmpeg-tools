@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, Set, Union
 
 from . import meta
 from . import formats
@@ -84,7 +84,8 @@ def validate_transcoding_params(
         meta.get_resolution(src_metadata),
         meta.get_video_codec(src_metadata),
         meta.get_audio_codec(src_metadata),
-        meta.get_frame_rate(src_metadata))
+        meta.get_frame_rate(src_metadata),
+        sample_rates=meta.get_sample_rates(src_metadata))
 
     # Validate format
     validate_format(src_params["format"])
@@ -112,6 +113,17 @@ def validate_transcoding_params(
                 dest_audio_codec,
                 audio_stream
             )
+
+            # ffmpeg returns information about sample rates only for half of the codecs.
+            # At the time of writing of this comment those were:
+            # aac, mp2, mp3, libmp3lame, opus, libopus.
+            # For other codecs there is no information about sample rates. For now
+            # we don't support transcoding for these codecs when the sample rate
+            # differs (it will result in a validation error).
+            # TODO: Add support for the remaining codecs.
+            validate_audio_sample_rate(
+                dest_audio_codec=dest_audio_codec,
+                source_sample_rates=src_params['audio'].get('sample_rates'))
         elif dst_muxer_info is not None:
             # Treat situations of user opting out of providing muxer info (dst_muxer_info == None)
             # and ffmpeg not having the info we need ('default_audio_codec' not present in
@@ -307,6 +319,16 @@ def validate_frame_rate(
     if target_frame_rate.normalized() not in formats.list_supported_frame_rates():
         raise exceptions.InvalidFrameRate(src_frame_rate, target_frame_rate)
     return True
+
+
+def validate_audio_sample_rate(dest_audio_codec: str, source_sample_rates: Optional[Union[List[Any], Set[Any]]]) -> bool:
+    if source_sample_rates is None:
+        return
+
+    dest_encoder_info = commands.query_encoder_info(dest_audio_codec)
+    unsupported_sample_rates = set(int(sr) for sr in source_sample_rates) - set(dest_encoder_info.get('sample_rates'))
+    if len(unsupported_sample_rates) > 0:
+        raise exceptions.UnsupportedSampleRate(unsupported_sample_rates, dest_audio_codec)
 
 
 def validate_video_codec_conversion(src_codec, dst_codec):

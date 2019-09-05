@@ -251,6 +251,42 @@ class TestConversionValidation(TestCase):
         return metadata
 
 
+    @mock.patch('ffmpeg_tools.validation.meta.get_sample_rates', return_value=['48000', '24000'])
+    def test_target_audio_codec_supports_source_sample_rates(self, _mock_get_sample_rates):
+        metadata = self.modify_metadata_with_passed_values("mp4", [640, 480], "h264", "mp3", 60)
+        dst_params = self.create_params("mp4", [640, 480], "h264", "mp3", 60)
+
+        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, {}))
+
+
+    @mock.patch('ffmpeg_tools.validation.meta.get_sample_rates', return_value=['48000', '24000'])
+    def test_default_target_audio_codec_supports_source_sample_rate(self, _mock_get_sample_rates):
+        metadata = self.modify_metadata_with_passed_values("mp4", [640, 480], "h264", "mp3", 60)
+        dst_params = self.create_params("mp4", [640, 480], "h264")
+        dst_muxer_info = {'default_audio_codec': "aac"}
+
+        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, dst_muxer_info))
+
+
+    @mock.patch('ffmpeg_tools.validation.meta.get_sample_rates', return_value=['48000', '5000'])
+    def test_target_audio_codec_does_not_support_source_sample_rate(self, _mock_get_sample_rates):
+        metadata = self.modify_metadata_with_passed_values("mp4", [640, 480], "h264", "mp3", 60)
+        dst_params = self.create_params("mp4", [640, 480], "h264", "mp3", 60)
+
+        with self.assertRaises(exceptions.UnsupportedSampleRate):
+            validation.validate_transcoding_params(dst_params, metadata, {})
+
+
+    @mock.patch('ffmpeg_tools.validation.meta.get_sample_rates', return_value=['48000', '5000'])
+    def test_default_target_audio_codec_does_not_support_source_sample_rate(self, _mock_get_sample_rates):
+        metadata = self.modify_metadata_with_passed_values("mp4", [640, 480], "h264", "mp3", 60)
+        dst_params = self.create_params("mp4", [640, 480], "h264")
+        dst_muxer_info = {'default_audio_codec': "aac"}
+
+        with self.assertRaises(exceptions.UnsupportedSampleRate):
+            self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, dst_muxer_info))
+
+
     def test_container_change(self):
         metadata = self.modify_metadata_with_passed_values("mp4", [1920, 1080], "h264", "mp3", 60)
         dst_params = self.create_params("mov", [1920, 1080], "h264", "mp3", 60)
