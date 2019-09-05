@@ -28,6 +28,14 @@ def get_frame_rate(metadata):
     return None
 
 
+def get_sample_rates(metadata):
+    return [
+        stream["sample_rate"]
+        for stream in metadata["streams"]
+        if stream["codec_type"] == "audio"
+    ]
+
+
 def get_duration(metadata, stream=0):
     return float(metadata["format"]["duration"])
 
