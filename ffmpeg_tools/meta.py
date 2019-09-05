@@ -94,15 +94,27 @@ def get_attribute_from_all_streams(
     ]
 
 
-def create_params(vformat, resolution, vcodec, acodec=None,
-                  frame_rate=None, video_bitrate=None,
-                  audio_bitrate=None, scaling_algorithm=None):
-    args = dict()
+def create_params(
+    vformat,
+    resolution,
+    vcodec,
+    acodec=None,
+    frame_rate=None,
+    video_bitrate=None,
+    audio_bitrate=None,
+    scaling_algorithm=None,
+    sample_rates=None
+):
+
+    args = {}
+
+    if sample_rates is None:
+        sample_rates = []
 
     args["format"] = vformat
 
     # Video parameters
-    args["video"] = dict()
+    args["video"] = {}
 
     args["resolution"] = resolution
     args["video"]["codec"] = vcodec
@@ -117,11 +129,14 @@ def create_params(vformat, resolution, vcodec, acodec=None,
         args["frame_rate"] = frame_rate
 
     # Audio parameters
-    if acodec or audio_bitrate:
+    if acodec or audio_bitrate or sample_rates:
         args["audio"] = {}
 
     if acodec:
         args["audio"]["codec"] = acodec
+
+    if sample_rates:
+        args["audio"]["sample_rates"] = sample_rates
 
     if audio_bitrate:
         args["audio"]["bitrate"] = audio_bitrate
