@@ -35,7 +35,7 @@ def _get_src_audio_codec(src_params):
 
 
 def _get_dst_audio_codec(dst_params: dict, dst_muxer_info: Optional[Dict[str, Any]]) -> Optional[str]:
-    assert not formats.Container(dst_params["format"]).is_exclusive_demuxer()
+    assert not formats.Container(dst_params["container"]).is_exclusive_demuxer()
 
     if dst_params.get("audio", {}).get("codec") is None:
         if dst_muxer_info is None:
@@ -88,12 +88,12 @@ def validate_transcoding_params(
         meta.get_frame_rate(src_metadata))
 
     # Validate format
-    validate_format(src_params["format"])
-    validate_target_format(dst_params["format"])
+    validate_format(src_params['container'])
+    validate_target_format(dst_params['container'])
 
     # Validate video codec
-    validate_video_codec(src_params["format"], src_params["video"]["codec"])
-    validate_video_codec(dst_params["format"], dst_params["video"]["codec"])
+    validate_video_codec(src_params['container'], src_params["video"]["codec"])
+    validate_video_codec(dst_params['container'], dst_params["video"]["codec"])
     validate_video_codec_conversion(src_params["video"]["codec"], dst_params["video"]["codec"])
 
     # Validate audio codec. Audio codec can not be set and ffmpeg should
@@ -103,11 +103,11 @@ def validate_transcoding_params(
     audio_stream = meta.get_audio_stream(src_metadata)
 
     if src_audio_codec is not None:
-        validate_audio_codec(src_params["format"], src_audio_codec)
+        validate_audio_codec(src_params["container"], src_audio_codec)
 
         dest_audio_codec = _get_dst_audio_codec(dst_params, dst_muxer_info)
         if dest_audio_codec is not None:
-            validate_audio_codec(dst_params["format"], dest_audio_codec)
+            validate_audio_codec(dst_params["container"], dest_audio_codec)
             validate_audio_codec_conversion(
                 src_audio_codec,
                 dest_audio_codec,
@@ -135,7 +135,7 @@ def validate_transcoding_params(
     validate_unsupported_subtitle_streams(
         src_metadata,
         strip_unsupported_subtitle_streams,
-        dst_params['format'])
+        dst_params['container'])
     return True
 
 
