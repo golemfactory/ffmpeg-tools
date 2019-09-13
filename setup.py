@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name='ffmpeg-tools',
-    version='0.14.1',
+    version='0.14.2',
     description="Tools for using ffmpeg functionalities in python.",
     url='https://github.com/golemfactory/ffmpeg-tools',
     maintainer='The Golem Team',
