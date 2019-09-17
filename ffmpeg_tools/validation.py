@@ -286,6 +286,22 @@ def normalize_frame_rate(dst_frame_rate, src_frame_rate=None):
     raise InvalidFrameRate(dst_frame_rate, src_frame_rate)
 
 
+def _try_get_frame_rate_based_for_corner_cases(src_frame_rate, dst_video_codec):
+    if dst_video_codec in codecs.MAX_SUPPORTED_FRAME_RATE:
+        (dividend, divisor) = normalize_frame_rate(src_frame_rate)
+        return min(
+            dividend // divisor,
+            codecs.MAX_SUPPORTED_FRAME_RATE[dst_video_codec]
+        )
+
+    if dst_video_codec in codecs.FRAME_RATE_SUBSTITUTIONS:
+        for (original, substitute) in codecs.FRAME_RATE_SUBSTITUTIONS[dst_video_codec]:
+            if normalize_frame_rate(src_frame_rate) == normalize_frame_rate(original):
+                return substitute
+
+    return None
+
+
 def validate_frame_rate(src_frame_rate, target_frame_rate):
     target_rate_supported = any(
         # This validation will accept both 24 and '24' for convenience.

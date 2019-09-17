@@ -1,5 +1,6 @@
 import enum
 
+from . import formats
 from . import validation
 
 DATA_STREAM_WHITELIST = [
@@ -197,3 +198,12 @@ def list_supported_audio_conversions(codec):
         return []
 
     return AudioCodec(codec).get_supported_conversions()
+
+
+MAX_SUPPORTED_FRAME_RATE = {
+    VideoCodec.MPEG_1.value: 60
+}
+
+FRAME_RATE_SUBSTITUTIONS = {
+    VideoCodec.MPEG_2.value: [(formats.FrameRate(25, 2), formats.FrameRate(12, 1))]
+}
