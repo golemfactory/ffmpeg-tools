@@ -365,6 +365,7 @@ _frame_rates = {
     # there are no floats allowed
 
     FrameRate(24000, 1001),  # 23.976 FPS (NTSC)
+    FrameRate(12, 1),
     FrameRate(15, 1),
     FrameRate(24, 1),
     FrameRate(25, 1),
