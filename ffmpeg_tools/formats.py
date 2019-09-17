@@ -1,5 +1,6 @@
 import enum
 from math import gcd
+from typing import NamedTuple
 
 from . import validation
 from . import codecs
@@ -343,6 +344,12 @@ _aspect_ratio_overrides = {
     ]
 }
 
+
+class FrameRate(NamedTuple):
+    dividend: int
+    divisor: int
+
+
 _frame_rates = {
     # NOTE 1: The same frame rate can often be represented a few slightly
     # different ways. For example 24 FPS could be 24, '24', '24/1', '48/2'
@@ -351,21 +358,26 @@ _frame_rates = {
     # valid.
 
     # NOTE 2: The common values of 23.976 and 29.97 used to refer to the NTSC
-    # frame rates are only approximations. In any situation other than just
-    # presenting them to the user we want to use the exact values: '24000/1001'
-    # and '30000/1001'.
+    # frame rates are only approximations. We want to represent them with exact
+    # values: 24000/1001 and 30000/1001. This is represented as namedtuple with
+    # fields (24000, 1001) and (30000, 1001). All other values are represented
+    # the same way, to keep whole dict unified. Values in tuple are int type,
+    # there are no floats allowed
 
-    '24000/1001', # 23.976 FPS (NTSC)
-    15,
-    24,
-    25,
-    '30000/1001', # 29.97 FPS (NTSC)
-    30,
-    50,
-    60,
-    240,
-    1000,
+    FrameRate(24000, 1001),  # 23.976 FPS (NTSC)
+    FrameRate(15, 1),
+    FrameRate(24, 1),
+    FrameRate(25, 1),
+    FrameRate(30000, 1001),  # 29.97 FPS (NTSC)
+    FrameRate(30, 1),
+    FrameRate(50, 1),
+    FrameRate(60, 1),
+    FrameRate(240, 1),
+    FrameRate(1000, 1),
 }
+
+assert all(isinstance(x.dividend, int) for x in _frame_rates)
+assert all(isinstance(x.divisor, int) for x in _frame_rates)
 
 
 def list_supported_formats():
