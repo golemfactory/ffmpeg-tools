@@ -142,8 +142,8 @@ _AUDIO_SUPPORTED_CONVERSIONS = {
 _PRESERVE_QUALITY_COMMAND = {
     "h264" : [ "-crf", "22" ],
     "h265" : [ "-crf", "22" ],
-    "vp8" : [ "-crf", "30", "-b:v", "0" ],
-    "vp9" : [ "-crf", "30", "-b:v", "0" ]
+    "vp8" : [ "-crf", "22", "-b:v", "0" ],
+    "vp9" : [ "-crf", "22", "-b:v", "0" ]
 }
 
 
