@@ -243,6 +243,7 @@ def transcode_video_command(track, output_file, targs):
         vcodec = targs['video']['codec']
         cmd.append("-c:v")
         cmd.append(codecs.get_video_encoder(vcodec))
+        cmd = cmd + codecs.preserve_quality_command(vcodec)
 
     if 'frame_rate' in targs:
         fps = str(targs['frame_rate'])
