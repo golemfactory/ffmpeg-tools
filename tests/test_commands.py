@@ -153,7 +153,7 @@ class TestCommands(TestCase):
             self.assertEqual(command, expected_command)
 
 
-class TestGetListOfStreamsNumbersToSkip(TestCase):
+class MetadataWithSupportedAndUnsupportedStreamsBase(TestCase):
 
     def setUp(self):
         super().setUp()
@@ -173,6 +173,11 @@ class TestGetListOfStreamsNumbersToSkip(TestCase):
             'some default unsupported name'
         self.metadata_with_unsupported_streams['streams'][3]['codec_name'] = \
             'some default unsupported name'
+
+
+class TestGetListOfStreamNumbersToSkip(
+    MetadataWithSupportedAndUnsupportedStreamsBase
+):
 
     def test_function_does_not_strip_whitelisted_streams(self):
         stream_number = get_lists_of_unsupported_stream_numbers(
