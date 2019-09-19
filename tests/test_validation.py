@@ -2,6 +2,8 @@ import copy
 from unittest import TestCase
 import sys
 
+from tests.test_commands import MetadataWithSupportedAndUnsupportedStreamsBase
+
 from ffmpeg_tools.formats import list_supported_formats, list_supported_video_codecs, list_supported_audio_codecs
 from ffmpeg_tools.meta import get_metadata
 from ffmpeg_tools.validation import UnsupportedVideoCodec, UnsupportedVideoFormat, \
@@ -343,3 +345,37 @@ class TestConversionValidation(TestCase):
         unsupported_metadata['streams'][1]['channels'] = validation._MAX_SUPPORTED_AUDIO_CHANNELS + 1
 
         self.assertTrue(validation.validate_transcoding_params(dst_params, unsupported_metadata))
+
+
+class TestValidateUnsupportedStreams(
+    MetadataWithSupportedAndUnsupportedStreamsBase
+):
+
+    def test_function_raises_exception_if_unsupported_stream_with_no_strip(self):
+        with self.assertRaises(validation.UnsupportedStream):
+            validation.validate_data_and_subtitle_streams(
+                metadata=self.metadata_with_unsupported_streams,
+                strip_unsupported_data_streams=False,
+                strip_unsupported_subtitle_streams=False,
+            )
+
+    def test_function_passes_if_unsupported_stream_strip_streams_is_true(self):
+        validation.validate_data_and_subtitle_streams(
+            metadata=self.metadata_with_unsupported_streams,
+            strip_unsupported_data_streams=True,
+            strip_unsupported_subtitle_streams=True,
+        )
+
+    def test_function_passes_if_only_supported_streams_strip_is_false(self):
+        validation.validate_data_and_subtitle_streams(
+            metadata=self.metadata_without_unsupported_streams,
+            strip_unsupported_data_streams=False,
+            strip_unsupported_subtitle_streams=False,
+        )
+
+    def test_function_passes_if_only_supported_streams_strip_is_true(self):
+        validation.validate_data_and_subtitle_streams(
+            metadata=self.metadata_without_unsupported_streams,
+            strip_unsupported_data_streams=True,
+            strip_unsupported_subtitle_streams=True,
+        )
