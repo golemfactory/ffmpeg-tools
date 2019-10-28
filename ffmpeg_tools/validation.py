@@ -89,7 +89,14 @@ def validate_video(metadata):
     return True
 
 
-def validate_transcoding_params(src_params, dst_params, src_metadata):
+def validate_transcoding_params(dst_params, src_metadata):
+
+    src_params = meta.create_params(
+        meta.get_format(src_metadata),
+        meta.get_resolution(src_metadata),
+        meta.get_video_codec(src_metadata),
+        meta.get_audio_codec(src_metadata),
+        meta.get_frame_rate(src_metadata))
 
     # Validate format
     validate_format(src_params["format"])
