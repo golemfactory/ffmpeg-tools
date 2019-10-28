@@ -159,11 +159,24 @@ _AUDIO_SUPPORTED_CONVERSIONS = {
     "vorbis": ["aac", "ac3", "amr_nb", "mp2", "mp3", "opus", "pcm_u8",           "wmav2", "vorbis"],
 }
 
+_PRESERVE_QUALITY_COMMAND = {
+    "h264" : [ "-crf", "22" ],
+    "h265" : [ "-crf", "22" ],
+    "vp8" : [ "-crf", "22", "-b:v", "0" ],
+    "vp9" : [ "-crf", "22", "-b:v", "0" ]
+}
+
 
 def get_video_encoder(target_codec):
     # This will throw exception for unsupported codecs.
     codec = VideoCodec(target_codec)
     return codec.get_encoder()
+
+
+def preserve_quality_command(target_codec):
+    # TODO: Hack function to preserve video quality for some formats.
+    # Create better and more generic solution in future.
+    return _PRESERVE_QUALITY_COMMAND.get(target_codec, [])
 
 
 def get_audio_encoder(target_codec):
