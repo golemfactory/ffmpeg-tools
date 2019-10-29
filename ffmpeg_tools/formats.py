@@ -1,4 +1,5 @@
 import enum
+from math import gcd
 
 from . import validation
 from . import codecs
@@ -329,44 +330,10 @@ _CONTAINER_SUPPORTED_CODECS = {
 assert set(_CONTAINER_SUPPORTED_CODECS) & {d.value for d in _EXCLUSIVE_DEMUXERS} == set(), \
     "Supported codecs for exclusive demuxers can be determined automatically; no need to define them here"
 
-_resolutions = {
+_aspect_ratio_overrides = {
     "16:9": [
-        [256, 144],    # YouTube 144p
-        [426, 240],
-        [640, 360],    # nHD
-        [768, 432],
-        [800, 450],
-        [848, 480],
-        [854, 480],    # FWVGA
-        [960, 540],    # qHD
-        [1024, 576],
-        [1280, 720],   # HD
-        [1366, 768],   # WXGA
-        [1600, 900],   # HD+
-        [1920, 1080],  # Full HD
-        [2048, 1152],
-        [2560, 1440],  # QHD
-        [2880, 1620],
-        [3200, 1800],  # QHD+
-        [3840, 2160],  # 4K UHD
-        [4096, 2304],
-        [5120, 2880],  # 5k
-        [7680, 4320]   # 8k
-    ],
-    "4:3": [
-        [320, 240],
-        [640, 480],
-        [800, 600],
-        [1024, 768]
-    ],
-    "16:10": [
-        [1280, 800],
-        [1440, 900],
-        [1680, 1050],
-        [1920, 1200]
-    ],
-    "5:4": [
-        [1280, 1024]
+        [1366, 768],
+        [1360, 768]
     ],
     "21:9": [
         [2560, 1080],
@@ -450,11 +417,17 @@ def _list_supported_audio_codecs_for_exclusive_demuxer(demuxer: Container):
     ))
 
 
-def list_matching_resolutions(resolution):
-    for aspect, resolutions_list in _resolutions.items():
+def get_effective_aspect_ratio(resolution: list) -> str:
+    for aspect, resolutions_list in _aspect_ratio_overrides.items():
         if resolution in resolutions_list:
-            return resolutions_list
-    return [resolution]
+            return aspect
+    return calculate_aspect_ratio(resolution)
+
+
+def calculate_aspect_ratio(resolution: list) -> str:
+    assert len(resolution) == 2
+    resolution_gcd = gcd(resolution[0], resolution[1])
+    return f"{resolution[0] // resolution_gcd}:{resolution[1] // resolution_gcd}"
 
 
 def list_supported_frame_rates():

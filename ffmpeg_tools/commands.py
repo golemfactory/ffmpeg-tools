@@ -310,7 +310,9 @@ def replace_streams(input_file,
                     replacement_source,
                     output_file,
                     stream_type,
-                    container=None):
+                    container=None,
+                    strip_unsupported_data_streams=False,
+                    strip_unsupported_subtitle_streams=False):
 
     assert os.path.isfile(input_file)
     assert os.path.isfile(replacement_source)
@@ -321,16 +323,45 @@ def replace_streams(input_file,
         replacement_source,
         output_file,
         stream_type,
-        container)
-
+        container,
+        strip_unsupported_data_streams,
+        strip_unsupported_subtitle_streams)
     exec_cmd(cmd)
+
+
+def get_list_of_streams_numbers_to_skip(
+    metadata,
+    strip_unsupported_data_streams,
+    strip_unsupported_subtitle_streams
+):
+    list_of_streams_to_skip = []
+    for stream_metadata in metadata.get('streams'):
+        if (
+            strip_unsupported_data_streams and
+            stream_metadata.get('codec_type') == 'data' and
+            stream_metadata.get('codec_name') not in
+            codecs.DATA_STREAM_WHITELIST
+        ):
+            list_of_streams_to_skip.append(stream_metadata.get('index'))
+
+        elif (
+            strip_unsupported_subtitle_streams and
+            stream_metadata.get('codec_type') == 'subtitle' and
+            stream_metadata.get('codec_name') not in
+            codecs.SUBTITLE_STREAM_WHITELIST
+        ):
+            list_of_streams_to_skip.append(stream_metadata.get('index'))
+
+    return list_of_streams_to_skip
 
 
 def replace_streams_command(input_file,
                             replacement_source,
                             output_file,
                             stream_type,
-                            container=None):
+                            container=None,
+                            strip_unsupported_data_streams=False,
+                            strip_unsupported_subtitle_streams=False):
     """
     Builds a ffmpeg command that can be used to create a new video file with
     all streams of a specific type replaced with streams of the same type from
@@ -359,6 +390,18 @@ def replace_streams_command(input_file,
             f"Should be one of: {', '.join(VALID_STREAM_TYPES)}"
         )
 
+    metadata = get_metadata_json(input_file)
+    stream_numbers_to_strip = get_list_of_streams_numbers_to_skip(
+        metadata,
+        strip_unsupported_data_streams,
+        strip_unsupported_subtitle_streams,
+    )
+
+    map_options = [
+        ["-map", f"-0:{index}"]
+        for index in stream_numbers_to_strip
+    ]
+
     cmd = [
         FFMPEG_COMMAND,
         "-nostdin",
@@ -367,6 +410,7 @@ def replace_streams_command(input_file,
         "-map", f"1:{stream_type}",
         "-map", "0",
         "-map", f"-0:{stream_type}",
+    ] + flatten_list(map_options) + [
         "-copy_unknown",
         "-c:v", "copy",
         "-c:d", "copy",

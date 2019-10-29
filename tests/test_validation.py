@@ -1,3 +1,4 @@
+import copy
 from unittest import TestCase
 import sys
 
@@ -7,9 +8,11 @@ from ffmpeg_tools.validation import UnsupportedVideoCodec, UnsupportedVideoForma
     UnsupportedTargetVideoFormat, MissingVideoStream, UnsupportedAudioCodec, \
     InvalidVideo, MissingVideoStream, InvalidFormatMetadata
 
+import ffmpeg_tools.codecs as codecs
 import ffmpeg_tools.validation as validation
 import ffmpeg_tools.formats as formats
 import ffmpeg_tools.meta as meta
+from parameterized import parameterized
 
 
 class TestInputValidation(TestCase):
@@ -225,76 +228,118 @@ class TestInputValidation(TestCase):
 
 class TestConversionValidation(TestCase):
 
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls._metadata = get_metadata("tests/resources/ForBiggerBlazes-[codec=h264].mp4")
+
+    def setUp(self) -> None:
+        pass
+
     @staticmethod
     def create_params(container, resolution, vcodec, acodec=None):
         return meta.create_params(container, resolution, vcodec, acodec=acodec)
 
+    def modify_metadata_with_passed_values(self, container, resolution, vcodec, acodec=None):
+        metadata = copy.copy(self._metadata)
+        metadata['format']['format_name'] = container
+        metadata['streams'][0]['width'] = resolution[0]
+        metadata['streams'][0]['coded_width'] = resolution[0]
+        metadata['streams'][0]['height'] = resolution[1]
+        metadata['streams'][0]['coded_height'] = resolution[1]
+        metadata['streams'][0]['codec_name'] = vcodec
+        if acodec is not None:
+            metadata['streams'][1]['codec_name'] = acodec
+        return metadata
+
 
     def test_container_change(self):
-        src_params = self.create_params("mp4", [1920, 1080], "h264", "mp3" )
+        metadata = self.modify_metadata_with_passed_values("mp4", [1920, 1080], "h264", "mp3" )
         dst_params = self.create_params("mov", [1920, 1080], "h264", "mp3" )
 
-        self.assertTrue(validation.validate_transcoding_params(src_params, dst_params))
+        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata))
 
 
     def test_video_codec_change(self):
-        src_params = self.create_params("mp4", [1920, 1080], "h264", "mp3" )
+        metadata = self.modify_metadata_with_passed_values("mp4", [1920, 1080], "h264", "mp3" )
         dst_params = self.create_params("mp4", [1920, 1080], "h265", "mp3" )
 
-        self.assertTrue(validation.validate_transcoding_params(src_params, dst_params))
+        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata))
 
 
     def test_invalid_audio_codec_change(self):
-        src_params = self.create_params("mp4", [1920, 1080], "h264", "mp3" )
-        dst_params = self.create_params("mp4", [1920, 1080], "h264", "aac" )
-
-        with self.assertRaises(validation.UnsupportedAudioCodecConversion):
-            validation.validate_transcoding_params(src_params, dst_params)
+        assert codecs.AudioCodec.WMAPRO.value not in codecs.AudioCodec.MP3.get_supported_conversions()
+        metadata = self.modify_metadata_with_passed_values("mp4", [1920, 1080], "h264", "mp3" )
+        dst_params = self.create_params("mp4", [1920, 1080], "h264", "wmapro" )
+        with self.assertRaises(validation.UnsupportedAudioCodec):
+            validation.validate_transcoding_params(dst_params, metadata)
 
 
     def test_resolution_change(self):
-        src_params = self.create_params("mp4", [1920, 1080], "h264", "mp3" )
+        metadata = self.modify_metadata_with_passed_values("mp4", [1920, 1080], "h264", "mp3" )
         dst_params = self.create_params("mp4", [640, 360], "h264", "mp3" )
 
-        self.assertTrue(validation.validate_transcoding_params(src_params, dst_params))
+        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata))
 
 
     def test_no_audio_codec(self):
         # It is valid to not provide audio codec.
-        src_params = self.create_params("mp4", [1920, 1080], "h264", None )
+        metadata = self.modify_metadata_with_passed_values("mp4", [1920, 1080], "h264", None )
         dst_params = self.create_params("mp4", [640, 360], "h264", None )
 
-        self.assertTrue(validation.validate_transcoding_params(src_params, dst_params))
+        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata))
 
 
     def test_invalid_src_video_codec(self):
-        src_params = self.create_params("mp4", [1920, 1080], "avi", "mp3" )
+        metadata = self.modify_metadata_with_passed_values("mp4", [1920, 1080], "avi", "mp3" )
         dst_params = self.create_params("mp4", [1920, 1080], "h264", "mp3" )
 
         with self.assertRaises(validation.UnsupportedVideoCodec):
-            validation.validate_transcoding_params(src_params, dst_params)
+            validation.validate_transcoding_params(dst_params, metadata)
 
 
     def test_invalid_dst_video_codec(self):
-        src_params = self.create_params("mp4", [1920, 1080], "h264", "mp3" )
+        metadata = self.modify_metadata_with_passed_values("mp4", [1920, 1080], "h264", "mp3" )
         dst_params = self.create_params("mp4", [1920, 1080], "avi", "mp3" )
 
         with self.assertRaises(validation.UnsupportedVideoCodec):
-            validation.validate_transcoding_params(src_params, dst_params)
+            validation.validate_transcoding_params(dst_params, metadata)
 
 
     def test_invalid_resolution_change(self):
-        src_params = self.create_params("mp4", [1920, 1080], "h264", "mp3" )
+        metadata = self.modify_metadata_with_passed_values("mp4", [1920, 1080], "h264", "mp3" )
         dst_params = self.create_params("mp4", [1280, 1024], "h264", "mp3" )
 
         with self.assertRaises(validation.InvalidResolution):
-            validation.validate_transcoding_params(src_params, dst_params)
+            validation.validate_transcoding_params(dst_params, metadata)
 
-
-    def test_nonstandard_resolution_change(self):
+    @parameterized.expand([
+        ([333, 333], [333, 333]),
+        ([333, 666], [666, 1332]),
+        ([1920, 1080], [1366, 768]),
+        ([3840, 2160], [2560, 1440]),
+    ])
+    def test_nonstandard_resolution_change(
+            self,
+            src_resolution,
+            target_resolution,
+    ):
         # It is allowed to convert video with non standard resolution
         # to the same resolution.
-        src_params = self.create_params("mp4", [333, 333], "h264", "mp3" )
-        dst_params = self.create_params("mp4", [333, 333], "h264", "mp3" )
+        metadata = self.modify_metadata_with_passed_values("mp4", src_resolution, "h264", "mp3")
+        dst_params = self.create_params("mp4", target_resolution, "h264", "mp3")
 
-        self.assertTrue(validation.validate_transcoding_params(src_params, dst_params))
+        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata))
+
+    def test_validate_audio_conversion_with_more_than_two_audio_channels(self):
+        dst_params = self.create_params("mp4", [1920, 1080], "h264", "aac")
+        unsupported_metadata = copy.deepcopy(self._metadata)
+        unsupported_metadata['streams'][1]['channels'] = validation._MAX_SUPPORTED_AUDIO_CHANNELS + 1
+        with self.assertRaises(validation.UnsupportedAudioChannelLayout):
+            validation.validate_transcoding_params(dst_params, unsupported_metadata)
+
+    def test_validate_conversion_without_audio_that_have_more_than_two_audio_channels(self):
+        dst_params = self.create_params("mp4", [1920, 1080], "h265", "mp3")
+        unsupported_metadata = copy.deepcopy(self._metadata)
+        unsupported_metadata['streams'][1]['channels'] = validation._MAX_SUPPORTED_AUDIO_CHANNELS + 1
+
+        self.assertTrue(validation.validate_transcoding_params(dst_params, unsupported_metadata))

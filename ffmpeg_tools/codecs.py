@@ -2,6 +2,14 @@ import enum
 
 from . import validation
 
+DATA_STREAM_WHITELIST = [
+    'bin_data'
+]
+
+
+SUBTITLE_STREAM_WHITELIST = [
+    'subrip'
+]
 
 
 class VideoCodec(enum.Enum):
@@ -43,6 +51,9 @@ class VideoCodec(enum.Enum):
 
     def get_supported_conversions(self):
         return _VIDEO_SUPPORTED_CONVERSIONS.get(self.value, [])
+
+    def can_convert(self, video_codec_value):
+        return video_codec_value in self.get_supported_conversions()
 
 
 class AudioCodec(enum.Enum):
@@ -135,8 +146,17 @@ _VIDEO_SUPPORTED_CONVERSIONS = {
 }
 
 _AUDIO_SUPPORTED_CONVERSIONS = {
-    "aac": [ "aac" ],
-    "mp3": [ "mp3" ],
+    #          "aac", "ac3", "amr_nb", "mp2", "mp3", "opus", "pcm_u8", "wmapro", "wmav2", "vorbis"
+    "aac":    ["aac", "ac3", "amr_nb", "mp2", "mp3", "opus", "pcm_u8",           "wmav2", "vorbis"],
+    "ac3":    ["aac", "ac3", "amr_nb", "mp2", "mp3", "opus", "pcm_u8",           "wmav2", "vorbis"],
+    "amr_nb": ["aac", "ac3", "amr_nb", "mp2", "mp3", "opus", "pcm_u8",           "wmav2", "vorbis"],
+    "mp2":    ["aac", "ac3", "amr_nb", "mp2", "mp3", "opus", "pcm_u8",           "wmav2", "vorbis"],
+    "mp3":    ["aac", "ac3", "amr_nb", "mp2", "mp3", "opus", "pcm_u8",           "wmav2", "vorbis"],
+    "opus":   ["aac", "ac3", "amr_nb", "mp2", "mp3", "opus", "pcm_u8",           "wmav2", "vorbis"],
+    "pcm_u8": ["aac", "ac3", "amr_nb", "mp2", "mp3", "opus", "pcm_u8",           "wmav2", "vorbis"],
+    "wmapro": ["aac", "ac3", "amr_nb", "mp2", "mp3", "opus", "pcm_u8",           "wmav2", "vorbis"],
+    "wmav2":  ["aac", "ac3", "amr_nb", "mp2", "mp3", "opus", "pcm_u8",           "wmav2", "vorbis"],
+    "vorbis": ["aac", "ac3", "amr_nb", "mp2", "mp3", "opus", "pcm_u8",           "wmav2", "vorbis"],
 }
 
 _PRESERVE_QUALITY_COMMAND = {

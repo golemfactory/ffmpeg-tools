@@ -3,6 +3,7 @@ import pytest
 from unittest import TestCase
 
 import ffmpeg_tools as ffmpeg
+from parameterized import parameterized
 
 
 class TestContainer(TestCase):
@@ -144,22 +145,34 @@ class TestSupportedAudioCodecs(object):
         assert not container.is_supported_audio_codec("bla")
 
 
-class TestResolutionsTools(object):
+class TestAspectRatioCalculations(TestCase):
 
-    def test_listing(self):
-        resolution_list = ffmpeg.formats.list_matching_resolutions( [1920, 1080] )
-        assert( len( resolution_list ) > 2 )
+    @parameterized.expand([
+        ([333, 333], "1:1"),
+        ([333, 666], "1:2"),
+        ([1366, 768], "16:9"),
+        ([1360, 768], "16:9"),
+        ([1920, 1080], "16:9"),
+        ([2560, 1080], "21:9"),
+        ([3440, 1440], "21:9"),
+    ])
+    def test_effective_aspect_ratio(self, resolution, expected_aspect_ratio):
+        aspect_ratio = ffmpeg.formats.get_effective_aspect_ratio(resolution)
+        self.assertEqual(aspect_ratio, expected_aspect_ratio)
 
-    def test_listing2(self):
-        resolution_list = ffmpeg.formats.list_matching_resolutions( [1280, 720] )
-        assert( len( resolution_list ) > 2 )
-
-    def test_listing_bad_propotions(self):
-        resolution_list = ffmpeg.formats.list_matching_resolutions( [2, 1] )
-
-        # Function returns at least resolution, that was passed in parameter.
-        assert( len( resolution_list ) == 1 )
-
+    @parameterized.expand([
+        ([333, 666], "1:2"),
+        ([1024, 768], "4:3"),
+        ([1920, 1080], "16:9"),
+        ([1280, 1024], "5:4"),
+        ([1360, 768], "85:48"),
+        ([1366, 768], "683:384"),
+        ([2560, 1080], "64:27"),
+        ([3440, 1440], "43:18"),
+    ])
+    def test_calculate_aspect_ratio(self, resolution, expected_aspect_ratio):
+        aspect_ratio = ffmpeg.formats.calculate_aspect_ratio(resolution)
+        self.assertEqual(aspect_ratio, expected_aspect_ratio)
 
 
 class TestHelperFunctions(TestCase):
