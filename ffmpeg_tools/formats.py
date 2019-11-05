@@ -332,6 +332,8 @@ assert set(_CONTAINER_SUPPORTED_CODECS) & {d.value for d in _EXCLUSIVE_DEMUXERS}
 
 _aspect_ratio_overrides = {
     "16:9": [
+        [426, 240],
+        [854, 480],
         [1366, 768],
         [1360, 768]
     ],
