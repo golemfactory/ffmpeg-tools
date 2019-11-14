@@ -253,7 +253,7 @@ def validate_resolution(src_resolution, target_resolution):
 
 def normalize_frame_rate(dst_frame_rate, src_frame_rate=None):
     if isinstance(dst_frame_rate, int):
-        return formats.FrameRate(dst_frame_rate, 1)
+        return formats.FrameRate(dst_frame_rate)
 
     if (
         isinstance(dst_frame_rate, tuple) and
@@ -276,7 +276,7 @@ def normalize_frame_rate(dst_frame_rate, src_frame_rate=None):
                 raise InvalidFrameRate(dst_frame_rate, src_frame_rate)
         else:
             try:
-                return formats.FrameRate(int(dst_frame_rate), 1)
+                return formats.FrameRate(int(dst_frame_rate))
             except ValueError:
                 raise InvalidFrameRate(dst_frame_rate, src_frame_rate)
 

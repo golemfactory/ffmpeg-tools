@@ -347,7 +347,7 @@ _aspect_ratio_overrides = {
 
 class FrameRate(NamedTuple):
     dividend: int
-    divisor: int
+    divisor: int = 1
 
 
 _frame_rates = {
@@ -365,16 +365,16 @@ _frame_rates = {
     # there are no floats allowed
 
     FrameRate(24000, 1001),  # 23.976 FPS (NTSC)
-    FrameRate(12, 1),
-    FrameRate(15, 1),
-    FrameRate(24, 1),
-    FrameRate(25, 1),
+    FrameRate(12),
+    FrameRate(15),
+    FrameRate(24),
+    FrameRate(25),
     FrameRate(30000, 1001),  # 29.97 FPS (NTSC)
-    FrameRate(30, 1),
-    FrameRate(50, 1),
-    FrameRate(60, 1),
-    FrameRate(240, 1),
-    FrameRate(1000, 1),
+    FrameRate(30),
+    FrameRate(50),
+    FrameRate(60),
+    FrameRate(240),
+    FrameRate(1000),
 }
 
 assert all(isinstance(x.dividend, int) for x in _frame_rates)

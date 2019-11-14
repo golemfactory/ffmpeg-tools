@@ -409,10 +409,10 @@ class TestNormalizeFramerate(TestCase):
         self.assertEqual(input_frame_rate, normalized_frame_rate)
 
     @parameterized.expand([
-        (30, formats.FrameRate(30, 1)),
-        ('30', formats.FrameRate(30, 1)),
-        ('30/1', formats.FrameRate(30, 1)),
-        ('60/2', formats.FrameRate(30, 1)),
+        (30, formats.FrameRate(30)),
+        ('30', formats.FrameRate(30)),
+        ('30/1', formats.FrameRate(30)),
+        ('60/2', formats.FrameRate(30)),
         ('62/4', formats.FrameRate(31, 2)),
     ])
     def test_function_returns_correct_normalized_frame_rates(self, user_input, expected):

@@ -182,3 +182,9 @@ class TestHelperFunctions(TestCase):
         self.assertEqual(
             ffmpeg.formats.get_safe_intermediate_format_for_demuxer(demuxer),
             demuxer.get_intermediate_muxer())
+
+class TestFrameRate(TestCase):
+    def test_should_have_a_default_for_divisor(self):
+        self.assertEqual(ffmpeg.formats.FrameRate(10), (10, 1))
+        self.assertEqual(ffmpeg.formats.FrameRate(10, 5), (10, 5))
+        self.assertEqual(ffmpeg.formats.FrameRate(10, 6), (10, 6))

@@ -205,5 +205,5 @@ MAX_SUPPORTED_FRAME_RATE = {
 }
 
 FRAME_RATE_SUBSTITUTIONS = {
-    VideoCodec.MPEG_2.value: [(formats.FrameRate(25, 2), formats.FrameRate(12, 1))]
+    VideoCodec.MPEG_2.value: [(formats.FrameRate(25, 2), formats.FrameRate(12))]
 }
