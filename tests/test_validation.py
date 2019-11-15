@@ -431,7 +431,7 @@ class TryGetFrameRateBasedOnCornerCases(TestCase):
         (formats.FrameRate(60), 'mpeg1video', formats.FrameRate(60)),
         (formats.FrameRate(61), 'mpeg1video', formats.FrameRate(60)),
         (formats.FrameRate(24, 2), 'mpeg1video', formats.FrameRate(12)),
-        (formats.FrameRate(25, 2), 'mpeg1video', formats.FrameRate(12)),
+        (formats.FrameRate(25, 2), 'mpeg1video', formats.FrameRate(25, 2)),
         (formats.FrameRate(24, 2), 'mpeg2video', None),
         (formats.FrameRate(25, 2), 'mpeg2video', formats.FrameRate(12, 1)),
 
