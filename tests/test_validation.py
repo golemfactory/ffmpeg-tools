@@ -365,6 +365,25 @@ class TestConversionValidation(TestCase):
         dst_params = self.create_params("mp4", [1920, 1080], "h264", frame_rate=None)
         self.assertTrue(validation.validate_transcoding_params(dst_params, metadata))
 
+    @parameterized.expand([
+        ('-1/-1', None),   # Should use source rate which is malformed
+        ('33', None),      # Should use source rate which is unsupported
+        (60, 33),          # Should use target rate which is malformed
+        (60, '-1/-1'),     # Should use target rate which is unsupported
+    ])
+    def test_validate_frame_rate_should_reject_invalid_target_frame_rates(self, src_frame_rate, target_frame_rate):
+        dst_params = self.create_params("mp4", [1920, 1080], "h264", frame_rate=target_frame_rate)
+        with self.assertRaises(validation.InvalidFrameRate):
+            validation.validate_frame_rate(dst_params, src_frame_rate)
+
+    @parameterized.expand([
+        (60, 30),   # Should use target rate
+        (60, None), # Should use source rate
+    ])
+    def test_validate_frame_rate_should_accept_supported_conversions(self, src_frame_rate, target_frame_rate):
+        dst_params = self.create_params("mp4", [1920, 1080], "h264", frame_rate=target_frame_rate)
+        self.assertTrue(validation.validate_frame_rate(dst_params, src_frame_rate))
+
 
 class TestValidateUnsupportedStreams(
     MetadataWithSupportedAndUnsupportedStreamsBase

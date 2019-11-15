@@ -291,11 +291,19 @@ def validate_frame_rate(
         src_frame_rate: str) -> bool:
 
     if 'frame_rate' in dst_params:
-        target_frame_rate = formats.FrameRate.decode(dst_params['frame_rate'])
+        try:
+            target_frame_rate = formats.FrameRate.decode(dst_params['frame_rate'])
+        except ValueError as exception:
+            raise InvalidFrameRate(src_frame_rate, dst_params['frame_rate'])
     else:
+        try:
+            decoded_src_frame_rate = formats.FrameRate.decode(src_frame_rate)
+        except ValueError as exception:
+            raise InvalidFrameRate(src_frame_rate, None)
+
         target_frame_rate = _get_frame_rate_based_on_src_frame_rate(
-            formats.FrameRate.decode(src_frame_rate),
-            dst_params
+            decoded_src_frame_rate,
+            dst_params,
         )
 
     if target_frame_rate.normalized() not in formats.list_supported_frame_rates():
