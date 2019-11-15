@@ -251,7 +251,7 @@ def validate_resolution(src_resolution, target_resolution):
     raise InvalidResolution(src_resolution, target_resolution)
 
 
-def _try_get_frame_rate_based_for_corner_cases(
+def _guess_target_frame_rate_for_special_cases(
         src_frame_rate: 'formats.FrameRate',
         dst_video_codec: str) -> Optional['formats.FrameRate']:
 
@@ -271,11 +271,11 @@ def _try_get_frame_rate_based_for_corner_cases(
     return None
 
 
-def _get_frame_rate_based_on_src_frame_rate(
+def _guess_target_frame_rate(
         src_frame_rate: 'formats.FrameRate',
         dst_params: Dict[str, Any]) -> str:
 
-    target_frame_rate = _try_get_frame_rate_based_for_corner_cases(
+    target_frame_rate = _guess_target_frame_rate_for_special_cases(
         src_frame_rate,
         dst_params['video']['codec'],
     )
@@ -300,7 +300,7 @@ def validate_frame_rate(
         except ValueError as exception:
             raise InvalidFrameRate(src_frame_rate, None)
 
-        target_frame_rate = _get_frame_rate_based_on_src_frame_rate(
+        target_frame_rate = _guess_target_frame_rate(
             decoded_src_frame_rate,
             dst_params,
         )

@@ -400,13 +400,36 @@ class TestConversionValidation(TestCase):
         (formats.FrameRate(24, 2), 'mpeg2video', formats.FrameRate(24, 2)),
         (formats.FrameRate(25, 2), 'mpeg2video', formats.FrameRate(12, 1)),
     ])
-    def test_get_frame_rate_based_on_src_frame_rate(self, src_frame_rate, dst_video_codec, expected_frame_rate):
+    def test_guess_target_frame_rate(self, src_frame_rate, dst_video_codec, expected_frame_rate):
         dst_params = self.create_params("mp4", [1920, 1080], dst_video_codec, frame_rate=None)
         self.assertEqual(
-            validation._get_frame_rate_based_on_src_frame_rate(src_frame_rate, dst_params),
+            validation._guess_target_frame_rate(src_frame_rate, dst_params),
             expected_frame_rate,
         )
 
+    @parameterized.expand([
+        (formats.FrameRate(122), 'h264', None),
+        (formats.FrameRate(60), 'h264', None),
+        (formats.FrameRate(122), 'mpeg1video', formats.FrameRate(60)),
+        (formats.FrameRate(244, 2), 'mpeg1video', formats.FrameRate(60)),
+        (formats.FrameRate(44, 2), 'mpeg1video', None),
+        (formats.FrameRate(22), 'mpeg1video', None),
+        (formats.FrameRate(60), 'mpeg1video', None),
+        (formats.FrameRate(61), 'mpeg1video', formats.FrameRate(60)),
+        (formats.FrameRate(24, 2), 'mpeg1video', None),
+        (formats.FrameRate(25, 2), 'mpeg1video', None),
+        (formats.FrameRate(24, 2), 'mpeg2video', None),
+        (formats.FrameRate(25, 2), 'mpeg2video', formats.FrameRate(12, 1)),
+
+    ])
+    def test_guess_target_frame_rate_for_special_cases(self, src_frame_rate, dst_video_codec, expected_value):
+        self.assertEqual(
+            validation._guess_target_frame_rate_for_special_cases(
+                src_frame_rate,
+                dst_video_codec
+            ),
+            expected_value
+        )
 
 class TestValidateUnsupportedStreams(
     MetadataWithSupportedAndUnsupportedStreamsBase
@@ -439,31 +462,4 @@ class TestValidateUnsupportedStreams(
             metadata=self.metadata_without_unsupported_streams,
             strip_unsupported_data_streams=True,
             strip_unsupported_subtitle_streams=True,
-        )
-
-
-class TryGetFrameRateBasedOnCornerCases(TestCase):
-
-    @parameterized.expand([
-        (formats.FrameRate(122), 'h264', None),
-        (formats.FrameRate(60), 'h264', None),
-        (formats.FrameRate(122), 'mpeg1video', formats.FrameRate(60)),
-        (formats.FrameRate(244, 2), 'mpeg1video', formats.FrameRate(60)),
-        (formats.FrameRate(44, 2), 'mpeg1video', None),
-        (formats.FrameRate(22), 'mpeg1video', None),
-        (formats.FrameRate(60), 'mpeg1video', None),
-        (formats.FrameRate(61), 'mpeg1video', formats.FrameRate(60)),
-        (formats.FrameRate(24, 2), 'mpeg1video', None),
-        (formats.FrameRate(25, 2), 'mpeg1video', None),
-        (formats.FrameRate(24, 2), 'mpeg2video', None),
-        (formats.FrameRate(25, 2), 'mpeg2video', formats.FrameRate(12, 1)),
-
-    ])
-    def test_function_returns_expected_values(self, src_frame_rate, dst_video_codec, expected_value):
-        self.assertEqual(
-            validation._try_get_frame_rate_based_for_corner_cases(
-                src_frame_rate,
-                dst_video_codec
-            ),
-            expected_value
         )
