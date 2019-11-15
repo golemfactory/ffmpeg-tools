@@ -386,6 +386,27 @@ class TestConversionValidation(TestCase):
         dst_params = self.create_params("mp4", [1920, 1080], "h264", frame_rate=target_frame_rate)
         self.assertTrue(validation.validate_frame_rate(dst_params, src_frame_rate))
 
+    @parameterized.expand([
+        (formats.FrameRate(122), 'h264', formats.FrameRate(122)),
+        (formats.FrameRate(60), 'h264', formats.FrameRate(60)),
+        (formats.FrameRate(122), 'mpeg1video', formats.FrameRate(60)),
+        (formats.FrameRate(244, 2), 'mpeg1video', formats.FrameRate(60)),
+        (formats.FrameRate(44, 2), 'mpeg1video', formats.FrameRate(44, 2)),
+        (formats.FrameRate(22), 'mpeg1video', formats.FrameRate(22)),
+        (formats.FrameRate(60), 'mpeg1video', formats.FrameRate(60)),
+        (formats.FrameRate(61), 'mpeg1video', formats.FrameRate(60)),
+        (formats.FrameRate(24, 2), 'mpeg1video', formats.FrameRate(24, 2)),
+        (formats.FrameRate(25, 2), 'mpeg1video', formats.FrameRate(25, 2)),
+        (formats.FrameRate(24, 2), 'mpeg2video', formats.FrameRate(24, 2)),
+        (formats.FrameRate(25, 2), 'mpeg2video', formats.FrameRate(12, 1)),
+    ])
+    def test_get_frame_rate_based_on_src_frame_rate(self, src_frame_rate, dst_video_codec, expected_frame_rate):
+        dst_params = self.create_params("mp4", [1920, 1080], dst_video_codec, frame_rate=None)
+        self.assertEqual(
+            validation._get_frame_rate_based_on_src_frame_rate(src_frame_rate, dst_params),
+            expected_frame_rate,
+        )
+
 
 class TestValidateUnsupportedStreams(
     MetadataWithSupportedAndUnsupportedStreamsBase
