@@ -1,5 +1,6 @@
 import os
 from math import gcd
+from typing import Any, Dict, Optional, Union
 
 from . import meta
 from . import formats
@@ -282,7 +283,10 @@ def normalize_frame_rate(dst_frame_rate, src_frame_rate=None):
     raise InvalidFrameRate(dst_frame_rate, src_frame_rate)
 
 
-def _try_get_frame_rate_based_for_corner_cases(src_frame_rate, dst_video_codec):
+def _try_get_frame_rate_based_for_corner_cases(
+        src_frame_rate: str,
+        dst_video_codec: str) -> Optional[Union[int, 'formats.FrameRate']]:
+
     if dst_video_codec in codecs.MAX_SUPPORTED_FRAME_RATE:
         (dividend, divisor) = normalize_frame_rate(src_frame_rate)
         return min(
@@ -298,7 +302,10 @@ def _try_get_frame_rate_based_for_corner_cases(src_frame_rate, dst_video_codec):
     return None
 
 
-def _get_frame_rate_based_on_src_frame_rate(src_frame_rate, dst_params):
+def _get_frame_rate_based_on_src_frame_rate(
+        src_frame_rate: str,
+        dst_params: Dict[str, Any]) -> str:
+
     target_frame_rate = _try_get_frame_rate_based_for_corner_cases(
         src_frame_rate,
         dst_params['video']['codec'],
@@ -306,7 +313,10 @@ def _get_frame_rate_based_on_src_frame_rate(src_frame_rate, dst_params):
     return target_frame_rate if target_frame_rate is not None else src_frame_rate
 
 
-def validate_frame_rate(dst_params, src_frame_rate):
+def validate_frame_rate(
+        dst_params: Dict[str, Any],
+        src_frame_rate: str) -> bool:
+
     if 'frame_rate' in dst_params:
         target_frame_rate = dst_params['frame_rate']
     else:
