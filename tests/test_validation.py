@@ -370,6 +370,7 @@ class TestConversionValidation(TestCase):
         ('33', None),      # Should use source rate which is unsupported
         (60, 33),          # Should use target rate which is malformed
         (60, '-1/-1'),     # Should use target rate which is unsupported
+        (None, None),      # Should use source rate which is missing
     ])
     def test_validate_frame_rate_should_reject_invalid_target_frame_rates(self, src_frame_rate, target_frame_rate):
         dst_params = self.create_params("mp4", [1920, 1080], "h264", frame_rate=target_frame_rate)
@@ -379,6 +380,7 @@ class TestConversionValidation(TestCase):
     @parameterized.expand([
         (60, 30),   # Should use target rate
         (60, None), # Should use source rate
+        (None, 60), # Should use target rate and ignore missing source rate
     ])
     def test_validate_frame_rate_should_accept_supported_conversions(self, src_frame_rate, target_frame_rate):
         dst_params = self.create_params("mp4", [1920, 1080], "h264", frame_rate=target_frame_rate)

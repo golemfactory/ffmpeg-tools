@@ -156,7 +156,7 @@ def validate_transcoding_params(
     # Validate resolution change
     validate_resolution(src_params["resolution"], dst_params["resolution"])
 
-    validate_frame_rate(dst_params, src_params["frame_rate"])
+    validate_frame_rate(dst_params, src_params.get("frame_rate"))
 
     validate_data_and_subtitle_streams(
         src_metadata,
@@ -284,7 +284,7 @@ def _get_frame_rate_based_on_src_frame_rate(
 
 def validate_frame_rate(
         dst_params: Dict[str, Any],
-        src_frame_rate: str) -> bool:
+        src_frame_rate: Optional[str]) -> bool:
 
     if 'frame_rate' in dst_params:
         try:
@@ -292,6 +292,9 @@ def validate_frame_rate(
         except ValueError as exception:
             raise InvalidFrameRate(src_frame_rate, dst_params['frame_rate'])
     else:
+        if src_frame_rate is None:
+            raise InvalidFrameRate(None, dst_params.get('frame_rate'))
+
         try:
             decoded_src_frame_rate = formats.FrameRate.decode(src_frame_rate)
         except ValueError as exception:
