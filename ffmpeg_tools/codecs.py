@@ -205,10 +205,12 @@ MAX_SUPPORTED_FRAME_RATE = {
 }
 
 FRAME_RATE_SUBSTITUTIONS = {
-    VideoCodec.MPEG_2.value: [(formats.FrameRate(25, 2), formats.FrameRate(12))]
+    VideoCodec.MPEG_2.value: {
+        formats.FrameRate(25, 2): formats.FrameRate(12),
+    }
 }
 assert all(
     original == original.normalized() and substitute == substitute.normalized()
     for codec, rules in FRAME_RATE_SUBSTITUTIONS.items()
-    for original, substitute in rules
+    for original, substitute in rules.items()
 )

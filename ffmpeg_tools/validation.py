@@ -262,12 +262,11 @@ def _try_get_frame_rate_based_for_corner_cases(
         if normalized_src_rate.to_float() > max_supported_fps:
             return formats.FrameRate(max_supported_fps)
 
-    if dst_video_codec in codecs.FRAME_RATE_SUBSTITUTIONS:
-        for (original, substitute) in codecs.FRAME_RATE_SUBSTITUTIONS[dst_video_codec]:
-            assert original == original.normalized()
-
-            if normalized_src_rate == original:
-                return substitute
+    substitution_needed = (
+        dst_video_codec in codecs.FRAME_RATE_SUBSTITUTIONS and
+        normalized_src_rate in codecs.FRAME_RATE_SUBSTITUTIONS[dst_video_codec])
+    if substitution_needed:
+        return codecs.FRAME_RATE_SUBSTITUTIONS[dst_video_codec][normalized_src_rate]
 
     return None
 
