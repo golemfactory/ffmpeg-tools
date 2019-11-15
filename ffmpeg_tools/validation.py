@@ -255,8 +255,10 @@ def _try_get_frame_rate_based_for_corner_cases(
         src_frame_rate: str,
         dst_video_codec: str) -> Optional[Union[int, 'formats.FrameRate']]:
 
+    normalized_src_rate = src_frame_rate.normalized()
+
     if dst_video_codec in codecs.MAX_SUPPORTED_FRAME_RATE:
-        (dividend, divisor) = formats.FrameRate.decode(src_frame_rate).normalized()
+        (dividend, divisor) = normalized_src_rate
         return min(
             dividend // divisor,
             codecs.MAX_SUPPORTED_FRAME_RATE[dst_video_codec]
@@ -264,7 +266,9 @@ def _try_get_frame_rate_based_for_corner_cases(
 
     if dst_video_codec in codecs.FRAME_RATE_SUBSTITUTIONS:
         for (original, substitute) in codecs.FRAME_RATE_SUBSTITUTIONS[dst_video_codec]:
-            if formats.FrameRate.decode(src_frame_rate).normalized() == formats.FrameRate.decode(original).normalized():
+            assert original == original.normalized()
+
+            if normalized_src_rate == original:
                 return substitute
 
     return None
