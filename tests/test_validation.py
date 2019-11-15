@@ -349,13 +349,13 @@ class TestConversionValidation(TestCase):
         self.assertTrue(validation.validate_transcoding_params(dst_params, unsupported_metadata))
 
     def test_target_frame_rate_based_on_src_value_corner_case_mpeg1video(self):
-        assert validation.normalize_frame_rate(122) not in formats._frame_rates
+        assert formats.FrameRate(122) not in formats._frame_rates
         metadata = self.modify_metadata_with_passed_values("mov", [1920, 1080], "mpeg1video", frame_rate=122)
         dst_params = self.create_params("mov", [1920, 1080], "mpeg1video", frame_rate=None)
         self.assertTrue(validation.validate_transcoding_params(dst_params, metadata))
 
     def test_target_frame_rate_based_on_src_value_corner_case_mpeg2video(self):
-        assert validation.normalize_frame_rate(122) not in formats._frame_rates
+        assert formats.FrameRate(122) not in formats._frame_rates
         metadata = self.modify_metadata_with_passed_values("mov", [1920, 1080], "mpeg2video", frame_rate='25/2')
         dst_params = self.create_params("mov", [1920, 1080], "mpeg2video")
         self.assertTrue(validation.validate_transcoding_params(dst_params, metadata))
@@ -398,40 +398,6 @@ class TestValidateUnsupportedStreams(
             strip_unsupported_data_streams=True,
             strip_unsupported_subtitle_streams=True,
         )
-
-
-class TestNormalizeFramerate(TestCase):
-
-    @parameterized.expand(formats._frame_rates)
-    def test_function_returns_unchanged_values_normalized_frame_rates(self, dividend, divisor):
-        input_frame_rate = (dividend, divisor)
-        normalized_frame_rate = validation.normalize_frame_rate(input_frame_rate)
-        self.assertEqual(input_frame_rate, normalized_frame_rate)
-
-    @parameterized.expand([
-        (30, formats.FrameRate(30)),
-        ('30', formats.FrameRate(30)),
-        ('30/1', formats.FrameRate(30)),
-        ('60/2', formats.FrameRate(30)),
-        ('62/4', formats.FrameRate(31, 2)),
-    ])
-    def test_function_returns_correct_normalized_frame_rates(self, user_input, expected):
-        normalized = validation.normalize_frame_rate(user_input)
-        self.assertEqual(normalized, expected)
-
-    @parameterized.expand([
-        (29.5,),
-        ('29.5',),
-        ('30/1/2',),
-        ('30/1.5',),
-        ((29.5, 1),),
-        (('29.5', 1),),
-        ((29, 1.5),),
-        ((29, '1.5'),),
-    ])
-    def test_incorrect_input_values_raises_exception(self, invalid_frame_rate):
-        with self.assertRaises(validation.InvalidFrameRate):
-            validation.normalize_frame_rate(invalid_frame_rate)
 
 
 class TryGetFrameRateBasedOnCornerCases(TestCase):

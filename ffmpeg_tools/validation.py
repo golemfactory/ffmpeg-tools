@@ -251,44 +251,12 @@ def validate_resolution(src_resolution, target_resolution):
     raise InvalidResolution(src_resolution, target_resolution)
 
 
-def normalize_frame_rate(dst_frame_rate, src_frame_rate=None):
-    if isinstance(dst_frame_rate, int):
-        return formats.FrameRate(dst_frame_rate)
-
-    if (
-        isinstance(dst_frame_rate, tuple) and
-        len(dst_frame_rate) == 2 and
-        isinstance(dst_frame_rate[0], int) and
-        isinstance(dst_frame_rate[1], int)
-    ):
-        return formats.FrameRate(*dst_frame_rate)
-
-    if isinstance(dst_frame_rate, str):
-        if '/' in dst_frame_rate:
-            (dividend, divisor) = dst_frame_rate.split('/', 1)
-            try:
-                _gcd: int = gcd(int(dividend), int(divisor))
-                return formats.FrameRate(
-                    int(dividend) // _gcd,
-                    int(divisor) // _gcd,
-                )
-            except ValueError:
-                raise InvalidFrameRate(dst_frame_rate, src_frame_rate)
-        else:
-            try:
-                return formats.FrameRate(int(dst_frame_rate))
-            except ValueError:
-                raise InvalidFrameRate(dst_frame_rate, src_frame_rate)
-
-    raise InvalidFrameRate(dst_frame_rate, src_frame_rate)
-
-
 def _try_get_frame_rate_based_for_corner_cases(
         src_frame_rate: str,
         dst_video_codec: str) -> Optional[Union[int, 'formats.FrameRate']]:
 
     if dst_video_codec in codecs.MAX_SUPPORTED_FRAME_RATE:
-        (dividend, divisor) = normalize_frame_rate(src_frame_rate)
+        (dividend, divisor) = formats.FrameRate.decode(src_frame_rate).normalized()
         return min(
             dividend // divisor,
             codecs.MAX_SUPPORTED_FRAME_RATE[dst_video_codec]
@@ -296,7 +264,7 @@ def _try_get_frame_rate_based_for_corner_cases(
 
     if dst_video_codec in codecs.FRAME_RATE_SUBSTITUTIONS:
         for (original, substitute) in codecs.FRAME_RATE_SUBSTITUTIONS[dst_video_codec]:
-            if normalize_frame_rate(src_frame_rate) == normalize_frame_rate(original):
+            if formats.FrameRate.decode(src_frame_rate).normalized() == formats.FrameRate.decode(original).normalized():
                 return substitute
 
     return None
@@ -322,7 +290,7 @@ def validate_frame_rate(
     else:
         target_frame_rate = _get_frame_rate_based_on_src_frame_rate(src_frame_rate, dst_params)
 
-    if normalize_frame_rate(target_frame_rate) not in formats.list_supported_frame_rates():
+    if formats.FrameRate.decode(target_frame_rate).normalized() not in formats.list_supported_frame_rates():
         raise InvalidFrameRate(src_frame_rate, target_frame_rate)
     return True
 
