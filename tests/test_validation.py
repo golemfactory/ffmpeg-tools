@@ -403,20 +403,18 @@ class TestValidateUnsupportedStreams(
 class TryGetFrameRateBasedOnCornerCases(TestCase):
 
     @parameterized.expand([
-        (122, 'h264', None),
-        (60, 'h264', None),
-        (122, 'mpeg1video', 60),
-        ('122', 'mpeg1video', 60),
-        ('122/1', 'mpeg1video', 60),
-        ('244/2', 'mpeg1video', 60),
-        ('44/2', 'mpeg1video', 22),
-        ('22', 'mpeg1video', 22),
-        ('60', 'mpeg1video', 60),
-        ('61', 'mpeg1video', 60),
-        ('24/2', 'mpeg1video', 12),
-        ('25/2', 'mpeg1video', 12),
-        ('24/2', 'mpeg2video', None),
-        ('25/2', 'mpeg2video', formats.FrameRate(12, 1)),
+        (formats.FrameRate(122), 'h264', None),
+        (formats.FrameRate(60), 'h264', None),
+        (formats.FrameRate(122), 'mpeg1video', formats.FrameRate(60)),
+        (formats.FrameRate(244, 2), 'mpeg1video', formats.FrameRate(60)),
+        (formats.FrameRate(44, 2), 'mpeg1video', formats.FrameRate(22)),
+        (formats.FrameRate(22), 'mpeg1video', formats.FrameRate(22)),
+        (formats.FrameRate(60), 'mpeg1video', formats.FrameRate(60)),
+        (formats.FrameRate(61), 'mpeg1video', formats.FrameRate(60)),
+        (formats.FrameRate(24, 2), 'mpeg1video', formats.FrameRate(12)),
+        (formats.FrameRate(25, 2), 'mpeg1video', formats.FrameRate(12)),
+        (formats.FrameRate(24, 2), 'mpeg2video', None),
+        (formats.FrameRate(25, 2), 'mpeg2video', formats.FrameRate(12, 1)),
 
     ])
     def test_function_returns_expected_values(self, src_frame_rate, dst_video_codec, expected_value):

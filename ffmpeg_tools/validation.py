@@ -252,17 +252,18 @@ def validate_resolution(src_resolution, target_resolution):
 
 
 def _try_get_frame_rate_based_for_corner_cases(
-        src_frame_rate: str,
-        dst_video_codec: str) -> Optional[Union[int, 'formats.FrameRate']]:
+        src_frame_rate: 'formats.FrameRate',
+        dst_video_codec: str) -> Optional['formats.FrameRate']:
 
     normalized_src_rate = src_frame_rate.normalized()
 
     if dst_video_codec in codecs.MAX_SUPPORTED_FRAME_RATE:
         (dividend, divisor) = normalized_src_rate
-        return min(
-            dividend // divisor,
-            codecs.MAX_SUPPORTED_FRAME_RATE[dst_video_codec]
-        )
+        max_supported_fps = codecs.MAX_SUPPORTED_FRAME_RATE[dst_video_codec]
+        if dividend // divisor > max_supported_fps:
+            return formats.FrameRate(max_supported_fps)
+
+        return formats.FrameRate(dividend // divisor)
 
     if dst_video_codec in codecs.FRAME_RATE_SUBSTITUTIONS:
         for (original, substitute) in codecs.FRAME_RATE_SUBSTITUTIONS[dst_video_codec]:
@@ -275,7 +276,7 @@ def _try_get_frame_rate_based_for_corner_cases(
 
 
 def _get_frame_rate_based_on_src_frame_rate(
-        src_frame_rate: str,
+        src_frame_rate: 'formats.FrameRate',
         dst_params: Dict[str, Any]) -> str:
 
     target_frame_rate = _try_get_frame_rate_based_for_corner_cases(
@@ -290,11 +291,14 @@ def validate_frame_rate(
         src_frame_rate: str) -> bool:
 
     if 'frame_rate' in dst_params:
-        target_frame_rate = dst_params['frame_rate']
+        target_frame_rate = formats.FrameRate.decode(dst_params['frame_rate'])
     else:
-        target_frame_rate = _get_frame_rate_based_on_src_frame_rate(src_frame_rate, dst_params)
+        target_frame_rate = _get_frame_rate_based_on_src_frame_rate(
+            formats.FrameRate.decode(src_frame_rate),
+            dst_params
+        )
 
-    if formats.FrameRate.decode(target_frame_rate).normalized() not in formats.list_supported_frame_rates():
+    if target_frame_rate.normalized() not in formats.list_supported_frame_rates():
         raise InvalidFrameRate(src_frame_rate, target_frame_rate)
     return True
 
