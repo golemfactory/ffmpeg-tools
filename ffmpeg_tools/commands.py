@@ -408,7 +408,7 @@ def replace_streams_command(input_file,
             ["-map", f"-0:{index}"]
             for index in unsupported_subtitle_streams
         )
-        
+
     cmd = [
         FFMPEG_COMMAND,
         "-nostdin",
@@ -424,18 +424,13 @@ def replace_streams_command(input_file,
         "-c:d", "copy",
     ] + ([
         "-f", container,
-    ] if container is not None else []) + [
+    ] if container is not None else []) + ([
+        "-c:a", codecs.get_audio_encoder(targs['audio']['codec']),
+    ] if 'audio' in targs and 'codec' in targs['audio'] else []) + ([
+        "-b:a", targs['audio']['bitrate'],
+    ] if 'audio' in targs and 'bitrate' in targs['audio'] else []) + [
         output_file,
     ]
-
-    if 'audio' in targs and 'codec' in targs['audio'] is not None:
-        acodec = targs['audio']['codec']
-        cmd.append("-c:a")
-        cmd.append(codecs.get_audio_encoder(acodec))
-    if 'audio' in targs and 'bitrate' in targs['audio'] is not None:
-        abitrate = targs['audio']['bitrate']
-        cmd.append("-b:a")
-        cmd.append(abitrate)
 
     return cmd
 
