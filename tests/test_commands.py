@@ -137,6 +137,20 @@ class TestCommands(TestCase):
         self.assertEqual(command, expected_command)
 
 
+    def test_transcode_video_command_does_not_accept_audio_parameters(self):
+        with self.assertRaises(commands.InvalidArgument):
+            commands.transcode_video_command(
+                "input.mp4",
+                "output.mkv",
+                {
+                    'audio': {
+                        'codec': 'mp3',
+                        'bitrate': '128k',
+                    },
+                },
+            )
+
+
     def test_replace_streams_command(self):
         command = ffmpeg.commands.replace_streams_command(
             "tests/resources/ForBiggerBlazes-[codec=h264].mp4",
@@ -210,6 +224,22 @@ class TestCommands(TestCase):
                 "tests/resources/ForBiggerBlazes-[codec=h264].mkv",
             ]
             self.assertEqual(command, expected_command)
+
+
+    def test_replace_streams_command_does_not_accept_video_parameters(self):
+        with self.assertRaises(commands.InvalidArgument):
+            commands.replace_streams_command(
+                "tests/resources/ForBiggerBlazes-[codec=h264].mp4",
+                "tests/resources/ForBiggerBlazes-[codec=h264][video-only].mkv",
+                "tests/resources/ForBiggerBlazes-[codec=h264].mkv",
+                "v",
+                {
+                    'video': {
+                        'codec': 'h264',
+                        'bitrate': '1000k',
+                    },
+                }
+            )
 
 
 class MetadataWithSupportedAndUnsupportedStreamsBase(TestCase):

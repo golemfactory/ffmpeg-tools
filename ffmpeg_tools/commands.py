@@ -238,6 +238,18 @@ def transcode_video_command(track, output_file, targs):
         "-f", targs['container'],
     ] if 'container' in targs else [])
 
+    if 'audio' in targs:
+        # NOTE: It's not guaranteed that the file passed in here by the caller does not
+        # have an audio track unless the file was passed to extract_streams_command() first.
+        # If it wasn't, the audio parameters could actually have effect on the output.
+        # We assume that it was though, because doing otherwise is not useful in practice.
+        # We could inspect the file with ffprobe (again) to be sure but I don't think
+        # it's worth it for such a fringe case.
+        raise InvalidArgument(
+            "The 'transcode' command works with a video stream extracted from the input video. "
+            "Audio parameters would have no effect when used here. "
+            "You should pass them to the 'replace' command instead.")
+
     # video settings
     if 'video' in targs and 'codec' in targs['video']:
         vcodec = targs['video']['codec']
@@ -380,6 +392,17 @@ def replace_streams_command(input_file,
             f"Invalid value of 'stream_type'. "
             f"Should be one of: {', '.join(VALID_STREAM_TYPES)}"
         )
+
+    if 'video' in targs:
+        # The video parameters could have an effect here if we added them to the
+        # ffmpeg command but we don't want to. It could result in video
+        # being transcoded again - i.e. work that was supposed to be already
+        # performed by the 'transcode' command, potentially on a completely
+        # different machine.
+        raise InvalidArgument(
+            "The video has already been transcoded so it's too late to specify video parameters. "
+            "Then would have no effect when used here. "
+            "You should pass them to the 'transcode' command instead.")
 
     metadata = get_metadata_json(input_file)
     (unsupported_data_streams, unsupported_subtitle_streams) = \
