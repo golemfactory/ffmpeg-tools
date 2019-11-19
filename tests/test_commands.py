@@ -4,6 +4,7 @@ import tempfile
 
 from unittest import TestCase, mock
 import ffmpeg_tools as ffmpeg
+from ffmpeg_tools import codecs
 from ffmpeg_tools import commands
 from ffmpeg_tools.codecs import DATA_STREAM_WHITELIST, SUBTITLE_STREAM_WHITELIST
 from ffmpeg_tools.commands import get_lists_of_unsupported_stream_numbers
@@ -88,6 +89,60 @@ class TestCommands(TestCase):
             ffmpeg.commands.get_video_len("bla")
 
 
+    def test_transcode_video_command(self):
+        command = commands.transcode_video_command(
+            "input.mp4",
+            "output.mkv",
+            {
+                'container': 'matroska',
+                'frame_rate': '25/1',
+                'video': {
+                    'codec': 'h264',
+                    'bitrate': '1000k',
+                },
+                'audio': {
+                    'codec': 'mp3',
+                    'bitrate': '128k',
+                },
+                'resolution': [1920, 1080],
+                'scaling_alg': 'neighbor',
+            },
+        )
+
+        expected_command = [
+            "ffmpeg",
+            "-nostdin",
+            "-i", "input.mp4",
+            "-f", "matroska",
+            "-c:v", codecs.VideoCodec.get_encoder(codecs.VideoCodec.H_264),
+            "-crf", "22",
+            "-r", "25/1",
+            "-b:v", "1000k",
+            "-c:a", codecs.AudioCodec.get_encoder(codecs.AudioCodec.MP3),
+            "-b:a", "128k",
+            "-vf", "scale=1920:1080",
+            "-sws_flags", "neighbor",
+            "output.mkv",
+        ]
+        self.assertEqual(command, expected_command)
+
+
+    def test_transcode_video_command_with_optional_values_missing(self):
+        command = commands.transcode_video_command(
+            "input.mp4",
+            "output.mkv",
+            {},
+        )
+
+        expected_command = [
+            "ffmpeg",
+            "-nostdin",
+            "-i", "input.mp4",
+            "output.mkv",
+        ]
+        self.assertEqual(command, expected_command)
+
+
     def test_replace_streams_command(self):
         command = ffmpeg.commands.replace_streams_command(
             "tests/resources/ForBiggerBlazes-[codec=h264].mp4",
@@ -123,7 +178,7 @@ class TestCommands(TestCase):
 
     def test_replace_streams_command_removes_streams_not_in_whitelist(self):
         with mock.patch('ffmpeg_tools.commands.get_lists_of_unsupported_stream_numbers') as _get_lists_of_unsupported_streams_numbers:
-            
+
             _get_lists_of_unsupported_streams_numbers.return_value = ([2], [3])
 
             command = ffmpeg.commands.replace_streams_command(
