@@ -149,7 +149,12 @@ class TestCommands(TestCase):
             "tests/resources/ForBiggerBlazes-[codec=h264][video-only].mkv",
             "tests/resources/ForBiggerBlazes-[codec=h264].mkv",
             "v",
-            {},
+            {
+                'audio': {
+                    'codec': 'mp3',
+                    'bitrate': '128k',
+                }
+            },
         )
 
         expected_command = [
@@ -163,6 +168,8 @@ class TestCommands(TestCase):
             "-copy_unknown",
             "-c:v", "copy",
             "-c:d", "copy",
+            "-c:a", codecs.AudioCodec.get_encoder(codecs.AudioCodec.MP3),
+            "-b:a", "128k",
             "tests/resources/ForBiggerBlazes-[codec=h264].mkv",
         ]
         self.assertEqual(command, expected_command)
