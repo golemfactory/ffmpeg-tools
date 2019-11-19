@@ -78,7 +78,8 @@ def create_params(vformat, resolution, vcodec, acodec=None,
         args["frame_rate"] = frame_rate
 
     # Audio parameters
-    args["audio"] = dict()
+    if acodec or audio_bitrate:
+        args["audio"] = {}
 
     if acodec:
         args["audio"]["codec"] = acodec
