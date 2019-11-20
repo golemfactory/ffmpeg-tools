@@ -6,17 +6,15 @@ from unittest import TestCase, mock
 
 from parameterized import parameterized
 
-import ffmpeg_tools as ffmpeg
 from ffmpeg_tools import codecs
 from ffmpeg_tools import commands
 from ffmpeg_tools import formats
-from ffmpeg_tools.codecs import DATA_STREAM_WHITELIST, SUBTITLE_STREAM_WHITELIST
-from ffmpeg_tools.commands import get_lists_of_unsupported_stream_numbers
+from ffmpeg_tools import meta
 from tests.test_meta import example_metadata
 
 BIN_DATA_EXAMPLE_STREAM = {
     'index': 2,
-    'codec_name': DATA_STREAM_WHITELIST[0],
+    'codec_name': codecs.DATA_STREAM_WHITELIST[0],
     'codec_long_name': 'binary data',
     'profile': 'unknown',
     'codec_type': 'data',
@@ -40,7 +38,7 @@ BIN_DATA_EXAMPLE_STREAM = {
 
 SUBTITLES_EXAMPLE_STREAM = {
     'index': 3,
-    'codec_name': SUBTITLE_STREAM_WHITELIST[0],
+    'codec_name': codecs.SUBTITLE_STREAM_WHITELIST[0],
     'codec_long_name': 'SubRip subtitle',
     'codec_type': 'subtitle',
     'codec_time_base': '0/1',
@@ -68,7 +66,7 @@ SUBTITLES_EXAMPLE_STREAM = {
 class TestCommands(TestCase):
 
     def test_transcoding(self):
-        params = ffmpeg.meta.create_params("mp4", [1280, 800], "h265")
+        params = meta.create_params("mp4", [1280, 800], "h265")
 
         input_video = "tests/resources/ForBiggerBlazes-[codec=h264].mp4"
         output_video = os.path.join(tempfile.gettempdir(), "ForBiggerBlazes-[codec=h265].mp4")
@@ -76,21 +74,21 @@ class TestCommands(TestCase):
         if os.path.exists(output_video):
             os.remove(output_video)
 
-        ffmpeg.commands.transcode_video(input_video, params, output_video)
+        commands.transcode_video(input_video, params, output_video)
 
         assert os.path.exists(output_video)
 
 
     def test_get_video_length(self):
         input_video = "tests/resources/ForBiggerBlazes-[codec=h264].mp4"
-        length = ffmpeg.commands.get_video_len(input_video)
+        length = commands.get_video_len(input_video)
 
         assert length == 15.021667
 
 
     def test_failed_command(self):
-        with self.assertRaises(ffmpeg.commands.CommandFailed):
-            ffmpeg.commands.get_video_len("bla")
+        with self.assertRaises(commands.CommandFailed):
+            commands.get_video_len("bla")
 
 
     def test_transcode_video_command(self):
@@ -156,7 +154,7 @@ class TestCommands(TestCase):
 
 
     def test_replace_streams_command(self):
-        command = ffmpeg.commands.replace_streams_command(
+        command = commands.replace_streams_command(
             "tests/resources/ForBiggerBlazes-[codec=h264].mp4",
             "tests/resources/ForBiggerBlazes-[codec=h264][video-only].mkv",
             "tests/resources/ForBiggerBlazes-[codec=h264].mkv",
@@ -188,8 +186,8 @@ class TestCommands(TestCase):
 
 
     def test_replace_streams_command_validates_stream_type(self):
-        with self.assertRaises(ffmpeg.commands.InvalidArgument):
-            ffmpeg.commands.replace_streams_command(
+        with self.assertRaises(commands.InvalidArgument):
+            commands.replace_streams_command(
                 "tests/resources/ForBiggerBlazes-[codec=h264].mp4",
                 "tests/resources/ForBiggerBlazes-[codec=h264][video-only].mkv",
                 "tests/resources/ForBiggerBlazes-[codec=h264].mkv",
@@ -202,7 +200,7 @@ class TestCommands(TestCase):
 
             _get_lists_of_unsupported_streams_numbers.return_value = ([2], [3])
 
-            command = ffmpeg.commands.replace_streams_command(
+            command = commands.replace_streams_command(
                 "tests/resources/ForBiggerBlazes-[codec=h264].mp4",
                 "tests/resources/ForBiggerBlazes-[codec=h264][video-only].mkv",
                 "tests/resources/ForBiggerBlazes-[codec=h264].mkv",
@@ -273,19 +271,19 @@ class TestGetListOfStreamNumbersToSkip(
 ):
 
     def test_function_does_not_strip_whitelisted_streams(self):
-        stream_number = get_lists_of_unsupported_stream_numbers(
+        stream_number = commands.get_lists_of_unsupported_stream_numbers(
             self.metadata_without_unsupported_streams,
         )
         self.assertEqual(stream_number, ([], []))
 
     def test_function_strips_non_whitelisted_streams(self):
-        stream_number = get_lists_of_unsupported_stream_numbers(
+        stream_number = commands.get_lists_of_unsupported_stream_numbers(
             self.metadata_with_unsupported_streams,
         )
         self.assertEqual(stream_number, ([2], [3]))
 
     def test_function_returns_correct_numbers_streams_metadata(self):
-        stream_number = get_lists_of_unsupported_stream_numbers(
+        stream_number = commands.get_lists_of_unsupported_stream_numbers(
             self.metadata_with_unsupported_streams)
         self.assertEqual(stream_number, ([2], [3]))
 
