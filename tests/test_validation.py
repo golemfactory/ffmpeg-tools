@@ -362,6 +362,14 @@ class TestConversionValidation(TestCase):
 
         self.assertTrue(validation.validate_transcoding_params(dst_params, unsupported_metadata, {}))
 
+    def test_validate_audio_codec_conversion_should_accept_videos_with_more_than_two_channels_if_audio_does_not_have_to_be_transcoded(self):
+        dst_params = self.create_params("mp4", [1920, 1080], "h264", "aac", 60)
+        unsupported_metadata = copy.deepcopy(self._metadata)
+        unsupported_metadata['streams'][1]['channels'] = validation._MAX_SUPPORTED_AUDIO_CHANNELS + 1
+        assert unsupported_metadata['streams'][1]['codec_name'] == "aac"
+
+        self.assertTrue(validation.validate_transcoding_params(dst_params, unsupported_metadata, {}))
+
     def test_default_audio_codec_should_be_validated_if_dst_audio_codec_missing(self):
         metadata = self.modify_metadata_with_passed_values("mp4", [1920, 1080], "h264", "mp3", frame_rate=60)
         dst_params = self.create_params("mp4", [1920, 1080], "h264", acodec=None)
