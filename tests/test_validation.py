@@ -1,4 +1,5 @@
 import copy
+from unittest import TestCase, mock
 
 from tests.test_commands import MetadataWithSupportedAndUnsupportedStreamsBase
 
@@ -356,6 +357,23 @@ class TestConversionValidation(TestCase):
         unsupported_metadata['streams'][1]['channels'] = validation._MAX_SUPPORTED_AUDIO_CHANNELS + 1
 
         self.assertTrue(validation.validate_transcoding_params(dst_params, unsupported_metadata))
+
+    @mock.patch('ffmpeg_tools.validation.commands.query_muxer_info')
+    def test_default_audio_codec_should_be_validated_if_dst_audio_codec_missing(self, mock_query_muxer_info):
+        mock_query_muxer_info.return_value = {'default_audio_codec': "unsupported_audio_codec"}
+
+        metadata = self.modify_metadata_with_passed_values("mp4", [1920, 1080], "h264", "mp3", frame_rate=60)
+        dst_params = self.create_params("mp4", [1920, 1080], "h264", acodec=None)
+        with self.assertRaises(validation.UnsupportedAudioCodec):
+            validation.validate_transcoding_params(dst_params, metadata)
+
+    @mock.patch('ffmpeg_tools.validation.commands.query_muxer_info')
+    def test_default_audio_codec_should_be_ignored_if_dst_audio_codec_present(self, mock_query_muxer_info):
+        mock_query_muxer_info.return_value = {'default_audio_codec': "unsupported_audio_codec"}
+
+        metadata = self.modify_metadata_with_passed_values("mp4", [1920, 1080], "h264", "mp3", frame_rate=60)
+        dst_params = self.create_params("mp4", [1920, 1080], "h264", acodec="aac")
+        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata))
 
     def test_target_frame_rate_based_on_src_value_corner_case_mpeg1video(self):
         assert formats.FrameRate(122) not in formats._frame_rates
