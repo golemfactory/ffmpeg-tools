@@ -1,6 +1,4 @@
 import copy
-from unittest import TestCase
-import sys
 
 from tests.test_commands import MetadataWithSupportedAndUnsupportedStreamsBase
 
@@ -8,7 +6,7 @@ from ffmpeg_tools.formats import list_supported_formats, list_supported_video_co
 from ffmpeg_tools.meta import get_metadata
 from ffmpeg_tools.validation import UnsupportedVideoCodec, UnsupportedVideoFormat, \
     UnsupportedTargetVideoFormat, MissingVideoStream, UnsupportedAudioCodec, \
-    InvalidVideo, MissingVideoStream, InvalidFormatMetadata
+    InvalidVideo, InvalidFormatMetadata
 
 import ffmpeg_tools.codecs as codecs
 import ffmpeg_tools.validation as validation
