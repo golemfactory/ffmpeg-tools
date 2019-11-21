@@ -345,17 +345,20 @@ class TestConversionValidation(TestCase):
 
         self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, {}))
 
-    def test_validate_audio_conversion_with_more_than_two_audio_channels(self):
-        dst_params = self.create_params("mp4", [1920, 1080], "h264", "aac", 60)
+    def test_validate_audio_codec_conversion_should_reject_videos_with_more_than_two_channels_if_audio_must_be_transcoded(self):
+        dst_params = self.create_params("mp4", [1920, 1080], "h264", "mp3", 60)
         unsupported_metadata = copy.deepcopy(self._metadata)
         unsupported_metadata['streams'][1]['channels'] = validation._MAX_SUPPORTED_AUDIO_CHANNELS + 1
+        assert unsupported_metadata['streams'][1]['codec_name'] != "mp3"
+
         with self.assertRaises(validation.UnsupportedAudioChannelLayout):
             validation.validate_transcoding_params(dst_params, unsupported_metadata, {})
 
-    def test_validate_conversion_without_audio_that_have_more_than_two_audio_channels(self):
-        dst_params = self.create_params("mp4", [1920, 1080], "h265", "mp3", 60)
+    def test_validate_audio_codec_conversion_should_not_reject_videos_with_two_or_less_channels_even_if_audio_must_be_transcoded(self):
+        dst_params = self.create_params("mp4", [1920, 1080], "h264", "mp3", 60)
         unsupported_metadata = copy.deepcopy(self._metadata)
-        unsupported_metadata['streams'][1]['channels'] = validation._MAX_SUPPORTED_AUDIO_CHANNELS + 1
+        unsupported_metadata['streams'][1]['channels'] = 1
+        assert unsupported_metadata['streams'][1]['codec_name'] != "mp3"
 
         self.assertTrue(validation.validate_transcoding_params(dst_params, unsupported_metadata, {}))
 
