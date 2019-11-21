@@ -236,8 +236,9 @@ class TestConversionValidation(TestCase):
         pass
 
     @staticmethod
-    def create_params(container, resolution, vcodec, acodec=None, frame_rate=None):
-        return meta.create_params(container, resolution, vcodec, acodec=acodec, frame_rate=frame_rate)
+    def create_params(*args, **kwargs):
+        return meta.create_params(*args, **kwargs)
+
 
     def modify_metadata_with_passed_values(self, container, resolution, vcodec, acodec=None, frame_rate=None):
         metadata = copy.copy(self._metadata)
