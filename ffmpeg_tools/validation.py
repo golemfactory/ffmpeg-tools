@@ -104,11 +104,11 @@ def _get_src_codec(src_params):
     return None
 
 
-def _get_dst_codec(dst_params: dict) -> Optional[str]:
+def _get_dst_codec(dst_params: dict, dst_muxer_info: Dict[str, Any]) -> Optional[str]:
     assert not formats.Container(dst_params["format"]).is_exclusive_demuxer()
 
     if dst_params.get("audio", {}).get("codec") is None:
-        return commands.query_muxer_info(dst_params["format"]).get('default_audio_codec')
+        return dst_muxer_info.get('default_audio_codec')
 
     return dst_params['audio']['codec']
 
@@ -131,6 +131,7 @@ def validate_data_and_subtitle_streams(
 def validate_transcoding_params(
     dst_params,
     src_metadata,
+    dst_muxer_info,
     strip_unsupported_data_streams=False,
     strip_unsupported_subtitle_streams=False,
 ):
@@ -158,7 +159,7 @@ def validate_transcoding_params(
     audio_stream = meta.get_audio_stream(src_metadata)
 
     if src_audio_codec is not None:
-        dest_audio_codec = _get_dst_codec(dst_params)
+        dest_audio_codec = _get_dst_codec(dst_params, dst_muxer_info)
         validate_audio_codec(src_params["format"], src_audio_codec)
         validate_audio_codec(dst_params["format"], dest_audio_codec)
         validate_audio_codec_conversion(

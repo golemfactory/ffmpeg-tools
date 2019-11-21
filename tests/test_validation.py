@@ -1,5 +1,5 @@
 import copy
-from unittest import TestCase, mock
+from unittest import TestCase
 
 from tests.test_commands import MetadataWithSupportedAndUnsupportedStreamsBase
 
@@ -260,7 +260,7 @@ class TestConversionValidation(TestCase):
         metadata = self.modify_metadata_with_passed_values("mp4", [1920, 1080], "h264", "mp3", 60)
         dst_params = self.create_params("mov", [1920, 1080], "h264", "mp3", 60)
 
-        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata))
+        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, {}))
 
 
     def test_container_change_when_target_is_an_exclusive_demuxer(self):
@@ -269,14 +269,14 @@ class TestConversionValidation(TestCase):
         metadata = self.modify_metadata_with_passed_values("matroska", [1920, 1080], "h264", "mp3")
         dst_params = self.create_params(formats.Container.c_MATROSKA_WEBM_DEMUXER.value, [1920, 1080], "h264")
         with self.assertRaises(UnsupportedTargetVideoFormat):
-            validation.validate_transcoding_params(dst_params, metadata)
+            validation.validate_transcoding_params(dst_params, metadata, {})
 
 
     def test_video_codec_change(self):
         metadata = self.modify_metadata_with_passed_values("mp4", [1920, 1080], "h264", "mp3", 60)
         dst_params = self.create_params("mp4", [1920, 1080], "h265", "mp3", 60)
 
-        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata))
+        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, {}))
 
 
     def test_invalid_audio_codec_change(self):
@@ -285,22 +285,23 @@ class TestConversionValidation(TestCase):
         dst_params = self.create_params("mp4", [1920, 1080], "h264", "wmapro", 60)
 
         with self.assertRaises(validation.UnsupportedAudioCodec):
-            validation.validate_transcoding_params(dst_params, metadata)
+            validation.validate_transcoding_params(dst_params, metadata, {})
 
 
     def test_resolution_change(self):
         metadata = self.modify_metadata_with_passed_values("mp4", [1920, 1080], "h264", "mp3", 60)
         dst_params = self.create_params("mp4", [640, 360], "h264", "mp3", 60)
 
-        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata))
+        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, {}))
 
 
     def test_no_audio_codec(self):
         # It is valid to not provide audio codec.
         metadata = self.modify_metadata_with_passed_values("mp4", [1920, 1080], "h264", None, 60)
         dst_params = self.create_params("mp4", [640, 360], "h264", None, 60)
+        dst_muxer_info = {'default_audio_codec': "aac"}
 
-        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata))
+        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, dst_muxer_info))
 
 
     def test_invalid_src_video_codec(self):
@@ -308,7 +309,7 @@ class TestConversionValidation(TestCase):
         dst_params = self.create_params("mp4", [1920, 1080], "h264", "mp3", 60)
 
         with self.assertRaises(validation.UnsupportedVideoCodec):
-            validation.validate_transcoding_params(dst_params, metadata)
+            validation.validate_transcoding_params(dst_params, metadata, {})
 
 
     def test_invalid_dst_video_codec(self):
@@ -316,7 +317,7 @@ class TestConversionValidation(TestCase):
         dst_params = self.create_params("mp4", [1920, 1080], "avi", "mp3", 60)
 
         with self.assertRaises(validation.UnsupportedVideoCodec):
-            validation.validate_transcoding_params(dst_params, metadata)
+            validation.validate_transcoding_params(dst_params, metadata, {})
 
 
     def test_invalid_resolution_change(self):
@@ -324,7 +325,7 @@ class TestConversionValidation(TestCase):
         dst_params = self.create_params("mp4", [1280, 1024], "h264", "mp3", 60)
 
         with self.assertRaises(validation.InvalidResolution):
-            validation.validate_transcoding_params(dst_params, metadata)
+            validation.validate_transcoding_params(dst_params, metadata, {})
 
     @parameterized.expand([
         ([333, 333], [333, 333]),
@@ -342,55 +343,51 @@ class TestConversionValidation(TestCase):
         metadata = self.modify_metadata_with_passed_values("mp4", src_resolution, "h264", "mp3", 60)
         dst_params = self.create_params("mp4", target_resolution, "h264", "mp3", 60)
 
-        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata))
+        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, {}))
 
     def test_validate_audio_conversion_with_more_than_two_audio_channels(self):
         dst_params = self.create_params("mp4", [1920, 1080], "h264", "aac", 60)
         unsupported_metadata = copy.deepcopy(self._metadata)
         unsupported_metadata['streams'][1]['channels'] = validation._MAX_SUPPORTED_AUDIO_CHANNELS + 1
         with self.assertRaises(validation.UnsupportedAudioChannelLayout):
-            validation.validate_transcoding_params(dst_params, unsupported_metadata)
+            validation.validate_transcoding_params(dst_params, unsupported_metadata, {})
 
     def test_validate_conversion_without_audio_that_have_more_than_two_audio_channels(self):
         dst_params = self.create_params("mp4", [1920, 1080], "h265", "mp3", 60)
         unsupported_metadata = copy.deepcopy(self._metadata)
         unsupported_metadata['streams'][1]['channels'] = validation._MAX_SUPPORTED_AUDIO_CHANNELS + 1
 
-        self.assertTrue(validation.validate_transcoding_params(dst_params, unsupported_metadata))
+        self.assertTrue(validation.validate_transcoding_params(dst_params, unsupported_metadata, {}))
 
-    @mock.patch('ffmpeg_tools.validation.commands.query_muxer_info')
-    def test_default_audio_codec_should_be_validated_if_dst_audio_codec_missing(self, mock_query_muxer_info):
-        mock_query_muxer_info.return_value = {'default_audio_codec': "unsupported_audio_codec"}
-
+    def test_default_audio_codec_should_be_validated_if_dst_audio_codec_missing(self):
         metadata = self.modify_metadata_with_passed_values("mp4", [1920, 1080], "h264", "mp3", frame_rate=60)
         dst_params = self.create_params("mp4", [1920, 1080], "h264", acodec=None)
+        dst_muxer_info = {'default_audio_codec': "unsupported_audio_codec"}
         with self.assertRaises(validation.UnsupportedAudioCodec):
-            validation.validate_transcoding_params(dst_params, metadata)
+            validation.validate_transcoding_params(dst_params, metadata, dst_muxer_info)
 
-    @mock.patch('ffmpeg_tools.validation.commands.query_muxer_info')
-    def test_default_audio_codec_should_be_ignored_if_dst_audio_codec_present(self, mock_query_muxer_info):
-        mock_query_muxer_info.return_value = {'default_audio_codec': "unsupported_audio_codec"}
-
+    def test_default_audio_codec_should_be_ignored_if_dst_audio_codec_present(self):
         metadata = self.modify_metadata_with_passed_values("mp4", [1920, 1080], "h264", "mp3", frame_rate=60)
         dst_params = self.create_params("mp4", [1920, 1080], "h264", acodec="aac")
-        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata))
+        dst_muxer_info = {'default_audio_codec': "unsupported_audio_codec"}
+        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, dst_muxer_info))
 
     def test_target_frame_rate_based_on_src_value_corner_case_mpeg1video(self):
         assert formats.FrameRate(122) not in formats._frame_rates
-        metadata = self.modify_metadata_with_passed_values("mov", [1920, 1080], "mpeg1video", frame_rate=122)
-        dst_params = self.create_params("mov", [1920, 1080], "mpeg1video", frame_rate=None)
-        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata))
+        metadata = self.modify_metadata_with_passed_values("mov", [1920, 1080], "mpeg1video", "aac", frame_rate=122)
+        dst_params = self.create_params("mov", [1920, 1080], "mpeg1video", "aac", frame_rate=None)
+        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, {}))
 
     def test_target_frame_rate_based_on_src_value_corner_case_mpeg2video(self):
         assert formats.FrameRate(122) not in formats._frame_rates
-        metadata = self.modify_metadata_with_passed_values("mov", [1920, 1080], "mpeg2video", frame_rate='25/2')
-        dst_params = self.create_params("mov", [1920, 1080], "mpeg2video")
-        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata))
+        metadata = self.modify_metadata_with_passed_values("mov", [1920, 1080], "mpeg2video", "aac", frame_rate='25/2')
+        dst_params = self.create_params("mov", [1920, 1080], "mpeg2video", "aac")
+        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, {}))
 
     def test_target_frame_rate_not_specified(self):
-        metadata = self.modify_metadata_with_passed_values("mp4", [1920, 1080], "h264", frame_rate=60)
-        dst_params = self.create_params("mp4", [1920, 1080], "h264", frame_rate=None)
-        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata))
+        metadata = self.modify_metadata_with_passed_values("mp4", [1920, 1080], "h264", "aac", frame_rate=60)
+        dst_params = self.create_params("mp4", [1920, 1080], "h264", "aac", frame_rate=None)
+        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, {}))
 
     @parameterized.expand([
         ('-1/-1', None),   # Should use source rate which is malformed
@@ -459,33 +456,27 @@ class TestConversionValidation(TestCase):
         )
 
     def test_get_dst_codec_returns_audio_codec_from_dst_params_if_present(self):
-        assert commands.query_muxer_info("mp4")['default_audio_codec'] != "mp3", \
-            "Make sure we're not testing a case where both answers are the same"
-
         params = self.create_params("mp4", [333, 333], "h264", acodec="mp3")
-        result = validation._get_dst_codec(params)
-        self.assertEqual(result, 'mp3')
+        dst_muxer_info = {'default_audio_codec': "aac"}
+        self.assertEqual(validation._get_dst_codec(params, dst_muxer_info), 'mp3')
 
     def test_get_dst_codec_returns_default_audio_codec_if_no_dst_audio_params(self):
-        assert commands.query_muxer_info("mp4")['default_audio_codec'] == "aac"
-
         params = self.create_params("mp4", [333, 333], "h264", acodec=None)
         assert 'audio' not in params
-        self.assertEqual(validation._get_dst_codec(params), 'aac')
+        dst_muxer_info = {'default_audio_codec': "aac"}
+        self.assertEqual(validation._get_dst_codec(params, dst_muxer_info), 'aac')
 
     def test_get_dst_codec_returns_default_audio_codec_if_no_codec_in_dst_audio_params(self):
-        assert commands.query_muxer_info("mp4")['default_audio_codec'] == "aac"
-
         params = self.create_params("mp4", [333, 333], "h264", audio_bitrate="192k")
         assert 'codec' not in params['audio']
-        self.assertEqual(validation._get_dst_codec(params), 'aac')
+        dst_muxer_info = {'default_audio_codec': "aac"}
+        self.assertEqual(validation._get_dst_codec(params, dst_muxer_info), 'aac')
 
     def test_get_dst_codec_returns_default_audio_codec_if_codec_missing_from_dst_params(self):
-        assert commands.query_muxer_info("mp4")['default_audio_codec'] == "aac"
-
         params = self.create_params("mp4", [333, 333], "h264", acodec="mp3")
         params['audio']['codec'] = None
-        self.assertEqual(validation._get_dst_codec(params), 'aac')
+        dst_muxer_info = {'default_audio_codec': "aac"}
+        self.assertEqual(validation._get_dst_codec(params, dst_muxer_info), 'aac')
 
 
 class TestValidateUnsupportedStreams(
