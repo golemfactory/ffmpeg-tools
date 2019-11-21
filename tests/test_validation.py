@@ -243,7 +243,7 @@ class TestConversionValidation(TestCase):
 
 
     def modify_metadata_with_passed_values(self, container, resolution, vcodec, acodec=None, frame_rate=None):
-        metadata = copy.copy(self._metadata)
+        metadata = copy.deepcopy(self._metadata)
         metadata['format']['format_name'] = container
         metadata['streams'][0]['width'] = resolution[0]
         metadata['streams'][0]['coded_width'] = resolution[0]
