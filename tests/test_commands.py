@@ -303,13 +303,41 @@ class TestQueryMuxerInfo(TestCase):
             muxer_info = commands.query_muxer_info(formats.Container.c_3G2)
             self.assertEqual(muxer_info['default_audio_codec'], 'amr_nb')
 
-    def test_muxer_not_recognized_by_ffmpeg_should_cause_an_exception(self):
-        with self.assertRaises(commands.NoMatchingEncoder):
-            commands.query_muxer_info('non_existent_container')
+    def test_default_audio_codec_field_should_be_omitted_if_not_found_in_ffmpeg_output(self):
+        sample_ffmpeg_output = (
+            'Muxer 3g2 [3GP2 (3GPP2 file format)]:\n'
+            '   Common extensions: 3g2.\n'
+            '   Default video codec: h263.\n'
+        )
 
-    def test_demuxer_should_cause_an_exception(self):
-        with self.assertRaises(commands.NoMatchingEncoder):
-            commands.query_muxer_info(formats.Container.c_MATROSKA_WEBM_DEMUXER.value)
+        with mock.patch.object(commands, 'exec_cmd_to_string', return_value=sample_ffmpeg_output):
+            muxer_info = commands.query_muxer_info(formats.Container.c_3G2)
+            self.assertIsInstance(muxer_info, dict)
+            self.assertNotIn('default_audio_codec', muxer_info)
+
+    def test_default_audio_codec_field_should_be_omitted_if_multiple_matches_found_in_ffmpeg_output(self):
+        sample_ffmpeg_output = (
+            'Muxer 3g2 [3GP2 (3GPP2 file format)]:\n'
+            '   Common extensions: 3g2.\n'
+            '   Default video codec: h263.\n'
+            '   Default audio codec: amr_nb.\n'
+            '   Default audio codec: mp3.\n'
+            '   Default audio codec: amr_nb.\n'
+        )
+
+        with mock.patch.object(commands, 'exec_cmd_to_string', return_value=sample_ffmpeg_output):
+            with self.assertRaises(commands.NoMatchingEncoder):
+                commands.query_muxer_info(formats.Container.c_3G2)
+
+    def test_muxer_not_recognized_by_ffmpeg_should_result_in_default_audio_codec_not_being_found(self):
+        muxer_info = commands.query_muxer_info('non_existent_container')
+        self.assertIsInstance(muxer_info, dict)
+        self.assertNotIn('default_audio_codec', muxer_info)
+
+    def test_demuxer_should_result_in_default_audio_codec_not_being_found(self):
+        muxer_info = commands.query_muxer_info(formats.Container.c_MATROSKA_WEBM_DEMUXER.value)
+        self.assertIsInstance(muxer_info, dict)
+        self.assertNotIn('default_audio_codec', muxer_info)
 
     @parameterized.expand([
         ('   Default audio codec: amr_nb.\n', ['amr_nb']),

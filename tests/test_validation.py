@@ -383,6 +383,13 @@ class TestConversionValidation(TestCase):
         dst_muxer_info = {'default_audio_codec': "unsupported_audio_codec"}
         self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, dst_muxer_info))
 
+    def test_validation_should_fail_if_ffmpeg_reports_no_default_audio_codec_for_a_format(self):
+        metadata = self.modify_metadata_with_passed_values("mp4", [1920, 1080], "h264", "aac", frame_rate=60)
+        dst_params = self.create_params("mpeg", [1920, 1080], "mpeg1video")
+        dst_muxer_info = {}
+        with self.assertRaises(validation.UnsupportedAudioCodecConversion):
+            validation.validate_transcoding_params(dst_params, metadata, dst_muxer_info)
+
     def test_target_frame_rate_based_on_src_value_corner_case_mpeg1video(self):
         assert formats.FrameRate(122) not in formats._frame_rates
         metadata = self.modify_metadata_with_passed_values("mov", [1920, 1080], "mpeg1video", "aac", frame_rate=122)

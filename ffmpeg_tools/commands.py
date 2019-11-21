@@ -584,9 +584,13 @@ def query_muxer_info(muxer: str) -> Dict[str, Any]:
 
     muxer_info_command = get_query_muxer_info_command(muxer)
     muxer_info = exec_cmd_to_string(muxer_info_command)
+
     audio_codecs = _parse_default_audio_codec_out_of_muxer_info(muxer_info)
 
-    if len(audio_codecs) != 1:
+    if len(audio_codecs) == 0:
+        return {}
+
+    if len(audio_codecs) >= 2:
         raise NoMatchingEncoder(
             f"Found {len(audio_codecs)} things in ffmpeg output that could be the default audio codec name. "
             f"Expected exactly one.")

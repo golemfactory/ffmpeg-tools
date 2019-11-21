@@ -160,6 +160,9 @@ def validate_transcoding_params(
 
     if src_audio_codec is not None:
         dest_audio_codec = _get_dst_codec(dst_params, dst_muxer_info)
+        if dest_audio_codec is None:
+            raise UnsupportedAudioCodecConversion(src_audio_codec, dest_audio_codec)
+
         validate_audio_codec(src_params["format"], src_audio_codec)
         validate_audio_codec(dst_params["format"], dest_audio_codec)
         validate_audio_codec_conversion(
