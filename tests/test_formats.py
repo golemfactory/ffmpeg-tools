@@ -83,28 +83,28 @@ class TestContainer(TestCase):
 class TestSupportedFormats(object):
 
     def test_existing_format(self):
-        assert(formats.is_supported("mp4") == True)
+        assert formats.is_supported("mp4") == True
 
     def test_not_existing_format(self):
-        assert(formats.is_supported("bla") == False)
+        assert formats.is_supported("bla") == False
 
 
 class TestListingSupportedFormats(object):
 
     def test_example_format(self):
-        assert( "mp4" in formats.list_supported_formats() )
+        assert "mp4" in formats.list_supported_formats()
 
 
 class TestSupportedVideoCodecs(object):
 
     def test_existing_format(self):
-        assert(formats.is_supported_video_codec("mp4", "h264") == True)
+        assert formats.is_supported_video_codec("mp4", "h264") == True
 
     def test_not_existing_format(self):
-        assert(formats.is_supported_video_codec("bla", "h264") == False)
+        assert formats.is_supported_video_codec("bla", "h264") == False
 
     def test_not_existing_codec(self):
-        assert(formats.is_supported_video_codec("mp4", "bla") == False)
+        assert formats.is_supported_video_codec("mp4", "bla") == False
 
     def test_container_is_supported(self):
         container = formats.Container("mp4")
@@ -119,22 +119,22 @@ class TestSupportedVideoCodecs(object):
 class TestListingSupportedVideoCodecs(object):
 
     def test_existing_format(self):
-        assert( len( formats.list_supported_video_codecs("mp4") ) != 0 )
+        assert len( formats.list_supported_video_codecs("mp4") ) != 0
 
     def test_not_existing_format(self):
-        assert( len( formats.list_supported_video_codecs("bla") ) == 0 )
+        assert len( formats.list_supported_video_codecs("bla") ) == 0
 
 
 class TestSupportedAudioCodecs(object):
 
     def test_existing_format(self):
-        assert(formats.is_supported_audio_codec("mp4", "mp3") == True)
+        assert formats.is_supported_audio_codec("mp4", "mp3") == True
 
     def test_not_existing_format(self):
-        assert(formats.is_supported_audio_codec("bla", "mp3") == False)
+        assert formats.is_supported_audio_codec("bla", "mp3") == False
 
     def test_not_existing_codec(self):
-        assert(formats.is_supported_audio_codec("mp4", "bla") == False)
+        assert formats.is_supported_audio_codec("mp4", "bla") == False
 
     def test_container_is_supported(self):
         container = formats.Container("mp4")
