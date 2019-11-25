@@ -393,16 +393,28 @@ class TestConversionValidation(TestCase):
         dst_muxer_info = None
         self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, dst_muxer_info))
 
-    def test_target_frame_rate_based_on_src_value_corner_case_mpeg1video(self):
-        assert frame_rate.FrameRate(122) not in formats._frame_rates
-        metadata = self.modify_metadata_with_passed_values("mov", [1920, 1080], "mpeg1video", "aac", frame_rate=122)
-        dst_params = self.create_params("mov", [1920, 1080], "mpeg1video", "aac", frame_rate=None)
+    @parameterized.expand([
+        ('121/2',),
+        ('61',),
+        ('122',),
+        ('100000',),
+    ])
+    def test_source_frame_rate_when_capped_is_validated_as_max_when_implicitly_used_as_target_frame_rate(self, src_frame_rate):
+        assert codecs.MAX_SUPPORTED_FRAME_RATE[codecs.VideoCodec.MPEG_1.value] == 60
+        assert frame_rate.FrameRate.from_string(src_frame_rate).normalized() not in formats.list_supported_frame_rates()
+        assert frame_rate.FrameRate(60) in formats.list_supported_frame_rates()
+
+        metadata = self.modify_metadata_with_passed_values("mov", [1920, 1080], codecs.VideoCodec.MPEG_1.value, "aac", frame_rate=src_frame_rate)
+        dst_params = self.create_params("mov", [1920, 1080], codecs.VideoCodec.MPEG_1.value, "aac", frame_rate=None)
         self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, {}))
 
-    def test_target_frame_rate_based_on_src_value_corner_case_mpeg2video(self):
-        assert frame_rate.FrameRate(122) not in formats._frame_rates
+    def test_source_frame_rate_when_substituted_is_validated_as_the_resulting_value_when_implicitly_used_as_target_frame_rate(self):
+        assert frame_rate.FrameRate(25, 2) in codecs.FRAME_RATE_SUBSTITUTIONS.get(codecs.VideoCodec.MPEG_2.value, {})
+        assert frame_rate.FrameRate(25, 2) not in formats.list_supported_frame_rates()
+        assert frame_rate.FrameRate(12) in formats.list_supported_frame_rates()
+
         metadata = self.modify_metadata_with_passed_values("mov", [1920, 1080], "mpeg2video", "aac", frame_rate='25/2')
-        dst_params = self.create_params("mov", [1920, 1080], "mpeg2video", "aac")
+        dst_params = self.create_params("mov", [1920, 1080], "mpeg2video", "aac", frame_rate=None)
         self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, {}))
 
     def test_target_frame_rate_not_specified(self):
