@@ -55,8 +55,8 @@ class VideoCodec(enum.Enum):
     def get_supported_conversions(self) -> List[str]:
         return _VIDEO_SUPPORTED_CONVERSIONS.get(self.value, [])
 
-    def can_convert(self, video_codec_value: str) -> bool:
-        return video_codec_value in self.get_supported_conversions()
+    def can_convert(self, video_codec: str) -> bool:
+        return video_codec in self.get_supported_conversions()
 
 
 class AudioCodec(enum.Enum):
@@ -90,6 +90,9 @@ class AudioCodec(enum.Enum):
 
     def get_supported_conversions(self) -> List[str]:
         return _AUDIO_SUPPORTED_CONVERSIONS.get(self.value, [])
+
+    def can_convert(self, audio_codec: str) -> bool:
+        return audio_codec in self.get_supported_conversions()
 
 
 _VIDEO_ENCODERS = {
