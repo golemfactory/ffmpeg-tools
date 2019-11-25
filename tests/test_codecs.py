@@ -2,6 +2,7 @@ from unittest import TestCase, mock
 
 from ffmpeg_tools import codecs
 from ffmpeg_tools import exceptions
+from ffmpeg_tools import formats
 from ffmpeg_tools import validation
 
 
@@ -67,6 +68,32 @@ class TestSupportedConversions(TestCase):
     @mock.patch.dict('ffmpeg_tools.codecs._SUBTITLE_SUPPORTED_CONVERSIONS', {'subrip': ['subrip', 'ass', 'webvtt']})
     def test_can_convert_unsupported_subtitle_codec(self):
         self.assertFalse(codecs.SubtitleCodec("subrip").can_convert("mov_text"))
+
+    @mock.patch.dict('ffmpeg_tools.formats._CONTAINER_SUPPORTED_CODECS', {"matroska": {'subtitlecodecs': ['subrip', 'ass']}})
+    @mock.patch.dict('ffmpeg_tools.codecs._SUBTITLE_SUPPORTED_CONVERSIONS', {'subrip': ['subrip', 'ass', 'webvtt']})
+    def test_select_conversion_for_container(self):
+        assert formats.is_supported(formats.Container.c_MOV.value)
+
+        self.assertEqual(
+            codecs.SubtitleCodec.SUBRIP.select_conversion_for_container(formats.Container.c_MATROSKA.value),
+            codecs.SubtitleCodec.ASS.value,
+        )
+
+    @mock.patch.dict('ffmpeg_tools.formats._CONTAINER_SUPPORTED_CODECS', {"mov": {'subtitlecodecs': ['mov_text']}})
+    @mock.patch.dict('ffmpeg_tools.codecs._SUBTITLE_SUPPORTED_CONVERSIONS', {'subrip': ['subrip', 'ass', 'webvtt']})
+    def test_select_conversion_for_container_should_return_none_if_target_container_does_not_support_any_conversion_target(self):
+        self.assertEqual(
+            codecs.SubtitleCodec.SUBRIP.select_conversion_for_container(formats.Container.c_MOV.value),
+            None,
+        )
+
+    def test_select_conversion_for_container_should_return_none_if_target_container_is_not_supported(self):
+        assert not formats.is_supported('invalid container')
+
+        self.assertEqual(
+            codecs.SubtitleCodec.SUBRIP.select_conversion_for_container('invalid container'),
+            None,
+        )
 
 
 class TestGettingEncoder(TestCase):

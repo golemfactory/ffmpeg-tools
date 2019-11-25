@@ -2,6 +2,7 @@ import enum
 from typing import List, Optional
 
 from . import exceptions
+from . import formats
 from . import frame_rate
 
 
@@ -114,6 +115,20 @@ class SubtitleCodec(enum.Enum):
 
     def can_convert(self, subtitle_codec: str) -> bool:
         return subtitle_codec in self.get_supported_conversions()
+
+    def select_conversion_for_container(self, target_container: str) -> Optional[str]:
+        if not formats.is_supported(target_container):
+            return None
+
+        supported_codecs = (
+            set(self.get_supported_conversions()) &
+            set(formats.Container(target_container).get_supported_subtitle_codecs())
+        )
+
+        if len(supported_codecs) == 0:
+            return None
+
+        return sorted(supported_codecs)[0]
 
 
 _VIDEO_ENCODERS = {
