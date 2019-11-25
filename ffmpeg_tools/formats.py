@@ -76,11 +76,15 @@ class Container(enum.Enum):
         elif isinstance(vcodec, str):
             return vcodec in self.get_supported_video_codecs()
 
+        assert False, "Invalid type"
+
     def is_supported_audio_codec(self, acodec):
         if isinstance(acodec, codecs.AudioCodec):
             return acodec.value in self.get_supported_audio_codecs()
         elif isinstance(acodec, str):
             return acodec in self.get_supported_audio_codecs()
+
+        assert False, "Invalid type"
 
     @staticmethod
     def is_supported(vformat):
