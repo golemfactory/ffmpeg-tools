@@ -1,6 +1,3 @@
-import sys
-import pytest
-
 from ffmpeg_tools import meta
 
 

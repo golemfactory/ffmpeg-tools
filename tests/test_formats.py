@@ -1,5 +1,3 @@
-import sys
-import pytest
 from unittest import TestCase
 
 from ffmpeg_tools import formats
