@@ -205,10 +205,12 @@ class TestCommands(TestCase):
                 {},
             )
 
-    def test_replace_streams_command_removes_streams_not_in_whitelist(self):
-        with mock.patch('ffmpeg_tools.commands.get_lists_of_unsupported_stream_numbers') as _get_lists_of_unsupported_streams_numbers:
 
-            _get_lists_of_unsupported_streams_numbers.return_value = ([2], [3])
+    def test_replace_streams_command_removes_streams_not_in_whitelist(self):
+        with mock.patch('ffmpeg_tools.commands.find_unsupported_data_streams') as _find_unsupported_data_streams, \
+             mock.patch('ffmpeg_tools.commands.find_unsupported_subtitle_streams') as _find_unsupported_subtitle_streams:
+            _find_unsupported_data_streams.return_value = [2]
+            _find_unsupported_subtitle_streams.return_value = [3]
 
             command = commands.replace_streams_command(
                 get_absolute_resource_path('ForBiggerBlazes-[codec=h264].mp4'),
@@ -276,25 +278,29 @@ class MetadataWithSupportedAndUnsupportedStreamsBase(TestCase):
             'some default unsupported name'
 
 
-class TestGetListOfStreamNumbersToSkip(
+class TestUnsupportedStreamDetection(
     MetadataWithSupportedAndUnsupportedStreamsBase
 ):
 
     def test_function_does_not_strip_whitelisted_streams(self):
-        stream_number = commands.get_lists_of_unsupported_stream_numbers(
-            self.metadata_without_unsupported_streams,
+        stream_number = (
+            commands.find_unsupported_data_streams(self.metadata_without_unsupported_streams),
+            commands.find_unsupported_subtitle_streams(self.metadata_without_unsupported_streams),
         )
         self.assertEqual(stream_number, ([], []))
 
     def test_function_strips_non_whitelisted_streams(self):
-        stream_number = commands.get_lists_of_unsupported_stream_numbers(
-            self.metadata_with_unsupported_streams,
+        stream_number = (
+            commands.find_unsupported_data_streams(self.metadata_with_unsupported_streams),
+            commands.find_unsupported_subtitle_streams(self.metadata_with_unsupported_streams),
         )
         self.assertEqual(stream_number, ([2], [3]))
 
     def test_function_returns_correct_numbers_streams_metadata(self):
-        stream_number = commands.get_lists_of_unsupported_stream_numbers(
-            self.metadata_with_unsupported_streams)
+        stream_number = (
+            commands.find_unsupported_data_streams(self.metadata_with_unsupported_streams),
+            commands.find_unsupported_subtitle_streams(self.metadata_with_unsupported_streams),
+        )
         self.assertEqual(stream_number, ([2], [3]))
 
 

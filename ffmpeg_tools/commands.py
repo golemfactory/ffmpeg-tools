@@ -315,27 +315,26 @@ def replace_streams(input_file,
     exec_cmd(cmd)
 
 
-def get_lists_of_unsupported_stream_numbers(
-    metadata,
-):
-    unsupported_data_streams = []
-    unsupported_subtitle_streams = []
-    for stream_metadata in metadata.get('streams'):
+def find_unsupported_data_streams(metadata):
+    return [
+        stream_metadata.get('index')
+        for stream_metadata in metadata.get('streams', [])
         if (
             stream_metadata.get('codec_type') == 'data' and
-            stream_metadata.get('codec_name') not in
-            codecs.DATA_STREAM_WHITELIST
-        ):
-            unsupported_data_streams.append(stream_metadata.get('index'))
+            stream_metadata.get('codec_name') not in codecs.DATA_STREAM_WHITELIST
+        )
+    ]
 
-        elif (
+
+def find_unsupported_subtitle_streams(metadata):
+    return [
+        stream_metadata.get('index')
+        for stream_metadata in metadata.get('streams', [])
+        if (
             stream_metadata.get('codec_type') == 'subtitle' and
-            stream_metadata.get('codec_name') not in
-            codecs.SUBTITLE_STREAM_WHITELIST
-        ):
-            unsupported_subtitle_streams.append(stream_metadata.get('index'))
-
-    return (unsupported_data_streams, unsupported_subtitle_streams)
+            stream_metadata.get('codec_name') not in codecs.SUBTITLE_STREAM_WHITELIST
+        )
+    ]
 
 
 def replace_streams_command(input_file,
@@ -407,21 +406,26 @@ def replace_streams_command(input_file,
             "You should pass them to the 'transcode' command instead.")
 
     metadata = get_metadata_json(input_file)
-    (unsupported_data_streams, unsupported_subtitle_streams) = \
-        get_lists_of_unsupported_stream_numbers(metadata)
 
-    data_map_options = []
-    subtitle_map_options = []
     if strip_unsupported_data_streams:
-        data_map_options = (
-            ["-map", f"-0:{index}"]
-            for index in unsupported_data_streams
-        )
+        data_streams_to_strip = find_unsupported_data_streams(metadata)
+    else:
+        data_streams_to_strip = []
+
+    data_map_options = [
+        ["-map", f"-0:{index}"]
+        for index in data_streams_to_strip
+    ]
+
     if strip_unsupported_subtitle_streams:
-        subtitle_map_options = (
-            ["-map", f"-0:{index}"]
-            for index in unsupported_subtitle_streams
-        )
+        subtitle_streams_to_strip = find_unsupported_subtitle_streams(metadata)
+    else:
+        subtitle_streams_to_strip = []
+
+    subtitle_map_options = [
+        ["-map", f"-0:{index}"]
+        for index in subtitle_streams_to_strip
+    ]
 
     cmd = [
         FFMPEG_COMMAND,

@@ -51,9 +51,9 @@ def validate_data_and_subtitle_streams(
     strip_unsupported_data_streams,
     strip_unsupported_subtitle_streams,
 ):
-    (unsupported_data_streams, unsupported_subtitle_streams) = (
-        commands.get_lists_of_unsupported_stream_numbers(metadata)
-    )
+    unsupported_data_streams = commands.find_unsupported_data_streams(metadata)
+    unsupported_subtitle_streams = commands.find_unsupported_subtitle_streams(metadata)
+
     if not strip_unsupported_data_streams and len(unsupported_data_streams) != 0:
         raise exceptions.UnsupportedStream('data', unsupported_data_streams)
 
