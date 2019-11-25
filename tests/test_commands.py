@@ -206,38 +206,39 @@ class TestCommands(TestCase):
             )
 
 
-    def test_replace_streams_command_removes_streams_not_in_whitelist(self):
-        with mock.patch('ffmpeg_tools.commands.find_unsupported_data_streams') as _find_unsupported_data_streams, \
-             mock.patch('ffmpeg_tools.commands.find_unsupported_subtitle_streams') as _find_unsupported_subtitle_streams:
-            _find_unsupported_data_streams.return_value = [2]
-            _find_unsupported_subtitle_streams.return_value = [3]
+    @mock.patch('ffmpeg_tools.commands.find_unsupported_data_streams', return_value=[2])
+    @mock.patch('ffmpeg_tools.commands.find_unsupported_subtitle_streams', return_value=[3])
+    def test_replace_streams_command_removes_streams_not_in_whitelist_if_asked_to(
+        self,
+        _mock_find_unsupported_subtitle_streams,
+        _mock_find_unsupported_data_streams,
+    ):
+        command = commands.replace_streams_command(
+            get_absolute_resource_path('ForBiggerBlazes-[codec=h264].mp4'),
+            get_absolute_resource_path('ForBiggerBlazes-[codec=h264][video-only].mkv'),
+            get_absolute_resource_path('ForBiggerBlazes-[codec=h264].mkv'),
+            "v",
+            {},
+            strip_unsupported_data_streams=True,
+            strip_unsupported_subtitle_streams=True
+        )
 
-            command = commands.replace_streams_command(
-                get_absolute_resource_path('ForBiggerBlazes-[codec=h264].mp4'),
-                get_absolute_resource_path('ForBiggerBlazes-[codec=h264][video-only].mkv'),
-                get_absolute_resource_path('ForBiggerBlazes-[codec=h264].mkv'),
-                "v",
-                {},
-                strip_unsupported_data_streams=True,
-                strip_unsupported_subtitle_streams=True
-            )
-
-            expected_command = [
-                "ffmpeg",
-                "-nostdin",
-                "-i", get_absolute_resource_path('ForBiggerBlazes-[codec=h264].mp4'),
-                "-i", get_absolute_resource_path('ForBiggerBlazes-[codec=h264][video-only].mkv'),
-                "-map", "1:v",
-                "-map", "0",
-                "-map", "-0:v",
-                '-map', '-0:2',
-                '-map', '-0:3',
-                "-copy_unknown",
-                "-c:v", "copy",
-                "-c:d", "copy",
-                get_absolute_resource_path('ForBiggerBlazes-[codec=h264].mkv'),
-            ]
-            self.assertEqual(command, expected_command)
+        expected_command = [
+            "ffmpeg",
+            "-nostdin",
+            "-i", get_absolute_resource_path('ForBiggerBlazes-[codec=h264].mp4'),
+            "-i", get_absolute_resource_path('ForBiggerBlazes-[codec=h264][video-only].mkv'),
+            "-map", "1:v",
+            "-map", "0",
+            "-map", "-0:v",
+            '-map', '-0:2',
+            '-map', '-0:3',
+            "-copy_unknown",
+            "-c:v", "copy",
+            "-c:d", "copy",
+            get_absolute_resource_path('ForBiggerBlazes-[codec=h264].mkv'),
+        ]
+        self.assertEqual(command, expected_command)
 
 
     def test_replace_streams_command_does_not_accept_video_parameters(self):
@@ -278,23 +279,18 @@ class MetadataWithSupportedAndUnsupportedStreamsBase(TestCase):
             'some default unsupported name'
 
 
-class TestUnsupportedStreamDetection(
-    MetadataWithSupportedAndUnsupportedStreamsBase
-):
+class TestUnsupportedStreamDetection(MetadataWithSupportedAndUnsupportedStreamsBase):
+    def test_find_unsupported_data_streams_does_not_strip_whitelisted_streams(self):
+        self.assertEqual(commands.find_unsupported_data_streams(self.metadata_without_unsupported_streams), [])
 
-    def test_function_does_not_strip_whitelisted_streams(self):
-        stream_number = (
-            commands.find_unsupported_data_streams(self.metadata_without_unsupported_streams),
-            commands.find_unsupported_subtitle_streams(self.metadata_without_unsupported_streams),
-        )
-        self.assertEqual(stream_number, ([], []))
+    def test_find_unsupported_subtitle_streams_does_not_strip_whitelisted_streams(self):
+        self.assertEqual(commands.find_unsupported_subtitle_streams(self.metadata_without_unsupported_streams), [])
 
-    def test_function_strips_non_whitelisted_streams(self):
-        stream_number = (
-            commands.find_unsupported_data_streams(self.metadata_with_unsupported_streams),
-            commands.find_unsupported_subtitle_streams(self.metadata_with_unsupported_streams),
-        )
-        self.assertEqual(stream_number, ([2], [3]))
+    def test_find_unsupported_data_streams_strips_non_whitelisted_streams(self):
+        self.assertEqual(commands.find_unsupported_data_streams(self.metadata_with_unsupported_streams), [2])
+
+    def test_find_unsupported_subtitle_streams_strips_non_whitelisted_streams(self):
+        self.assertEqual(commands.find_unsupported_subtitle_streams(self.metadata_with_unsupported_streams), [3])
 
 
 class TestQueryMuxerInfo(TestCase):
