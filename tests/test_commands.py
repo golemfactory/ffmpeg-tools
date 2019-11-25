@@ -1,7 +1,6 @@
 import copy
 import os
 import tempfile
-
 from unittest import TestCase, mock
 
 from parameterized import parameterized

@@ -1,8 +1,9 @@
 from unittest import TestCase
 
+from parameterized import parameterized
+
 from ffmpeg_tools import formats
 from ffmpeg_tools import codecs
-from parameterized import parameterized
 
 
 class TestContainer(TestCase):

@@ -1,7 +1,7 @@
 import copy
 from unittest import TestCase
 
-from tests.test_commands import MetadataWithSupportedAndUnsupportedStreamsBase
+from parameterized import parameterized
 
 from ffmpeg_tools import codecs
 from ffmpeg_tools import commands
@@ -10,8 +10,8 @@ from ffmpeg_tools import validation
 from ffmpeg_tools import formats
 from ffmpeg_tools import frame_rate
 from ffmpeg_tools import meta
+from tests.test_commands import MetadataWithSupportedAndUnsupportedStreamsBase
 from tests.utils import get_absolute_resource_path
-from parameterized import parameterized
 
 
 class TestInputValidation(TestCase):
