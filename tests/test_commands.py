@@ -296,13 +296,6 @@ class TestUnsupportedStreamDetection(
         )
         self.assertEqual(stream_number, ([2], [3]))
 
-    def test_function_returns_correct_numbers_streams_metadata(self):
-        stream_number = (
-            commands.find_unsupported_data_streams(self.metadata_with_unsupported_streams),
-            commands.find_unsupported_subtitle_streams(self.metadata_with_unsupported_streams),
-        )
-        self.assertEqual(stream_number, ([2], [3]))
-
 
 class TestQueryMuxerInfo(TestCase):
 
