@@ -41,8 +41,8 @@ example_metadata = {
                 "visual_impaired": 0,
                 "clean_effects": 0,
                 "attached_pic": 0,
-                "timed_thumbnails": 0
-            }
+                "timed_thumbnails": 0,
+            },
         },
         {
             "index": 1,
@@ -74,9 +74,9 @@ example_metadata = {
                 "visual_impaired": 0,
                 "clean_effects": 0,
                 "attached_pic": 0,
-                "timed_thumbnails": 0
-            }
-        }
+                "timed_thumbnails": 0,
+            },
+        },
     ],
     "format": {
         "filename": "/home/nieznanysprawiciel/Data/Transcoding/different-codecs/Panasonic-[codec=vp9].webm",
@@ -90,9 +90,9 @@ example_metadata = {
         "bit_rate": "389715",
         "probe_score": 100,
         "tags": {
-            "encoder": "Lavf57.66.105"
-        }
-    }
+            "encoder": "Lavf57.66.105",
+        },
+    },
 }
 
 

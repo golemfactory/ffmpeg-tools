@@ -49,20 +49,28 @@ SUBTITLES_EXAMPLE_STREAM = {
     'r_frame_rate': '0/0',
     'avg_frame_rate': '0/0',
     'time_base': '1/1000',
-    'start_pts': 0, 'start_time': '0.000000',
+    'start_pts': 0,
+    'start_time': '0.000000',
     'duration_ts': 46665,
     'duration': '46.665000',
     'disposition': {
-        'default': 1, 'dub': 0,
-        'original': 0, 'comment': 0,
-        'lyrics': 0, 'karaoke': 0,
+        'default': 1,
+        'dub': 0,
+        'original': 0,
+        'comment': 0,
+        'lyrics': 0,
+        'karaoke': 0,
         'forced': 0,
         'hearing_impaired': 0,
         'visual_impaired': 0,
         'clean_effects': 0,
         'attached_pic': 0,
-        'timed_thumbnails': 0},
-    'tags': {'language': 'eng'}}
+        'timed_thumbnails': 0
+    },
+    'tags': {
+        'language': 'eng',
+    }
+}
 
 
 class TestCommands(TestCase):
