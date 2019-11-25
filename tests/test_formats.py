@@ -2,75 +2,76 @@ import sys
 import pytest
 from unittest import TestCase
 
-import ffmpeg_tools as ffmpeg
+from ffmpeg_tools import formats
+from ffmpeg_tools import codecs
 from parameterized import parameterized
 
 
 class TestContainer(TestCase):
 
     def test_get_demuxer_should_return_demuxer_from_demuxer_map(self):
-        assert ffmpeg.formats.Container.c_WEBM in ffmpeg.formats._DEMUXER_MAP
+        assert formats.Container.c_WEBM in formats._DEMUXER_MAP
 
         self.assertEqual(
-            ffmpeg.formats.Container.c_WEBM.get_demuxer(),
-            ffmpeg.formats.Container.c_MATROSKA_WEBM_DEMUXER.value)
+            formats.Container.c_WEBM.get_demuxer(),
+            formats.Container.c_MATROSKA_WEBM_DEMUXER.value)
 
     def test_get_demuxer_should_return_muxer_if_not_present_in_demuxer_map(self):
-        assert ffmpeg.formats.Container.c_AVI not in ffmpeg.formats._DEMUXER_MAP
+        assert formats.Container.c_AVI not in formats._DEMUXER_MAP
 
         self.assertEqual(
-            ffmpeg.formats.Container.c_AVI.get_demuxer(),
-            ffmpeg.formats.Container.c_AVI.value)
+            formats.Container.c_AVI.get_demuxer(),
+            formats.Container.c_AVI.value)
 
     def test_get_demuxer_should_work_when_used_with_an_exclusive_demuxer(self):
-        assert ffmpeg.formats.Container.c_QUICK_TIME_DEMUXER in ffmpeg.formats._EXCLUSIVE_DEMUXERS
+        assert formats.Container.c_QUICK_TIME_DEMUXER in formats._EXCLUSIVE_DEMUXERS
 
         self.assertEqual(
-            ffmpeg.formats.Container.c_QUICK_TIME_DEMUXER.get_demuxer(),
-            ffmpeg.formats.Container.c_QUICK_TIME_DEMUXER.value)
+            formats.Container.c_QUICK_TIME_DEMUXER.get_demuxer(),
+            formats.Container.c_QUICK_TIME_DEMUXER.value)
 
     def test_is_exclusive_demuxer_should_return_values_based_on_exclusive_demuxers_dict(self):
-        assert ffmpeg.formats.Container.c_QUICK_TIME_DEMUXER in ffmpeg.formats._EXCLUSIVE_DEMUXERS
-        assert ffmpeg.formats.Container.c_MOV not in ffmpeg.formats._EXCLUSIVE_DEMUXERS
+        assert formats.Container.c_QUICK_TIME_DEMUXER in formats._EXCLUSIVE_DEMUXERS
+        assert formats.Container.c_MOV not in formats._EXCLUSIVE_DEMUXERS
 
-        self.assertTrue(ffmpeg.formats.Container.c_QUICK_TIME_DEMUXER.is_exclusive_demuxer())
-        self.assertFalse(ffmpeg.formats.Container.c_MOV.is_exclusive_demuxer())
+        self.assertTrue(formats.Container.c_QUICK_TIME_DEMUXER.is_exclusive_demuxer())
+        self.assertFalse(formats.Container.c_MOV.is_exclusive_demuxer())
 
     def test_get_matching_muxers_should_return_all_matching_muxers(self):
-        assert ffmpeg.formats.Container.c_MATROSKA_WEBM_DEMUXER in ffmpeg.formats._DEMUXER_MAP.values()
-        assert ffmpeg.formats.Container.c_MATROSKA_WEBM_DEMUXER not in ffmpeg.formats._DEMUXER_MAP
+        assert formats.Container.c_MATROSKA_WEBM_DEMUXER in formats._DEMUXER_MAP.values()
+        assert formats.Container.c_MATROSKA_WEBM_DEMUXER not in formats._DEMUXER_MAP
 
         self.assertEqual(
-            ffmpeg.formats.Container.c_MATROSKA_WEBM_DEMUXER.get_matching_muxers(),
-            {ffmpeg.formats.Container.c_MATROSKA, ffmpeg.formats.Container.c_WEBM})
+            formats.Container.c_MATROSKA_WEBM_DEMUXER.get_matching_muxers(),
+            {formats.Container.c_MATROSKA, formats.Container.c_WEBM})
 
     def test_get_matching_muxers_should_return_muxer_itself_if_not_present_in_muxer_map(self):
-        assert ffmpeg.formats.Container.c_AVI not in ffmpeg.formats._DEMUXER_MAP
+        assert formats.Container.c_AVI not in formats._DEMUXER_MAP
 
         self.assertEqual(
-            ffmpeg.formats.Container.c_AVI.get_matching_muxers(),
-            {ffmpeg.formats.Container.c_AVI})
+            formats.Container.c_AVI.get_matching_muxers(),
+            {formats.Container.c_AVI})
 
     def test_get_matching_muxers_should_never_return_exclusive_demuxers(self):
-        assert ffmpeg.formats.Container.c_QUICK_TIME_DEMUXER in ffmpeg.formats._EXCLUSIVE_DEMUXERS
+        assert formats.Container.c_QUICK_TIME_DEMUXER in formats._EXCLUSIVE_DEMUXERS
 
         self.assertNotIn(
-            ffmpeg.formats.Container.c_QUICK_TIME_DEMUXER,
-            ffmpeg.formats.Container.c_QUICK_TIME_DEMUXER.get_matching_muxers())
+            formats.Container.c_QUICK_TIME_DEMUXER,
+            formats.Container.c_QUICK_TIME_DEMUXER.get_matching_muxers())
 
     def test_get_intermediate_muxer_should_return_values_from_safe_intermediate_formats_dict(self):
-        demuxer = ffmpeg.formats.Container.c_MATROSKA_WEBM_DEMUXER
-        assert demuxer in ffmpeg.formats._SAFE_INTERMEDIATE_FORMATS
+        demuxer = formats.Container.c_MATROSKA_WEBM_DEMUXER
+        assert demuxer in formats._SAFE_INTERMEDIATE_FORMATS
 
-        expected_intermediate_muxer = ffmpeg.formats._SAFE_INTERMEDIATE_FORMATS[demuxer]
+        expected_intermediate_muxer = formats._SAFE_INTERMEDIATE_FORMATS[demuxer]
 
         self.assertEqual(
             demuxer.get_intermediate_muxer(),
             expected_intermediate_muxer.value)
 
     def test_get_intermediate_muxer_should_return_self_if_demuxer_not_present_in_safe_intermediate_formats_dict(self):
-        demuxer = ffmpeg.formats.Container.c_AVI
-        assert demuxer not in ffmpeg.formats._SAFE_INTERMEDIATE_FORMATS
+        demuxer = formats.Container.c_AVI
+        assert demuxer not in formats._SAFE_INTERMEDIATE_FORMATS
 
         expected_intermediate_muxer = demuxer
 
@@ -82,33 +83,33 @@ class TestContainer(TestCase):
 class TestSupportedFormats(object):
 
     def test_existing_format(self):
-        assert(ffmpeg.formats.is_supported("mp4") == True)
+        assert(formats.is_supported("mp4") == True)
 
     def test_not_existing_format(self):
-        assert(ffmpeg.formats.is_supported("bla") == False)
+        assert(formats.is_supported("bla") == False)
 
 
 class TestListingSupportedFormats(object):
 
     def test_example_format(self):
-        assert( "mp4" in ffmpeg.formats.list_supported_formats() )
+        assert( "mp4" in formats.list_supported_formats() )
 
 
 class TestSupportedVideoCodecs(object):
 
     def test_existing_format(self):
-        assert(ffmpeg.formats.is_supported_video_codec("mp4", "h264") == True)
+        assert(formats.is_supported_video_codec("mp4", "h264") == True)
 
     def test_not_existing_format(self):
-        assert(ffmpeg.formats.is_supported_video_codec("bla", "h264") == False)
+        assert(formats.is_supported_video_codec("bla", "h264") == False)
 
     def test_not_existing_codec(self):
-        assert(ffmpeg.formats.is_supported_video_codec("mp4", "bla") == False)
+        assert(formats.is_supported_video_codec("mp4", "bla") == False)
 
     def test_container_is_supported(self):
-        container = ffmpeg.formats.Container("mp4")
+        container = formats.Container("mp4")
         vcodec = "h264"
-        vcodec_class = ffmpeg.codecs.VideoCodec(vcodec)
+        vcodec_class = codecs.VideoCodec(vcodec)
 
         assert container.is_supported_video_codec(vcodec)
         assert container.is_supported_video_codec(vcodec_class)
@@ -118,27 +119,27 @@ class TestSupportedVideoCodecs(object):
 class TestListingSupportedVideoCodecs(object):
 
     def test_existing_format(self):
-        assert( len( ffmpeg.formats.list_supported_video_codecs("mp4") ) != 0 )
+        assert( len( formats.list_supported_video_codecs("mp4") ) != 0 )
 
     def test_not_existing_format(self):
-        assert( len( ffmpeg.formats.list_supported_video_codecs("bla") ) == 0 )
+        assert( len( formats.list_supported_video_codecs("bla") ) == 0 )
 
 
 class TestSupportedAudioCodecs(object):
 
     def test_existing_format(self):
-        assert(ffmpeg.formats.is_supported_audio_codec("mp4", "mp3") == True)
+        assert(formats.is_supported_audio_codec("mp4", "mp3") == True)
 
     def test_not_existing_format(self):
-        assert(ffmpeg.formats.is_supported_audio_codec("bla", "mp3") == False)
+        assert(formats.is_supported_audio_codec("bla", "mp3") == False)
 
     def test_not_existing_codec(self):
-        assert(ffmpeg.formats.is_supported_audio_codec("mp4", "bla") == False)
+        assert(formats.is_supported_audio_codec("mp4", "bla") == False)
 
     def test_container_is_supported(self):
-        container = ffmpeg.formats.Container("mp4")
+        container = formats.Container("mp4")
         acodec = "mp3"
-        acodec_class = ffmpeg.codecs.AudioCodec(acodec)
+        acodec_class = codecs.AudioCodec(acodec)
 
         assert container.is_supported_audio_codec(acodec)
         assert container.is_supported_audio_codec(acodec_class)
@@ -157,7 +158,7 @@ class TestAspectRatioCalculations(TestCase):
         ([3440, 1440], "21:9"),
     ])
     def test_effective_aspect_ratio(self, resolution, expected_aspect_ratio):
-        aspect_ratio = ffmpeg.formats.get_effective_aspect_ratio(resolution)
+        aspect_ratio = formats.get_effective_aspect_ratio(resolution)
         self.assertEqual(aspect_ratio, expected_aspect_ratio)
 
     @parameterized.expand([
@@ -171,14 +172,14 @@ class TestAspectRatioCalculations(TestCase):
         ([3440, 1440], "43:18"),
     ])
     def test_calculate_aspect_ratio(self, resolution, expected_aspect_ratio):
-        aspect_ratio = ffmpeg.formats.calculate_aspect_ratio(resolution)
+        aspect_ratio = formats.calculate_aspect_ratio(resolution)
         self.assertEqual(aspect_ratio, expected_aspect_ratio)
 
 
 class TestHelperFunctions(TestCase):
 
     def test_get_safe_intermediate_format_for_demuxer(self):
-        demuxer = ffmpeg.formats.Container.c_AVI
+        demuxer = formats.Container.c_AVI
         self.assertEqual(
-            ffmpeg.formats.get_safe_intermediate_format_for_demuxer(demuxer),
+            formats.get_safe_intermediate_format_for_demuxer(demuxer),
             demuxer.get_intermediate_muxer())
