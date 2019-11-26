@@ -237,7 +237,7 @@ _M4V_CODECS = {
         "mp3",
     ],
     'subtitlecodecs': [
-        'subrip',
+        'mov_text',
     ],
 }
 
@@ -253,6 +253,7 @@ _MP4_CODECS = {
         "mp3",
     ],
     'subtitlecodecs': [
+        'mov_text',
     ],
 }
 
@@ -312,7 +313,6 @@ _OGG_CODECS = {
         "vorbis",
     ],
     'subtitlecodecs': [
-        'subrip',
     ],
 }
 
