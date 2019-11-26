@@ -103,7 +103,7 @@ class Container(enum.Enum):
     def is_exclusive_demuxer(self) -> bool:
         return self in _EXCLUSIVE_DEMUXERS
 
-    def get_matching_muxers(self) -> Set[str]:
+    def get_matching_muxers(self) -> Set['Container']:
         muxers = {
             muxer
             for muxer, demuxer in _DEMUXER_MAP.items()
@@ -448,5 +448,5 @@ def calculate_aspect_ratio(resolution: list) -> str:
     return f"{resolution[0] // resolution_gcd}:{resolution[1] // resolution_gcd}"
 
 
-def list_supported_frame_rates() -> List[frame_rate.FrameRate]:
+def list_supported_frame_rates() -> Set[frame_rate.FrameRate]:
     return _frame_rates

@@ -258,7 +258,7 @@ def _guess_target_frame_rate_for_special_cases(
 
 def _guess_target_frame_rate(
         src_frame_rate: 'frame_rate.FrameRate',
-        dst_params: Dict[str, Any]) -> str:
+        dst_params: Dict[str, Any]) -> 'frame_rate.FrameRate':
 
     target_frame_rate = _guess_target_frame_rate_for_special_cases(
         src_frame_rate,
