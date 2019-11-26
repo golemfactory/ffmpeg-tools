@@ -47,6 +47,11 @@ class UnsupportedAudioCodec(InvalidVideo):
         super().__init__(message="Unsupported audio codec: {} for video format: {}".format(audio_codec, video_format))
 
 
+class UnsupportedSubtitleCodec(InvalidVideo):
+    def __init__(self, subtitle_codec, video_format):
+        super().__init__(message="Unsupported subtitle codec: {} for video format: {}".format(subtitle_codec, video_format))
+
+
 class MissingVideoStream(InvalidVideo):
     def __init__(self):
         super().__init__(message="Missing video stream")

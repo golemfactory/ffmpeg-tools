@@ -1,4 +1,4 @@
-from unittest import TestCase
+from unittest import TestCase, mock
 
 from parameterized import parameterized
 
@@ -144,6 +144,74 @@ class TestSupportedAudioCodecs(object):
         assert container.is_supported_audio_codec(acodec)
         assert container.is_supported_audio_codec(acodec_class)
         assert not container.is_supported_audio_codec("bla")
+
+
+@mock.patch.dict('ffmpeg_tools.formats._CONTAINER_SUPPORTED_CODECS', {"matroska": {'subtitlecodecs': ['subrip', 'ass']}})
+class TestListingSupportedSubtitleCodecs(TestCase):
+
+    def test_existing_format(self):
+        self.assertCountEqual(formats.list_supported_subtitle_codecs("matroska"), ['subrip', 'ass'])
+
+    def test_not_existing_format(self):
+        self.assertCountEqual(formats.list_supported_subtitle_codecs("bla"), [])
+
+
+class TestSupportedSubtitleCodecs(TestCase):
+
+    @mock.patch.dict('ffmpeg_tools.formats._CONTAINER_SUPPORTED_CODECS', {"matroska": {'subtitlecodecs': ['subrip', 'ass']}})
+    def test_is_supported_subtitle_codec(self):
+        self.assertTrue(formats.is_supported_subtitle_codec("matroska", "subrip"))
+
+    @mock.patch.dict('ffmpeg_tools.formats._CONTAINER_SUPPORTED_CODECS', {"matroska": {'subtitlecodecs': ['subrip', 'ass']}})
+    def test_is_supported_subtitle_codec_should_return_false_if_format_unsupported(self):
+        self.assertFalse(formats.is_supported_subtitle_codec("bla", "subrip"))
+
+    @mock.patch.dict('ffmpeg_tools.formats._CONTAINER_SUPPORTED_CODECS', {"matroska": {'subtitlecodecs': ['subrip', 'ass']}})
+    def test_is_supported_subtitle_codec_should_return_false_if_codec_unsupported(self):
+        self.assertFalse(formats.is_supported_subtitle_codec("matroska", "bla"))
+
+    @mock.patch.dict('ffmpeg_tools.formats._CONTAINER_SUPPORTED_CODECS', {"matroska": {'subtitlecodecs': ['subrip', 'ass']}})
+    def test_container_get_supported_subtitle_codecs(self):
+        self.assertCountEqual(formats.Container.c_MATROSKA.get_supported_subtitle_codecs(), ['subrip', 'ass'])
+
+    @mock.patch.dict('ffmpeg_tools.formats._CONTAINER_SUPPORTED_CODECS', clear=True)
+    def test_container_get_supported_subtitle_codecs_should_return_empty_list_for_unsupported_container(self):
+        assert formats.Container.c_MATROSKA.value not in formats._CONTAINER_SUPPORTED_CODECS
+
+        self.assertCountEqual(formats.Container.c_MATROSKA.get_supported_subtitle_codecs(), [])
+
+    @mock.patch.object(formats, '_EXCLUSIVE_DEMUXERS', {
+        formats.Container.c_MATROSKA_WEBM_DEMUXER
+    })
+    @mock.patch.dict('ffmpeg_tools.formats._DEMUXER_MAP', {
+        formats.Container.c_MATROSKA: formats.Container.c_MATROSKA_WEBM_DEMUXER,
+        formats.Container.c_WEBM: formats.Container.c_MATROSKA_WEBM_DEMUXER,
+        formats.Container.c_AVI: formats.Container.c_MATROSKA_WEBM_DEMUXER,
+    })
+    @mock.patch.dict('ffmpeg_tools.formats._CONTAINER_SUPPORTED_CODECS', {
+        'matroska': {'subtitlecodecs': ['ass', 'subrip']},
+        'webm': {'subtitlecodecs': ['webvtt']},
+        'avi': {'subtitlecodecs': []},
+    })
+    def test_container_get_supported_subtitle_codecs_should_list_codecs_supported_by_all_muxers_matching_an_exclusive_demuxer(self):
+        assert formats.Container.c_MATROSKA_WEBM_DEMUXER.is_exclusive_demuxer()
+
+        self.assertCountEqual(formats.Container.c_MATROSKA_WEBM_DEMUXER.get_supported_subtitle_codecs(), ['ass', 'subrip', 'webvtt'])
+
+    @mock.patch.dict('ffmpeg_tools.formats._CONTAINER_SUPPORTED_CODECS', {"matroska": {'subtitlecodecs': ['subrip', 'ass']}})
+    def test_container_is_supported_subtitle_codec(self):
+        self.assertTrue(
+            formats.Container.c_MATROSKA.is_supported_subtitle_codec(
+                codecs.SubtitleCodec.SUBRIP.value))
+        self.assertTrue(
+            formats.Container.c_MATROSKA.is_supported_subtitle_codec(
+                codecs.SubtitleCodec.SUBRIP))
+        self.assertFalse(
+            formats.Container.c_MATROSKA.is_supported_subtitle_codec(
+                codecs.SubtitleCodec.MOV_TEXT.value))
+        self.assertFalse(
+            formats.Container.c_MATROSKA.is_supported_subtitle_codec(
+                codecs.SubtitleCodec.MOV_TEXT))
 
 
 class TestAspectRatioCalculations(TestCase):

@@ -95,6 +95,27 @@ class AudioCodec(enum.Enum):
         return audio_codec in self.get_supported_conversions()
 
 
+class SubtitleCodec(enum.Enum):
+    ASS = 'ass'             # ASS (Advanced SubStation Alpha)
+    MOV_TEXT = 'mov_text'   # 3GPP Timed Text (TTXT)
+    SUBRIP = 'subrip'       # SubRip
+    WEBVTT = 'webvtt'       # WebVTT (Web Video Text Tracks)
+
+    @classmethod
+    def _missing_(cls, value):
+        raise exceptions.UnsupportedSubtitleCodec(value, "")
+
+    @staticmethod
+    def from_name(name: str) -> 'SubtitleCodec':
+        return SubtitleCodec(name)
+
+    def get_supported_conversions(self) -> List[str]:
+        return _SUBTITLE_SUPPORTED_CONVERSIONS.get(self.value, [])
+
+    def can_convert(self, subtitle_codec: str) -> bool:
+        return subtitle_codec in self.get_supported_conversions()
+
+
 _VIDEO_ENCODERS = {
     "av1": None,                    # libaom-av1 is still experimental
     "flv1": "flv",
@@ -164,6 +185,9 @@ _AUDIO_SUPPORTED_CONVERSIONS = {
     "vorbis": ["aac", "ac3", "amr_nb", "mp2", "mp3", "opus", "pcm_u8",           "wmav2", "vorbis"],
 }
 
+_SUBTITLE_SUPPORTED_CONVERSIONS = {
+}
+
 _PRESERVE_QUALITY_COMMAND = {
     "h264" : [ "-crf", "22" ],
     "h265" : [ "-crf", "22" ],
@@ -202,6 +226,13 @@ def list_supported_audio_conversions(codec: str) -> List[str]:
         return []
 
     return AudioCodec(codec).get_supported_conversions()
+
+
+def list_supported_subtitle_conversions(codec: str) -> List[str]:
+    if codec not in SubtitleCodec._value2member_map_:
+        return []
+
+    return SubtitleCodec(codec).get_supported_conversions()
 
 
 MAX_SUPPORTED_FRAME_RATE = {
