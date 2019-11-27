@@ -363,8 +363,6 @@ def replace_streams_command(input_file,
             - `V` - video streams which are not attached pictures, video
                     thumbnails or cover arts.
             - `a` - audio streams.
-            - `s` - subtitle streams.
-            - `d` - data streams.
             - `t` - attachments.
     :param targs: Dictionary with additional transcoding parameters.
         The following parameters are supported:
@@ -377,7 +375,10 @@ def replace_streams_command(input_file,
         Optional, but highly recommended. If you don't specify it, ffmpeg will
         try to guess based the extension of the output file.
     """
-    VALID_STREAM_TYPES = {'v', 'V', 'a', 's', 'd', 't'}
+    # NOTE: We could support 's' (subtitle streams) or 'd' (data streams) as well
+    # but it would complicate the implementation and we currently don't use them
+    # so implementing it was not worth the hassle.
+    VALID_STREAM_TYPES = {'v', 'V', 'a', 't'}
     if stream_type not in VALID_STREAM_TYPES:
         raise exceptions.InvalidArgument(
             f"Invalid value of 'stream_type'. "
