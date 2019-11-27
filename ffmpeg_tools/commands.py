@@ -326,13 +326,30 @@ def find_unsupported_data_streams(metadata):
     ]
 
 
-def find_unsupported_subtitle_streams(metadata):
+def find_unsupported_subtitle_streams(metadata, target_container):
+    if target_container is None:
+        # This is a corner case that won't happen if you explicitly select
+        # the target container instead of letting ffmpeg select one
+        # based on the file name and possibly other factors.
+        # It's best to always specify the container but ffmpeg-tools allows
+        # you not to do it for the sake of flexibility.
+        #
+        # If the target container is selected implicitly by ffmpeg, we
+        # can't really know which subtitle streams it supports.
+        # The safest bet is to say that all subtitle streams are supported.
+        # This way nothing gets stripped and ffmpeg either converts them on
+        # its own or fails, letting the user know that it can't process the video.
+        return []
+
     return [
         stream_metadata.get('index')
         for stream_metadata in metadata.get('streams', [])
         if (
             stream_metadata.get('codec_type') == 'subtitle' and
-            stream_metadata.get('codec_name') not in codecs.SUBTITLE_STREAM_WHITELIST
+            (
+                stream_metadata.get('codec_name') not in codecs.SubtitleCodec._value2member_map_ or
+                codecs.SubtitleCodec(stream_metadata.get('codec_name')).select_conversion_for_container(target_container) is None
+            )
         )
     ]
 
@@ -372,17 +389,26 @@ def replace_streams_command(input_file,
                 Can include the following keys:`bitrate`, `codec`.
     :param container: Container type to use for the output file.
         Optional, but highly recommended. If you don't specify it, ffmpeg will
-        try to guess based the extension of the output file.
+        try to guess based the extension of the output file and also we won't
+        be able to convert supported subtitles or strip unsupported ones (because
+        support depends on container type).
     :param strip_unsupported_data_streams: If true, all data streams using
         codecs not listed in DATA_STREAM_WHITELIST will not be included in the
         output file. If your input_file contains such streams but you don't
         care about them, you can use this option to force a conversion that
         would otherwise fail.
-    :param strip_unsupported_subtitle_streams: If true, all subtitle streams using
-        codecs not listed in SUBTITLE_STREAM_WHITELIST will not be included in the
-        output file. If your input_file contains such streams but you don't
+    :param strip_unsupported_subtitle_streams: If true, all subtitle streams
+        which are not supported by the target container and cannot be converted
+        to any other subtitle type that is supported, will not be included in
+        the output file. If your input_file contains such streams but you don't
         care about them, you can use this option to force a conversion that
         would otherwise fail.
+
+        If target container is not specified, all subtitle
+        streams are treated as supported. In that case there's no explicit
+        conversion but ffmpeg is allowed to convert them if it can (hint: it
+        often can but does not want to because there are many possible subtitle
+        codecs and no default - it refuses to choose one on its own and fails).
     """
     # NOTE: We could support 's' (subtitle streams) or 'd' (data streams) as well
     # but it would complicate the implementation and we currently don't use them
@@ -418,7 +444,7 @@ def replace_streams_command(input_file,
     ]
 
     if strip_unsupported_subtitle_streams:
-        subtitle_streams_to_strip = find_unsupported_subtitle_streams(metadata)
+        subtitle_streams_to_strip = find_unsupported_subtitle_streams(metadata, container)
     else:
         subtitle_streams_to_strip = []
 

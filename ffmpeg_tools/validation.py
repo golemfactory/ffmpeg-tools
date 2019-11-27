@@ -128,7 +128,8 @@ def validate_transcoding_params(
         strip_unsupported_data_streams)
     validate_unsupported_subtitle_streams(
         src_metadata,
-        strip_unsupported_subtitle_streams)
+        strip_unsupported_subtitle_streams,
+        dst_params['format'])
     return True
 
 
@@ -204,8 +205,12 @@ def validate_unsupported_data_streams(metadata: dict, strip_unsupported_data_str
     return True
 
 
-def validate_unsupported_subtitle_streams(metadata: dict, strip_unsupported_subtitle_streams: bool):
-    unsupported_subtitle_streams = commands.find_unsupported_subtitle_streams(metadata)
+def validate_unsupported_subtitle_streams(
+    metadata: dict,
+    strip_unsupported_subtitle_streams: bool,
+    target_container: str
+):
+    unsupported_subtitle_streams = commands.find_unsupported_subtitle_streams(metadata, target_container)
 
     if not strip_unsupported_subtitle_streams and len(unsupported_subtitle_streams) != 0:
         raise exceptions.UnsupportedStream('subtitle', unsupported_subtitle_streams)

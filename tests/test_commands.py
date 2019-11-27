@@ -218,9 +218,27 @@ class TestUnsupportedStreamDetection(TestCase):
     def test_find_unsupported_data_streams_strips_non_whitelisted_streams(self):
         self.assertCountEqual(commands.find_unsupported_data_streams(self.METADATA_WITH_SUBTITLES), [0])
 
-    @mock.patch.object(codecs, 'SUBTITLE_STREAM_WHITELIST', ["subrip", "mov_text"])
-    def test_find_unsupported_subtitle_streams_strips_non_whitelisted_streams(self):
-        self.assertCountEqual(commands.find_unsupported_subtitle_streams(self.METADATA_WITH_SUBTITLES), [8, 1, 9])
+    @mock.patch.dict('ffmpeg_tools.formats._CONTAINER_SUPPORTED_CODECS', {"matroska": {'subtitlecodecs': ['mov_text']}})
+    @mock.patch.dict('ffmpeg_tools.codecs._SUBTITLE_SUPPORTED_CONVERSIONS', {
+        'subrip': ['subrip', 'ass', 'mov_text'],
+        'ass': ['ass', 'mov_text'],
+        'mov_text': ['mov_text'],
+        'webvtt': ['subrip', 'ass'],
+    })
+    def test_find_unsupported_subtitle_streams_strips_streams_not_convertible_to_something_supported_by_target_container(self):
+        self.assertCountEqual(
+            commands.find_unsupported_subtitle_streams(
+                self.METADATA_WITH_SUBTITLES,
+                formats.Container.c_MATROSKA.value,
+             ),
+             [1, 9],
+         )
+
+    def test_find_unsupported_subtitle_streams_does_not_strip_streams_if_target_container_is_not_specified(self):
+        self.assertEqual(
+            commands.find_unsupported_subtitle_streams(self.METADATA_WITH_SUBTITLES, None),
+            [],
+        )
 
 
 class TestQueryMuxerInfo(TestCase):

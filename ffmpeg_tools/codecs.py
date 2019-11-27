@@ -11,11 +11,6 @@ DATA_STREAM_WHITELIST = [
 ]
 
 
-SUBTITLE_STREAM_WHITELIST = [
-    'subrip'
-]
-
-
 class VideoCodec(enum.Enum):
     AV1 = "av1"              # Alliance for Open Media AV1
     FLV1 = "flv1"            # FLV / Sorenson Spark / Sorenson H.263 (Flash Video)
