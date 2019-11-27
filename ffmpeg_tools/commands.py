@@ -374,6 +374,16 @@ def replace_streams_command(input_file,
     :param container: Container type to use for the output file.
         Optional, but highly recommended. If you don't specify it, ffmpeg will
         try to guess based the extension of the output file.
+    :param strip_unsupported_data_streams: If true, all data streams using
+        codecs not listed in DATA_STREAM_WHITELIST will not be included in the
+        output file. If your input_file contains such streams but you don't
+        care about them, you can use this option to force a conversion that
+        would otherwise fail.
+    :param strip_unsupported_subtitle_streams: If true, all subtitle streams using
+        codecs not listed in SUBTITLE_STREAM_WHITELIST will not be included in the
+        output file. If your input_file contains such streams but you don't
+        care about them, you can use this option to force a conversion that
+        would otherwise fail.
     """
     # NOTE: We could support 's' (subtitle streams) or 'd' (data streams) as well
     # but it would complicate the implementation and we currently don't use them
