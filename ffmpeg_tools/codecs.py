@@ -1,4 +1,5 @@
 import enum
+from typing import List, Optional
 
 from . import exceptions
 from . import frame_rate
@@ -48,13 +49,13 @@ class VideoCodec(enum.Enum):
 
     # FFMPEG needs encoder name, instead of codec name as transcoding parameter.
     # If list doesn't contain encoder we assume that we can pass codec name.
-    def get_encoder(self):
+    def get_encoder(self) -> Optional[str]:
         return _VIDEO_ENCODERS.get(self.value, self.value)
 
-    def get_supported_conversions(self):
+    def get_supported_conversions(self) -> List[str]:
         return _VIDEO_SUPPORTED_CONVERSIONS.get(self.value, [])
 
-    def can_convert(self, video_codec_value):
+    def can_convert(self, video_codec_value: str) -> bool:
         return video_codec_value in self.get_supported_conversions()
 
 
@@ -84,12 +85,11 @@ class AudioCodec(enum.Enum):
 
     # FFMPEG needs encoder name, instead of codec name as transcoding parameter.
     # If list doesn't contain encoder we assume that we can pass codec name.
-    def get_encoder(self):
+    def get_encoder(self) -> Optional[str]:
         return _AUDIO_ENCODERS.get(self.value, self.value)
 
-    def get_supported_conversions(self):
+    def get_supported_conversions(self) -> List[str]:
         return _AUDIO_SUPPORTED_CONVERSIONS.get(self.value, [])
-
 
 
 _VIDEO_ENCODERS = {
@@ -169,32 +169,32 @@ _PRESERVE_QUALITY_COMMAND = {
 }
 
 
-def get_video_encoder(target_codec):
+def get_video_encoder(target_codec: str) -> Optional[str]:
     # This will throw exception for unsupported codecs.
     codec = VideoCodec(target_codec)
     return codec.get_encoder()
 
 
-def preserve_quality_command(target_codec):
+def preserve_quality_command(target_codec: str) -> List[str]:
     # TODO: Hack function to preserve video quality for some formats.
     # Create better and more generic solution in future.
     return _PRESERVE_QUALITY_COMMAND.get(target_codec, [])
 
 
-def get_audio_encoder(target_codec):
+def get_audio_encoder(target_codec: str) -> Optional[str]:
     # This will throw exception for unsupported codecs.
     codec = AudioCodec(target_codec)
     return codec.get_encoder()
 
 
-def list_supported_video_conversions(codec):
+def list_supported_video_conversions(codec: str) -> List[str]:
     if codec not in VideoCodec._value2member_map_:
         return []
 
     return VideoCodec(codec).get_supported_conversions()
 
 
-def list_supported_audio_conversions(codec):
+def list_supported_audio_conversions(codec: str) -> List[str]:
     if codec not in AudioCodec._value2member_map_:
         return []
 
