@@ -354,6 +354,22 @@ def find_unsupported_subtitle_streams(metadata, target_container):
     ]
 
 
+def select_subtitle_conversions(metadata, target_container):
+    if target_container is None:
+        # No container specified = leave conversions up to ffmpeg
+        return {}
+
+    conversions = {
+        stream_metadata.get('index'): codecs.SubtitleCodec(stream_metadata.get('codec_name')).select_conversion_for_container(target_container)
+        for stream_metadata in metadata.get('streams', [])
+        if (
+            stream_metadata.get('codec_type') == 'subtitle' and
+            stream_metadata.get('codec_name') in codecs.SubtitleCodec._value2member_map_
+        )
+    }
+    return {index: codec for index, codec in conversions.items() if codec is not None}
+
+
 def replace_streams_command(input_file,
                             replacement_source,
                             output_file,
@@ -453,6 +469,11 @@ def replace_streams_command(input_file,
         for index in subtitle_streams_to_strip
     ]
 
+    subtitle_codec_options = [
+        [f"-codec:{index}", codec]
+        for index, codec in select_subtitle_conversions(metadata, container).items()
+    ]
+
     cmd = [
         FFMPEG_COMMAND,
         "-nostdin",
@@ -463,6 +484,7 @@ def replace_streams_command(input_file,
         "-map", f"-0:{stream_type}",
     ] + flatten_list(data_map_options) + [
     ] + flatten_list(subtitle_map_options) + [
+    ] + flatten_list(subtitle_codec_options) + [
         "-copy_unknown",
         "-c:v", "copy",
         "-c:d", "copy",

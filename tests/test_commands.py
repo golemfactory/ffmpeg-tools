@@ -198,6 +198,93 @@ class TestCommands(TestCase):
             )
 
 
+    @mock.patch('ffmpeg_tools.commands.get_metadata_json')
+    @mock.patch('ffmpeg_tools.commands.select_subtitle_conversions', return_value={
+        1: 'subrip',
+        3: 'ass',
+        4: 'mov_text',
+        8: 'ass',
+    })
+    def test_replace_streams_command_should_convert_unstripped_subtitle_streams(
+        self,
+        _mock_select_subtitle_conversions,
+        _mock_get_metadata_json,
+    ):
+        command = commands.replace_streams_command(
+            input_file='input.mp4',
+            replacement_source='input[video-only].mkv',
+            output_file='output.mkv',
+            stream_type="v",
+            targs={},
+            container='matroska',
+            strip_unsupported_data_streams=False,
+            strip_unsupported_subtitle_streams=False,
+        )
+        expected_command = [
+            "ffmpeg",
+            "-nostdin",
+            "-i", 'input.mp4',
+            "-i", 'input[video-only].mkv',
+            "-map", "1:v",
+            "-map", "0",
+            "-map", "-0:v",
+            "-codec:1", "subrip",
+            "-codec:3", "ass",
+            "-codec:4", "mov_text",
+            "-codec:8", "ass",
+            "-copy_unknown",
+            "-c:v", "copy",
+            "-c:d", "copy",
+            "-f", "matroska",
+            'output.mkv',
+        ]
+
+        self.assertEqual(command, expected_command)
+
+
+    @mock.patch('ffmpeg_tools.commands.get_metadata_json', return_value={
+        'streams': [
+            {
+                'index': 3,
+                'codec_type': 'subtitle',
+                'codec_name': 'subrip',
+            },
+        ]
+    })
+    @mock.patch.dict('ffmpeg_tools.codecs._SUBTITLE_SUPPORTED_CONVERSIONS', {
+        'subrip': ['subrip', 'ass', 'webvtt'],
+    })
+    def test_replace_streams_command_should_leave_converting_subtitles_up_to_ffmpeg_if_no_container_specified(
+        self,
+        _mock_get_metadata_json
+    ):
+        command = commands.replace_streams_command(
+            input_file='input.mp4',
+            replacement_source='input[video-only].mkv',
+            output_file='output.mkv',
+            stream_type="v",
+            targs={},
+            container=None,
+            strip_unsupported_data_streams=False,
+            strip_unsupported_subtitle_streams=False,
+        )
+        expected_command = [
+            "ffmpeg",
+            "-nostdin",
+            "-i", 'input.mp4',
+            "-i", 'input[video-only].mkv',
+            "-map", "1:v",
+            "-map", "0",
+            "-map", "-0:v",
+            "-copy_unknown",
+            "-c:v", "copy",
+            "-c:d", "copy",
+            'output.mkv',
+        ]
+
+        self.assertEqual(command, expected_command)
+
+
 class TestUnsupportedStreamDetection(TestCase):
     METADATA_WITH_SUBTITLES = {
         'streams': [
@@ -239,6 +326,38 @@ class TestUnsupportedStreamDetection(TestCase):
             commands.find_unsupported_subtitle_streams(self.METADATA_WITH_SUBTITLES, None),
             [],
         )
+
+    @mock.patch.dict('ffmpeg_tools.formats._CONTAINER_SUPPORTED_CODECS', {
+        "matroska": {'subtitlecodecs': ['subrip', 'ass', 'mov_text']}
+    })
+    @mock.patch.dict('ffmpeg_tools.codecs._SUBTITLE_SUPPORTED_CONVERSIONS', {
+        'subrip': ['subrip', 'ass', 'webvtt'],
+        'ass': ['ass', 'mov_text'],
+        'mov_text': ['mov_text'],
+        'webvtt': ['subrip', 'webvtt'],
+    })
+    def test_select_subtitle_conversions(self):
+        suggested_conversions = commands.select_subtitle_conversions(self.METADATA_WITH_SUBTITLES, target_container='matroska')
+        expected_conversions = {
+            1: 'subrip',
+            3: 'ass',
+            4: 'mov_text',
+            8: 'ass',
+        }
+
+        self.assertEqual(suggested_conversions, expected_conversions)
+
+    @mock.patch.dict('ffmpeg_tools.formats._CONTAINER_SUPPORTED_CODECS', {
+        "matroska": {'subtitlecodecs': ['subrip', 'ass', 'mov_text']}
+    })
+    @mock.patch.dict('ffmpeg_tools.codecs._SUBTITLE_SUPPORTED_CONVERSIONS', {
+        'subrip': ['subrip', 'ass', 'webvtt'],
+        'ass': ['ass', 'mov_text'],
+        'mov_text': ['mov_text'],
+        'webvtt': ['subrip', 'webvtt'],
+    })
+    def test_select_subtitle_conversions_should_not_suggest_any_conversions_if_target_container_is_not_known(self):
+        self.assertEqual(commands.select_subtitle_conversions(self.METADATA_WITH_SUBTITLES, target_container=None), {})
 
 
 class TestQueryMuxerInfo(TestCase):
