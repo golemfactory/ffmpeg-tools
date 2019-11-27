@@ -357,8 +357,6 @@ def replace_streams_command(input_file,
         type will be taken. Must exist.
     :param output_file: Container to put the streams in. Must not exist.
     :param stream_type: Stream type specifier.
-    :param targs: Dictionary with additional parameters used by command
-    :param container: Container of output file
         See https://ffmpeg.org/ffmpeg.html#Stream-specifiers.
         The following values are supported:
             - `v` - same as `V`.
@@ -368,6 +366,8 @@ def replace_streams_command(input_file,
             - `s` - subtitle streams.
             - `d` - data streams.
             - `t` - attachments.
+    :param targs: Dictionary with additional parameters used by command
+    :param container: Container of output file
     """
     VALID_STREAM_TYPES = {'v', 'V', 'a', 's', 'd', 't'}
     if stream_type not in VALID_STREAM_TYPES:
