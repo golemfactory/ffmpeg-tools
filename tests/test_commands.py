@@ -14,65 +14,6 @@ from tests.test_meta import example_metadata
 from tests.utils import get_absolute_resource_path
 
 
-BIN_DATA_EXAMPLE_STREAM = {
-    'index': 2,
-    'codec_name': codecs.DATA_STREAM_WHITELIST[0],
-    'codec_long_name': 'binary data',
-    'profile': 'unknown',
-    'codec_type': 'data',
-    'codec_tag_string': '[6][0][0][0]',
-    'codec_tag': '0x0006',
-    'id': '0x102',
-    'r_frame_rate': '0/0',
-    'avg_frame_rate': '0/0',
-    'time_base': '1/90000',
-    'start_pts': 131920,
-    'start_time': '1.465778',
-    'duration_ts': 475200,
-    'duration': '5.280000',
-    'bit_rate': 'N/A',
-    'max_bit_rate': 'N/A',
-    'bits_per_raw_sample': 'N/A',
-    'nb_frames': 'N/A',
-    'nb_read_frames': 'N/A',
-    'nb_read_packets': 'N/A',
-}
-
-SUBTITLES_EXAMPLE_STREAM = {
-    'index': 3,
-    'codec_name': codecs.SUBTITLE_STREAM_WHITELIST[0],
-    'codec_long_name': 'SubRip subtitle',
-    'codec_type': 'subtitle',
-    'codec_time_base': '0/1',
-    'codec_tag_string': '[0][0][0][0]',
-    'codec_tag': '0x0000',
-    'r_frame_rate': '0/0',
-    'avg_frame_rate': '0/0',
-    'time_base': '1/1000',
-    'start_pts': 0,
-    'start_time': '0.000000',
-    'duration_ts': 46665,
-    'duration': '46.665000',
-    'disposition': {
-        'default': 1,
-        'dub': 0,
-        'original': 0,
-        'comment': 0,
-        'lyrics': 0,
-        'karaoke': 0,
-        'forced': 0,
-        'hearing_impaired': 0,
-        'visual_impaired': 0,
-        'clean_effects': 0,
-        'attached_pic': 0,
-        'timed_thumbnails': 0
-    },
-    'tags': {
-        'language': 'eng',
-    }
-}
-
-
 class TestCommands(TestCase):
 
     def test_transcoding(self):
@@ -257,40 +198,29 @@ class TestCommands(TestCase):
             )
 
 
-class MetadataWithSupportedAndUnsupportedStreamsBase(TestCase):
+class TestUnsupportedStreamDetection(TestCase):
+    METADATA_WITH_SUBTITLES = {
+        'streams': [
+            {'index': 2, 'codec_type': 'video', 'codec_name': 'h264'},
+            {'index': 6, 'codec_type': 'audio', 'codec_name': 'aac'},
+            {'index': 3, 'codec_type': 'subtitle', 'codec_name': 'subrip'},
+            {'index': 8, 'codec_type': 'subtitle', 'codec_name': 'ass'},
+            {'index': 4, 'codec_type': 'subtitle', 'codec_name': 'mov_text'},
+            {'index': 1, 'codec_type': 'subtitle', 'codec_name': 'webvtt'},
+            {'index': 9, 'codec_type': 'subtitle', 'codec_name': 'some unsupported codec'},
+            {'index': 0, 'codec_type': 'data', 'codec_name': 'bin_data'},
+            {'index': 7, 'codec_type': 'weird unsupported codec type', 'codec_name': 'subrip'},
+            {'index': 10, 'codec_type': 'data', 'codec_name': 'dvd_nav_packet'},
+        ]
+    }
 
-    def setUp(self):
-        super().setUp()
-        self.metadata_without_unsupported_streams = copy.deepcopy(
-            example_metadata)
-        self.metadata_without_unsupported_streams['streams'].extend(
-            [BIN_DATA_EXAMPLE_STREAM, SUBTITLES_EXAMPLE_STREAM])
-        self.metadata_without_unsupported_streams['format']['nb_streams'] = 4
-
-        self.metadata_with_unsupported_streams = copy.deepcopy(
-            self.metadata_without_unsupported_streams)
-
-        assert 'some default unsupported name' not in BIN_DATA_EXAMPLE_STREAM
-        assert 'some default unsupported name' not in SUBTITLES_EXAMPLE_STREAM
-
-        self.metadata_with_unsupported_streams['streams'][2]['codec_name'] = \
-            'some default unsupported name'
-        self.metadata_with_unsupported_streams['streams'][3]['codec_name'] = \
-            'some default unsupported name'
-
-
-class TestUnsupportedStreamDetection(MetadataWithSupportedAndUnsupportedStreamsBase):
-    def test_find_unsupported_data_streams_does_not_strip_whitelisted_streams(self):
-        self.assertEqual(commands.find_unsupported_data_streams(self.metadata_without_unsupported_streams), [])
-
-    def test_find_unsupported_subtitle_streams_does_not_strip_whitelisted_streams(self):
-        self.assertEqual(commands.find_unsupported_subtitle_streams(self.metadata_without_unsupported_streams), [])
-
+    @mock.patch.object(codecs, 'DATA_STREAM_WHITELIST', ["dvd_nav_packet"])
     def test_find_unsupported_data_streams_strips_non_whitelisted_streams(self):
-        self.assertEqual(commands.find_unsupported_data_streams(self.metadata_with_unsupported_streams), [2])
+        self.assertCountEqual(commands.find_unsupported_data_streams(self.METADATA_WITH_SUBTITLES), [0])
 
+    @mock.patch.object(codecs, 'SUBTITLE_STREAM_WHITELIST', ["subrip", "mov_text"])
     def test_find_unsupported_subtitle_streams_strips_non_whitelisted_streams(self):
-        self.assertEqual(commands.find_unsupported_subtitle_streams(self.metadata_with_unsupported_streams), [3])
+        self.assertCountEqual(commands.find_unsupported_subtitle_streams(self.METADATA_WITH_SUBTITLES), [8, 1, 9])
 
 
 class TestQueryMuxerInfo(TestCase):
