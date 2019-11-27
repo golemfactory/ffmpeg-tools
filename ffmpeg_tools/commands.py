@@ -440,9 +440,9 @@ def replace_streams_command(input_file,
         "-f", container,
     ] if container is not None else []) + ([
         "-c:a", codecs.get_audio_encoder(targs['audio']['codec']),
-    ] if 'audio' in targs and 'codec' in targs['audio'] else []) + ([
+    ] if 'codec' in targs.get('audio', {}) else []) + ([
         "-b:a", targs['audio']['bitrate'],
-    ] if 'audio' in targs and 'bitrate' in targs['audio'] else []) + [
+    ] if 'bitrate' in targs.get('audio', {}) else []) + [
         output_file,
     ]
 
