@@ -366,8 +366,16 @@ def replace_streams_command(input_file,
             - `s` - subtitle streams.
             - `d` - data streams.
             - `t` - attachments.
-    :param targs: Dictionary with additional parameters used by command
-    :param container: Container of output file
+    :param targs: Dictionary with additional transcoding parameters.
+        The following parameters are supported:
+            - `audio`: dict with parameters for audio stream transcoding.
+                Same parameters are applied to all audio streams.
+                Transcoding different audio streams differently is currently
+                not supported.
+                Can include the following keys:`bitrate`, `codec`.
+    :param container: Container type to use for the output file.
+        Optional, but highly recommended. If you don't specify it, ffmpeg will
+        try to guess based the extension of the output file.
     """
     VALID_STREAM_TYPES = {'v', 'V', 'a', 's', 'd', 't'}
     if stream_type not in VALID_STREAM_TYPES:
