@@ -9,7 +9,7 @@ from ffmpeg_tools import validation
 from ffmpeg_tools import formats
 from ffmpeg_tools import frame_rate
 from ffmpeg_tools import meta
-from tests.utils import get_absolute_resource_path
+from tests.utils import get_absolute_resource_path, make_parameterized_test_name_generator_for_scalar_values
 
 
 class TestInputValidation(TestCase):
@@ -322,12 +322,15 @@ class TestConversionValidation(TestCase):
         with self.assertRaises(exceptions.InvalidResolution):
             validation.validate_transcoding_params(dst_params, metadata, {})
 
-    @parameterized.expand([
-        ([333, 333], [333, 333]),
-        ([333, 666], [666, 1332]),
-        ([1920, 1080], [1366, 768]),
-        ([3840, 2160], [2560, 1440]),
-    ])
+    @parameterized.expand(
+        [
+            ([333, 333], [333, 333]),
+            ([333, 666], [666, 1332]),
+            ([1920, 1080], [1366, 768]),
+            ([3840, 2160], [2560, 1440]),
+        ],
+        name_func=make_parameterized_test_name_generator_for_scalar_values(['source', 'target']),
+    )
     def test_nonstandard_resolution_change(
             self,
             src_resolution,
@@ -391,12 +394,15 @@ class TestConversionValidation(TestCase):
         dst_muxer_info = None
         self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, dst_muxer_info))
 
-    @parameterized.expand([
-        ('121/2',),
-        ('61',),
-        ('122',),
-        ('100000',),
-    ])
+    @parameterized.expand(
+        [
+            ('121/2',),
+            ('61',),
+            ('122',),
+            ('100000',),
+        ],
+        name_func=make_parameterized_test_name_generator_for_scalar_values(['rate']),
+    )
     def test_source_frame_rate_when_capped_is_validated_as_max_when_implicitly_used_as_target_frame_rate(self, src_frame_rate):
         assert codecs.MAX_SUPPORTED_FRAME_RATE[codecs.VideoCodec.MPEG_1.value] == 60
         assert frame_rate.FrameRate.from_string(src_frame_rate).normalized() not in formats.list_supported_frame_rates()
@@ -406,12 +412,15 @@ class TestConversionValidation(TestCase):
         dst_params = self.create_params("mov", [1920, 1080], codecs.VideoCodec.MPEG_1.value, "aac", frame_rate=None)
         self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, {}))
 
-    @parameterized.expand([
-        ('121/2',),
-        ('61',),
-        ('122',),
-        ('100000',),
-    ])
+    @parameterized.expand(
+        [
+            ('121/2',),
+            ('61',),
+            ('122',),
+            ('100000',),
+        ],
+        name_func=make_parameterized_test_name_generator_for_scalar_values(['rate']),
+    )
     def test_explicitly_set_target_frame_rate_is_not_capped(self, dst_frame_rate):
         assert codecs.MAX_SUPPORTED_FRAME_RATE[codecs.VideoCodec.MPEG_1.value] == 60
         assert frame_rate.FrameRate.from_string(dst_frame_rate).normalized() not in formats.list_supported_frame_rates()
@@ -446,41 +455,50 @@ class TestConversionValidation(TestCase):
         dst_params = self.create_params("mp4", [1920, 1080], "h264", "aac", frame_rate=None)
         self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, {}))
 
-    @parameterized.expand([
-        ('-1/-1', None),   # Should use source rate which is malformed
-        ('33', None),      # Should use source rate which is unsupported
-        (60, 33),          # Should use target rate which is malformed
-        (60, '-1/-1'),     # Should use target rate which is unsupported
-        (None, None),      # Should use source rate which is missing
-    ])
+    @parameterized.expand(
+        [
+            ('-1/-1', None),   # Should use source rate which is malformed
+            ('33', None),      # Should use source rate which is unsupported
+            (60, 33),          # Should use target rate which is malformed
+            (60, '-1/-1'),     # Should use target rate which is unsupported
+            (None, None),      # Should use source rate which is missing
+        ],
+        name_func=make_parameterized_test_name_generator_for_scalar_values(['source', 'target']),
+    )
     def test_validate_frame_rate_should_reject_invalid_target_frame_rates(self, src_frame_rate, target_frame_rate):
         dst_params = self.create_params("mp4", [1920, 1080], "h264", frame_rate=target_frame_rate)
         with self.assertRaises(exceptions.InvalidFrameRate):
             validation.validate_frame_rate(dst_params, src_frame_rate)
 
-    @parameterized.expand([
-        (60, 30),   # Should use target rate
-        (60, None), # Should use source rate
-        (None, 60), # Should use target rate and ignore missing source rate
-    ])
+    @parameterized.expand(
+        [
+            (60, 30),   # Should use target rate
+            (60, None), # Should use source rate
+            (None, 60), # Should use target rate and ignore missing source rate
+        ],
+        name_func=make_parameterized_test_name_generator_for_scalar_values(['source', 'target']),
+    )
     def test_validate_frame_rate_should_accept_supported_conversions(self, src_frame_rate, target_frame_rate):
         dst_params = self.create_params("mp4", [1920, 1080], "h264", frame_rate=target_frame_rate)
         self.assertTrue(validation.validate_frame_rate(dst_params, src_frame_rate))
 
-    @parameterized.expand([
-        (frame_rate.FrameRate(122), 'h264', frame_rate.FrameRate(122)),
-        (frame_rate.FrameRate(60), 'h264', frame_rate.FrameRate(60)),
-        (frame_rate.FrameRate(122), 'mpeg1video', frame_rate.FrameRate(60)),
-        (frame_rate.FrameRate(244, 2), 'mpeg1video', frame_rate.FrameRate(60)),
-        (frame_rate.FrameRate(44, 2), 'mpeg1video', frame_rate.FrameRate(44, 2)),
-        (frame_rate.FrameRate(22), 'mpeg1video', frame_rate.FrameRate(22)),
-        (frame_rate.FrameRate(60), 'mpeg1video', frame_rate.FrameRate(60)),
-        (frame_rate.FrameRate(61), 'mpeg1video', frame_rate.FrameRate(60)),
-        (frame_rate.FrameRate(24, 2), 'mpeg1video', frame_rate.FrameRate(24, 2)),
-        (frame_rate.FrameRate(25, 2), 'mpeg1video', frame_rate.FrameRate(25, 2)),
-        (frame_rate.FrameRate(24, 2), 'mpeg2video', frame_rate.FrameRate(24, 2)),
-        (frame_rate.FrameRate(25, 2), 'mpeg2video', frame_rate.FrameRate(12, 1)),
-    ])
+    @parameterized.expand(
+        [
+            (frame_rate.FrameRate(122), 'h264', frame_rate.FrameRate(122)),
+            (frame_rate.FrameRate(60), 'h264', frame_rate.FrameRate(60)),
+            (frame_rate.FrameRate(122), 'mpeg1video', frame_rate.FrameRate(60)),
+            (frame_rate.FrameRate(244, 2), 'mpeg1video', frame_rate.FrameRate(60)),
+            (frame_rate.FrameRate(44, 2), 'mpeg1video', frame_rate.FrameRate(44, 2)),
+            (frame_rate.FrameRate(22), 'mpeg1video', frame_rate.FrameRate(22)),
+            (frame_rate.FrameRate(60), 'mpeg1video', frame_rate.FrameRate(60)),
+            (frame_rate.FrameRate(61), 'mpeg1video', frame_rate.FrameRate(60)),
+            (frame_rate.FrameRate(24, 2), 'mpeg1video', frame_rate.FrameRate(24, 2)),
+            (frame_rate.FrameRate(25, 2), 'mpeg1video', frame_rate.FrameRate(25, 2)),
+            (frame_rate.FrameRate(24, 2), 'mpeg2video', frame_rate.FrameRate(24, 2)),
+            (frame_rate.FrameRate(25, 2), 'mpeg2video', frame_rate.FrameRate(12, 1)),
+        ],
+        name_func=make_parameterized_test_name_generator_for_scalar_values(['source', 'codec', 'target']),
+    )
     def test_guess_target_frame_rate(self, src_frame_rate, dst_video_codec, expected_frame_rate):
         dst_params = self.create_params("mp4", [1920, 1080], dst_video_codec, frame_rate=None)
         self.assertEqual(
@@ -488,21 +506,23 @@ class TestConversionValidation(TestCase):
             expected_frame_rate,
         )
 
-    @parameterized.expand([
-        (frame_rate.FrameRate(122), 'h264', None),
-        (frame_rate.FrameRate(60), 'h264', None),
-        (frame_rate.FrameRate(122), 'mpeg1video', frame_rate.FrameRate(60)),
-        (frame_rate.FrameRate(244, 2), 'mpeg1video', frame_rate.FrameRate(60)),
-        (frame_rate.FrameRate(44, 2), 'mpeg1video', None),
-        (frame_rate.FrameRate(22), 'mpeg1video', None),
-        (frame_rate.FrameRate(60), 'mpeg1video', None),
-        (frame_rate.FrameRate(61), 'mpeg1video', frame_rate.FrameRate(60)),
-        (frame_rate.FrameRate(24, 2), 'mpeg1video', None),
-        (frame_rate.FrameRate(25, 2), 'mpeg1video', None),
-        (frame_rate.FrameRate(24, 2), 'mpeg2video', None),
-        (frame_rate.FrameRate(25, 2), 'mpeg2video', frame_rate.FrameRate(12, 1)),
-
-    ])
+    @parameterized.expand(
+        [
+            (frame_rate.FrameRate(122), 'h264', None),
+            (frame_rate.FrameRate(60), 'h264', None),
+            (frame_rate.FrameRate(122), 'mpeg1video', frame_rate.FrameRate(60)),
+            (frame_rate.FrameRate(244, 2), 'mpeg1video', frame_rate.FrameRate(60)),
+            (frame_rate.FrameRate(44, 2), 'mpeg1video', None),
+            (frame_rate.FrameRate(22), 'mpeg1video', None),
+            (frame_rate.FrameRate(60), 'mpeg1video', None),
+            (frame_rate.FrameRate(61), 'mpeg1video', frame_rate.FrameRate(60)),
+            (frame_rate.FrameRate(24, 2), 'mpeg1video', None),
+            (frame_rate.FrameRate(25, 2), 'mpeg1video', None),
+            (frame_rate.FrameRate(24, 2), 'mpeg2video', None),
+            (frame_rate.FrameRate(25, 2), 'mpeg2video', frame_rate.FrameRate(12, 1)),
+        ],
+        name_func=make_parameterized_test_name_generator_for_scalar_values(['source', 'codec', 'target']),
+    )
     def test_guess_target_frame_rate_for_special_cases(self, src_frame_rate, dst_video_codec, expected_value):
         self.assertEqual(
             validation._guess_target_frame_rate_for_special_cases(

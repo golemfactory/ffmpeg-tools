@@ -4,6 +4,7 @@ from parameterized import parameterized
 
 from ffmpeg_tools import formats
 from ffmpeg_tools import codecs
+from tests.utils import make_parameterized_test_name_generator_for_scalar_values
 
 
 class TestContainer(TestCase):
@@ -147,29 +148,35 @@ class TestSupportedAudioCodecs(object):
 
 class TestAspectRatioCalculations(TestCase):
 
-    @parameterized.expand([
-        ([333, 333], "1:1"),
-        ([333, 666], "1:2"),
-        ([1366, 768], "16:9"),
-        ([1360, 768], "16:9"),
-        ([1920, 1080], "16:9"),
-        ([2560, 1080], "21:9"),
-        ([3440, 1440], "21:9"),
-    ])
+    @parameterized.expand(
+        [
+            ([333, 333], "1:1"),
+            ([333, 666], "1:2"),
+            ([1366, 768], "16:9"),
+            ([1360, 768], "16:9"),
+            ([1920, 1080], "16:9"),
+            ([2560, 1080], "21:9"),
+            ([3440, 1440], "21:9"),
+        ],
+        name_func=make_parameterized_test_name_generator_for_scalar_values(['resolution', 'aspect']),
+    )
     def test_effective_aspect_ratio(self, resolution, expected_aspect_ratio):
         aspect_ratio = formats.get_effective_aspect_ratio(resolution)
         self.assertEqual(aspect_ratio, expected_aspect_ratio)
 
-    @parameterized.expand([
-        ([333, 666], "1:2"),
-        ([1024, 768], "4:3"),
-        ([1920, 1080], "16:9"),
-        ([1280, 1024], "5:4"),
-        ([1360, 768], "85:48"),
-        ([1366, 768], "683:384"),
-        ([2560, 1080], "64:27"),
-        ([3440, 1440], "43:18"),
-    ])
+    @parameterized.expand(
+        [
+            ([333, 666], "1:2"),
+            ([1024, 768], "4:3"),
+            ([1920, 1080], "16:9"),
+            ([1280, 1024], "5:4"),
+            ([1360, 768], "85:48"),
+            ([1366, 768], "683:384"),
+            ([2560, 1080], "64:27"),
+            ([3440, 1440], "43:18"),
+        ],
+        name_func=make_parameterized_test_name_generator_for_scalar_values(['resolution', 'aspect']),
+    )
     def test_calculate_aspect_ratio(self, resolution, expected_aspect_ratio):
         aspect_ratio = formats.calculate_aspect_ratio(resolution)
         self.assertEqual(aspect_ratio, expected_aspect_ratio)
