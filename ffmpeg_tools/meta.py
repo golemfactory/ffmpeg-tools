@@ -1,4 +1,5 @@
 import json
+from typing import Any, Dict, List
 
 from . import commands
 from . import exceptions
@@ -54,6 +55,35 @@ def get_audio_stream(metadata):
         if stream["codec_type"] == "audio":
             return stream
     return None
+
+
+def count_streams(
+    metadata: Dict['str', Any],
+    codec_type: str=None) -> int:
+
+    return len(find_stream_indexes(metadata, codec_type))
+
+
+def find_stream_indexes(
+    metadata: Dict['str', Any],
+    codec_type: str=None) -> List[Any]:
+
+    return get_attribute_from_all_streams(metadata, 'index', codec_type)
+
+
+def get_attribute_from_all_streams(
+    metadata: Dict['str', Any],
+    attribute: str,
+    codec_type: str=None) -> List[Any]:
+
+    return [
+        stream.get(attribute)
+        for stream in metadata.get('streams', [])
+        if (
+            codec_type is None or
+            stream.get('codec_type') == codec_type
+        )
+    ]
 
 
 def create_params(vformat, resolution, vcodec, acodec=None,
