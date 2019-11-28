@@ -1,3 +1,5 @@
+from unittest import TestCase
+
 from ffmpeg_tools import meta
 
 
@@ -97,27 +99,25 @@ example_metadata = {
 
 
 
-class TestMetadata(object):
+class TestMetadata(TestCase):
 
     def test_getting_resolution(self):
-        assert meta.get_resolution(example_metadata) == [1920, 1080]
+        self.assertEqual(meta.get_resolution(example_metadata), [1920, 1080])
 
     def test_get_duration(self):
-        assert meta.get_duration(example_metadata) == 46.120000
+        self.assertEqual(meta.get_duration(example_metadata), 46.120000)
 
     def test_get_video_codec(self):
-        assert meta.get_video_codec(example_metadata) == "vp9"
+        self.assertEqual(meta.get_video_codec(example_metadata), "vp9")
 
     def test_get_audio_codec(self):
-        assert meta.get_audio_codec(example_metadata) == "opus"
+        self.assertEqual(meta.get_audio_codec(example_metadata), "opus")
 
     def test_get_format(self):
-        assert meta.get_format(example_metadata) == "matroska,webm"
+        self.assertEqual(meta.get_format(example_metadata), "matroska,webm")
 
     def test_get_audio_stream(self):
-        assert meta.get_audio_stream(example_metadata) == example_metadata['streams'][1]
+        self.assertEqual(meta.get_audio_stream(example_metadata), example_metadata['streams'][1])
 
     def test_get_metadata_invalid_path(self):
-        assert meta.get_metadata("blabla") == {}
-
-
+        self.assertEqual(meta.get_metadata("blabla"), {})
