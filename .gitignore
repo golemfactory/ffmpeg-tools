@@ -2,6 +2,7 @@
 __pycache__/
 .pytest_cache/
 .cache
+/.mypy_cache/
 
 # Build artifacts
 /ffmpeg_tools.egg-info
