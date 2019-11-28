@@ -370,6 +370,63 @@ def select_subtitle_conversions(metadata, target_container):
     return {index: codec for index, codec in conversions.items() if codec is not None}
 
 
+def adjust_stream_indexes_for_removals(indexed_map: Dict[int, Any], removed_indexes: List[int]) -> Dict[int, Any]:
+    """
+    Accepts a dict representing streams that will not be removed
+    and updates their indexes to the values they will have when some other
+    streams get removed.
+    """
+
+    assert set(indexed_map) & set(removed_indexes) == set()
+    assert all(index >= 0 for index in set(indexed_map) | set(removed_indexes))
+
+    if len(indexed_map) == 0:
+        return {}
+
+    # We'll iterate over two sorted collections in paralled.
+    # The first one is the set of streams to be removed.
+    # The other is a set of buckets corresponding to intervals between streams
+    # from index_map. Initially the buckets are empty. As we go over the
+    # removed streams, each one is added to the bucket for interval it falls into.
+    removal_histogram = {index: 0 for index in sorted(indexed_map)}
+    histogram_iterator = (index for index in removal_histogram)
+    current_histogram_index = next(histogram_iterator)
+
+    done = False
+    for removed_index in sorted(removed_indexes):
+        while current_histogram_index < removed_index:
+            try:
+                current_histogram_index = next(histogram_iterator)
+            except StopIteration:
+                done = True
+                break
+
+        if done:
+            break
+
+        removal_histogram[current_histogram_index] += 1
+
+    # Now we go over each stream in indexed_map and decrease its index by the total
+    # number of removed streams below it. We get that running total by summing
+    # the buckets as we go.
+    reindexed_map: Dict[int, Any] = {}
+    running_total = 0
+    for index, value in indexed_map.items():
+        running_total += removal_histogram[index]
+        assert running_total <= index
+        assert index - running_total not in reindexed_map
+
+        reindexed_map[index - running_total] = value
+
+    return reindexed_map
+
+
+def shift_stream_indexes(indexed_map: Dict[int, Any], shift: int) -> Dict[int, Any]:
+    assert all(index + shift >= 0 for index in indexed_map)
+
+    return {index + shift: value for index, value in indexed_map.items()}
+
+
 def replace_streams_command(input_file,
                             replacement_source,
                             output_file,
@@ -395,7 +452,6 @@ def replace_streams_command(input_file,
             - `V` - video streams which are not attached pictures, video
                     thumbnails or cover arts.
             - `a` - audio streams.
-            - `t` - attachments.
     :param targs: Dictionary with additional transcoding parameters.
         The following parameters are supported:
             - `audio`: dict with parameters for audio stream transcoding.
@@ -429,7 +485,11 @@ def replace_streams_command(input_file,
     # NOTE: We could support 's' (subtitle streams) or 'd' (data streams) as well
     # but it would complicate the implementation and we currently don't use them
     # so implementing it was not worth the hassle.
-    VALID_STREAM_TYPES = {'v', 'V', 'a', 't'}
+    VALID_STREAM_TYPES = {
+        'v': 'video',
+        'V': 'video',
+        'a': 'audio',
+    }
     if stream_type not in VALID_STREAM_TYPES:
         raise exceptions.InvalidArgument(
             f"Invalid value of 'stream_type'. "
@@ -447,10 +507,11 @@ def replace_streams_command(input_file,
             "Then would have no effect when used here. "
             "You should pass them to the 'transcode' command instead.")
 
-    metadata = get_metadata_json(input_file)
+    input_metadata = get_metadata_json(input_file)
+    replacement_metadata = get_metadata_json(replacement_source)
 
     if strip_unsupported_data_streams:
-        data_streams_to_strip = find_unsupported_data_streams(metadata)
+        data_streams_to_strip = find_unsupported_data_streams(input_metadata)
     else:
         data_streams_to_strip = []
 
@@ -460,7 +521,7 @@ def replace_streams_command(input_file,
     ]
 
     if strip_unsupported_subtitle_streams:
-        subtitle_streams_to_strip = find_unsupported_subtitle_streams(metadata, container)
+        subtitle_streams_to_strip = find_unsupported_subtitle_streams(input_metadata, container)
     else:
         subtitle_streams_to_strip = []
 
@@ -469,9 +530,18 @@ def replace_streams_command(input_file,
         for index in subtitle_streams_to_strip
     ]
 
+    subtitle_codec_map = shift_stream_indexes(
+        adjust_stream_indexes_for_removals(
+            select_subtitle_conversions(input_metadata, container),
+            data_streams_to_strip +
+            subtitle_streams_to_strip +
+            meta.find_stream_indexes(input_metadata, VALID_STREAM_TYPES[stream_type]),
+        ),
+        meta.count_streams(replacement_metadata, VALID_STREAM_TYPES[stream_type]),
+    )
     subtitle_codec_options = [
         [f"-codec:{index}", codec]
-        for index, codec in select_subtitle_conversions(metadata, container).items()
+        for index, codec in subtitle_codec_map.items()
     ]
 
     cmd = [
