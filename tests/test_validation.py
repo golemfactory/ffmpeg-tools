@@ -1,5 +1,5 @@
 import copy
-from unittest import TestCase
+from unittest import TestCase, mock
 
 from parameterized import parameterized
 
@@ -9,7 +9,6 @@ from ffmpeg_tools import validation
 from ffmpeg_tools import formats
 from ffmpeg_tools import frame_rate
 from ffmpeg_tools import meta
-from tests.test_commands import MetadataWithSupportedAndUnsupportedStreamsBase
 from tests.utils import get_absolute_resource_path
 
 
@@ -537,35 +536,65 @@ class TestConversionValidation(TestCase):
         self.assertEqual(validation._get_dst_audio_codec(params, dst_muxer_info), 'aac')
 
 
-class TestValidateUnsupportedStreams(
-    MetadataWithSupportedAndUnsupportedStreamsBase
-):
-
-    def test_function_raises_exception_if_unsupported_stream_with_no_strip(self):
+class TestValidateUnsupportedStreams(TestCase):
+    @mock.patch('ffmpeg_tools.validation.commands.find_unsupported_data_streams', return_value=[2, 3, 5])
+    def test_validate_unsupported_data_streams_raises_exception_if_unsupported_data_streams_cant_be_stripped(
+        self,
+        _mock_find_unsupported_data_streams,
+    ):
         with self.assertRaises(exceptions.UnsupportedStream):
-            validation.validate_data_and_subtitle_streams(
-                metadata=self.metadata_with_unsupported_streams,
+            validation.validate_unsupported_data_streams(
+                metadata={},
                 strip_unsupported_data_streams=False,
+            )
+
+    @mock.patch('ffmpeg_tools.validation.commands.find_unsupported_data_streams', return_value=[2, 3, 5])
+    def test_validate_unsupported_data_streams_does_not_raise_if_unsupported_data_streams_can_be_stripped(
+        self,
+        _mock_find_unsupported_data_streams,
+    ):
+        self.assertTrue(validation.validate_unsupported_data_streams(
+            metadata={},
+            strip_unsupported_data_streams=True,
+        ))
+
+    @mock.patch('ffmpeg_tools.validation.commands.find_unsupported_data_streams', return_value=[])
+    def test_validate_unsupported_data_streams_does_not_raise_if_no_unsupported_data_streams(
+        self,
+        _mock_find_unsupported_data_streams,
+    ):
+        self.assertTrue(validation.validate_unsupported_data_streams(
+            metadata={},
+            strip_unsupported_data_streams=False,
+        ))
+
+    @mock.patch('ffmpeg_tools.validation.commands.find_unsupported_subtitle_streams', return_value=[2, 3, 5])
+    def test_validate_unsupported_subtitle_streams_raises_exception_if_unsupported_subtitle_streams_cant_be_stripped(
+        self,
+        _mock_find_unsupported_subtitle_streams,
+    ):
+        with self.assertRaises(exceptions.UnsupportedStream):
+            validation.validate_unsupported_subtitle_streams(
+                metadata={},
                 strip_unsupported_subtitle_streams=False,
             )
 
-    def test_function_passes_if_unsupported_stream_strip_streams_is_true(self):
-        validation.validate_data_and_subtitle_streams(
-            metadata=self.metadata_with_unsupported_streams,
-            strip_unsupported_data_streams=True,
+    @mock.patch('ffmpeg_tools.validation.commands.find_unsupported_subtitle_streams', return_value=[2, 3, 5])
+    def test_validate_unsupported_subtitle_streams_does_not_raise_if_unsupported_subtitle_streams_can_be_stripped(
+        self,
+        _mock_find_unsupported_subtitle_streams,
+    ):
+        self.assertTrue(validation.validate_unsupported_subtitle_streams(
+            metadata={},
             strip_unsupported_subtitle_streams=True,
-        )
+        ))
 
-    def test_function_passes_if_only_supported_streams_strip_is_false(self):
-        validation.validate_data_and_subtitle_streams(
-            metadata=self.metadata_without_unsupported_streams,
-            strip_unsupported_data_streams=False,
+    @mock.patch('ffmpeg_tools.validation.commands.find_unsupported_subtitle_streams', return_value=[])
+    def test_validate_unsupported_subtitle_streams_does_not_raise_if_no_unsupported_subtitle_streams(
+        self,
+        _mock_find_unsupported_subtitle_streams,
+    ):
+        self.assertTrue(validation.validate_unsupported_subtitle_streams(
+            metadata={},
             strip_unsupported_subtitle_streams=False,
-        )
-
-    def test_function_passes_if_only_supported_streams_strip_is_true(self):
-        validation.validate_data_and_subtitle_streams(
-            metadata=self.metadata_without_unsupported_streams,
-            strip_unsupported_data_streams=True,
-            strip_unsupported_subtitle_streams=True,
-        )
+        ))
