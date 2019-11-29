@@ -514,28 +514,28 @@ class TestConversionValidation(TestCase):
             expected_value
         )
 
-    def test_get_dst_codec_returns_audio_codec_from_dst_params_if_present(self):
+    def test_get_dst_audio_codec_returns_audio_codec_from_dst_params_if_present(self):
         params = self.create_params("mp4", [333, 333], "h264", acodec="mp3")
         dst_muxer_info = {'default_audio_codec': "aac"}
-        self.assertEqual(validation._get_dst_codec(params, dst_muxer_info), 'mp3')
+        self.assertEqual(validation._get_dst_audio_codec(params, dst_muxer_info), 'mp3')
 
-    def test_get_dst_codec_returns_default_audio_codec_if_no_dst_audio_params(self):
+    def test_get_dst_audio_codec_returns_default_audio_codec_if_no_dst_audio_params(self):
         params = self.create_params("mp4", [333, 333], "h264", acodec=None)
         assert 'audio' not in params
         dst_muxer_info = {'default_audio_codec': "aac"}
-        self.assertEqual(validation._get_dst_codec(params, dst_muxer_info), 'aac')
+        self.assertEqual(validation._get_dst_audio_codec(params, dst_muxer_info), 'aac')
 
-    def test_get_dst_codec_returns_default_audio_codec_if_no_codec_in_dst_audio_params(self):
+    def test_get_dst_audio_codec_returns_default_audio_codec_if_no_codec_in_dst_audio_params(self):
         params = self.create_params("mp4", [333, 333], "h264", audio_bitrate="192k")
         assert 'codec' not in params['audio']
         dst_muxer_info = {'default_audio_codec': "aac"}
-        self.assertEqual(validation._get_dst_codec(params, dst_muxer_info), 'aac')
+        self.assertEqual(validation._get_dst_audio_codec(params, dst_muxer_info), 'aac')
 
-    def test_get_dst_codec_returns_default_audio_codec_if_codec_missing_from_dst_params(self):
+    def test_get_dst_audio_codec_returns_default_audio_codec_if_codec_missing_from_dst_params(self):
         params = self.create_params("mp4", [333, 333], "h264", acodec="mp3")
         params['audio']['codec'] = None
         dst_muxer_info = {'default_audio_codec': "aac"}
-        self.assertEqual(validation._get_dst_codec(params, dst_muxer_info), 'aac')
+        self.assertEqual(validation._get_dst_audio_codec(params, dst_muxer_info), 'aac')
 
 
 class TestValidateUnsupportedStreams(
