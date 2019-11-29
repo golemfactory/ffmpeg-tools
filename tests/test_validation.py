@@ -205,9 +205,9 @@ class TestInputValidation(TestCase):
             })
 
 
-    def validate_video_missing_video_stream(self):
+    def test_validate_video_missing_video_stream(self):
         with self.assertRaises(exceptions.MissingVideoStream):
-            validation.validate_video(filename=self._filename, metadata={
+            validation.validate_video(metadata={
                 "format": self._format_metadata,
                 "streams": [self._audio_stream]
             })
