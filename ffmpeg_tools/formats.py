@@ -91,7 +91,7 @@ class Container(enum.Enum):
         return vformat in list_supported_formats()
 
     @staticmethod
-    def list_supported_formats(vformat: str) -> List[str]:
+    def list_supported_formats() -> List[str]:
         return list_supported_formats()
 
     def get_demuxer(self) -> str:
