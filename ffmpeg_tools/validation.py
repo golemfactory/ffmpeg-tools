@@ -1,6 +1,5 @@
 import os
-from math import gcd
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional
 
 from . import meta
 from . import formats

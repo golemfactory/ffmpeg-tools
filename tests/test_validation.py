@@ -4,7 +4,6 @@ from unittest import TestCase
 from parameterized import parameterized
 
 from ffmpeg_tools import codecs
-from ffmpeg_tools import commands
 from ffmpeg_tools import exceptions
 from ffmpeg_tools import validation
 from ffmpeg_tools import formats
