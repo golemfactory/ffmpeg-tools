@@ -46,24 +46,6 @@ def _get_dst_audio_codec(dst_params: dict, dst_muxer_info: Optional[Dict[str, An
     return dst_params['audio']['codec']
 
 
-def validate_unsupported_data_streams(metadata: dict, strip_unsupported_data_streams: bool):
-    unsupported_data_streams = commands.find_unsupported_data_streams(metadata)
-
-    if not strip_unsupported_data_streams and len(unsupported_data_streams) != 0:
-        raise exceptions.UnsupportedStream('data', unsupported_data_streams)
-
-    return True
-
-
-def validate_unsupported_subtitle_streams(metadata: dict, strip_unsupported_subtitle_streams: bool):
-    unsupported_subtitle_streams = commands.find_unsupported_subtitle_streams(metadata)
-
-    if not strip_unsupported_subtitle_streams and len(unsupported_subtitle_streams) != 0:
-        raise exceptions.UnsupportedStream('subtitle', unsupported_subtitle_streams)
-
-    return True
-
-
 def validate_transcoding_params(
     dst_params,
     src_metadata,
@@ -210,6 +192,24 @@ def validate_video_stream(stream_metadata, video_format):
         validate_video_codec(video_format=video_format, video_codec=stream_metadata["codec_name"])
     except KeyError:
         raise exceptions.InvalidVideo(message="Video stream without specified codec")
+    return True
+
+
+def validate_unsupported_data_streams(metadata: dict, strip_unsupported_data_streams: bool):
+    unsupported_data_streams = commands.find_unsupported_data_streams(metadata)
+
+    if not strip_unsupported_data_streams and len(unsupported_data_streams) != 0:
+        raise exceptions.UnsupportedStream('data', unsupported_data_streams)
+
+    return True
+
+
+def validate_unsupported_subtitle_streams(metadata: dict, strip_unsupported_subtitle_streams: bool):
+    unsupported_subtitle_streams = commands.find_unsupported_subtitle_streams(metadata)
+
+    if not strip_unsupported_subtitle_streams and len(unsupported_subtitle_streams) != 0:
+        raise exceptions.UnsupportedStream('subtitle', unsupported_subtitle_streams)
+
     return True
 
 
