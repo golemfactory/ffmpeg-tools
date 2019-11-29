@@ -78,7 +78,7 @@ class TestFrameRate(TestCase):
     ])
     def test_from_collection_should_reject_invalid_representations(self, collection):
         with self.assertRaises(ValueError):
-            frame_rate.FrameRate.from_collection(collection),
+            frame_rate.FrameRate.from_collection(collection)
 
     @parameterized.expand([
         ('0', (0, 1)),
@@ -107,7 +107,7 @@ class TestFrameRate(TestCase):
     ])
     def test_from_string_should_reject_invalid_representations(self, string_value):
         with self.assertRaises(ValueError):
-            frame_rate.FrameRate.from_string(string_value),
+            frame_rate.FrameRate.from_string(string_value)
 
     @parameterized.expand([
         ((0, 1), (0, 1)),
