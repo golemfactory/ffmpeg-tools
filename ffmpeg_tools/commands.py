@@ -745,9 +745,7 @@ def _parse_supported_sample_rates_out_of_encoder_info(codec_info):
         r"""
         ^\s*                           # Leading whitespace
         Supported\ ?sample\ ?rates:\s* # Label
-        (.*[^\s.])\s*                  # Sample rate list
-        \.?                            # Optional dot at the end of the line
-        \s*$                           # Trailing whitespace
+        (.*[^\s])\s*$                  # Sample rate list
         """,
         codec_info,
         re.X | re.MULTILINE

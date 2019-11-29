@@ -613,8 +613,7 @@ class TestQueryEncoderInfo(TestCase):
     @parameterized.expand([
         ('Supported sample rates: 44100 48000 32000 22050 24000 16000 11025 12000 8000\n', ['44100 48000 32000 22050 24000 16000 11025 12000 8000']),
         ('Supported sample rates: 44100 48000 \n', ['44100 48000']),
-        ('Supported sample rates: 44100 48000. \n', ['44100 48000']),
-        ('  Supported sample rates: 44100 48000. \n', ['44100 48000']),
+        ('  Supported sample rates: 44100 48000 \n', ['44100 48000']),
         ('Supported sample rates: 44100 48000. something after \n', ['44100 48000. something after']),
         ('Supported sample rates: 44100 48000 Supported sample rates: 16000 24000 \n', ['44100 48000 Supported sample rates: 16000 24000']),
     ])
