@@ -22,7 +22,7 @@ class TestIntegration(TestCase):
             'merge': os.path.join(self.tmp_dir, 'merge'),
             'replace': os.path.join(self.tmp_dir, 'replace'),
         }
-        for work_dir_id, work_dir_path in self.work_dirs.items():
+        for _work_dir_id, work_dir_path in self.work_dirs.items():
             os.mkdir(work_dir_path)
 
     def tearDown(self):
