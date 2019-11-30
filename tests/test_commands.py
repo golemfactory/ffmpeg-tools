@@ -11,7 +11,7 @@ from ffmpeg_tools import exceptions
 from ffmpeg_tools import formats
 from ffmpeg_tools import meta
 from tests.test_meta import example_metadata
-from tests.utils import get_absolute_resource_path
+from tests.utils import get_absolute_resource_path, make_parameterized_test_name_generator_for_scalar_values
 
 
 class TestCommands(TestCase):
@@ -641,3 +641,49 @@ class TestQueryEncoderInfo(TestCase):
         )
         result = commands._parse_supported_sample_rates_out_of_encoder_info(sample_ffmpeg_output)
         self.assertEqual(result, expected_result)
+
+    @parameterized.expand(
+        [
+            ('', set()),
+            ('44100 48000', {44100, 48000}),
+            ('44100 -48000 0', {44100, -48000, 0}),
+            ('44100 44100 44100', {44100}),
+            ('4410044100441004410044100441004410044100', {4410044100441004410044100441004410044100}),
+        ],
+        name_func=make_parameterized_test_name_generator_for_scalar_values(['input', 'output']),
+    )
+    def test_should_not_raise_if_sample_rates_are_integers(self, input_line, expected_rates):
+        sample_ffmpeg_output = (
+            'some text before sample line \n'
+            f'Supported sample rates: {input_line} \n'
+            'some text after sample line \n'
+        )
+
+        with mock.patch.object(commands, 'exec_cmd_to_string', return_value=sample_ffmpeg_output):
+            encoder_info = commands.query_encoder_info('mp3')
+
+        self.assertEqual(encoder_info, {'sample_rates': expected_rates})
+
+    @parameterized.expand(
+        [
+            ('mp3',),
+            ('x y z',),
+            ('forty four thousand',),
+            ('44100.0 48000.0',),
+            ('44100.33 48000.33',),
+            ('1.2.3',),
+            ('44100 48000. something after',),
+            ('44100 48000 Supported sample rates: 16000 24000',),
+        ],
+        name_func=make_parameterized_test_name_generator_for_scalar_values(['input']),
+    )
+    def test_should_raise_if_sample_rates_are_not_integers(self, input_line):
+        sample_ffmpeg_output = (
+            'some text before sample line \n'
+            f'Supported sample rates: {input_line} \n'
+            'some text after sample line \n'
+        )
+
+        with mock.patch.object(commands, 'exec_cmd_to_string', return_value=sample_ffmpeg_output):
+            with self.assertRaises(exceptions.InvalidSampleRateInfo):
+                commands.query_encoder_info('mp3')

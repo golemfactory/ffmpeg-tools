@@ -765,6 +765,9 @@ def query_encoder_info(encoder):
             f"Expected exactly one.")
 
     if len(matches) == 1:
-        return {
-            'sample_rates': {int(sr) for sr in matches[0].strip().split(" ")},
-        }
+        rate_strings = {s for s in matches[0].strip().split(" ") if s != ''}
+        try:
+            return {'sample_rates': {int(s) for s in rate_strings}}
+        except (ValueError, TypeError):
+            raise exceptions.InvalidSampleRateInfo(f"Failed to parse sample rates reported by ffmpeg as integers.")
+
