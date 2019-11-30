@@ -503,7 +503,7 @@ class TestQueryMuxerInfo(TestCase):
             self.assertIsInstance(muxer_info, dict)
             self.assertNotIn('default_audio_codec', muxer_info)
 
-    def test_default_audio_codec_field_should_be_omitted_if_multiple_matches_found_in_ffmpeg_output(self):
+    def test_should_raise_if_multiple_matches_found_in_ffmpeg_output(self):
         sample_ffmpeg_output = (
             'Muxer 3g2 [3GP2 (3GPP2 file format)]:\n'
             '   Common extensions: 3g2.\n'
