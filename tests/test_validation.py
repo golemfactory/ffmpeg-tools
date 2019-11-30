@@ -251,7 +251,7 @@ class TestConversionValidation(TestCase):
         return metadata
 
 
-    @mock.patch('ffmpeg_tools.validation.meta.get_sample_rates', return_value=['48000', '24000'])
+    @mock.patch('ffmpeg_tools.validation.meta.get_sample_rates', return_value=[48000, 24000])
     def test_target_audio_codec_supports_source_sample_rates(self, _mock_get_sample_rates):
         metadata = self.modify_metadata_with_passed_values("mp4", [640, 480], "h264", "mp3", 60)
         dst_params = self.create_params("mp4", [640, 480], "h264", "mp3", 60)
@@ -259,7 +259,7 @@ class TestConversionValidation(TestCase):
         self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, {}))
 
 
-    @mock.patch('ffmpeg_tools.validation.meta.get_sample_rates', return_value=['48000', '24000'])
+    @mock.patch('ffmpeg_tools.validation.meta.get_sample_rates', return_value=[48000, 24000])
     def test_default_target_audio_codec_supports_source_sample_rate(self, _mock_get_sample_rates):
         metadata = self.modify_metadata_with_passed_values("mp4", [640, 480], "h264", "mp3", 60)
         dst_params = self.create_params("mp4", [640, 480], "h264")
@@ -268,7 +268,7 @@ class TestConversionValidation(TestCase):
         self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, dst_muxer_info))
 
 
-    @mock.patch('ffmpeg_tools.validation.meta.get_sample_rates', return_value=['48000', '5000'])
+    @mock.patch('ffmpeg_tools.validation.meta.get_sample_rates', return_value=[48000, 5000])
     def test_target_audio_codec_does_not_support_source_sample_rate(self, _mock_get_sample_rates):
         metadata = self.modify_metadata_with_passed_values("mp4", [640, 480], "h264", "mp3", 60)
         dst_params = self.create_params("mp4", [640, 480], "h264", "mp3", 60)
@@ -277,7 +277,7 @@ class TestConversionValidation(TestCase):
             validation.validate_transcoding_params(dst_params, metadata, {})
 
 
-    @mock.patch('ffmpeg_tools.validation.meta.get_sample_rates', return_value=['48000', '5000'])
+    @mock.patch('ffmpeg_tools.validation.meta.get_sample_rates', return_value=[48000, 5000])
     def test_default_target_audio_codec_does_not_support_source_sample_rate(self, _mock_get_sample_rates):
         metadata = self.modify_metadata_with_passed_values("mp4", [640, 480], "h264", "mp3", 60)
         dst_params = self.create_params("mp4", [640, 480], "h264")

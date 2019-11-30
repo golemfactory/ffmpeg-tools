@@ -28,9 +28,23 @@ def get_frame_rate(metadata):
     return None
 
 
+def _try_int(value: Any) -> Any:
+    if isinstance(value, str):
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            pass
+
+    return value
+
+
 def get_sample_rates(metadata):
     return [
-        stream.get("sample_rate")
+        # Sample rates should always be integers but just in case we get a weird
+        # file for which ffprobe reports garbage, we'll return raw values if
+        # they cannot be converted. That's more useful that just refusing to work
+        # and it's the job of validations to reject these values if they're invalid.
+        _try_int(stream.get("sample_rate"))
         for stream in metadata["streams"]
         if stream["codec_type"] == "audio"
     ]

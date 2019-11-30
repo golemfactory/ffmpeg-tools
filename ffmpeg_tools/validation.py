@@ -326,7 +326,7 @@ def validate_audio_sample_rate(dest_audio_codec: str, source_sample_rates: Optio
         return
 
     dest_encoder_info = commands.query_encoder_info(dest_audio_codec)
-    unsupported_sample_rates = set(int(sr) for sr in source_sample_rates) - set(dest_encoder_info.get('sample_rates'))
+    unsupported_sample_rates = set(source_sample_rates) - set(dest_encoder_info.get('sample_rates'))
     if len(unsupported_sample_rates) > 0:
         raise exceptions.UnsupportedSampleRate(unsupported_sample_rates, dest_audio_codec)
 
