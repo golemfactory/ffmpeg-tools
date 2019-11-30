@@ -503,6 +503,18 @@ class TestQueryMuxerInfo(TestCase):
             self.assertIsInstance(muxer_info, dict)
             self.assertNotIn('default_audio_codec', muxer_info)
 
+    def test_default_audio_codec_field_should_not_be_omitted_if_codec_name_is_an_empty_string(self):
+        sample_ffmpeg_output = (
+            'Muxer 3g2 [3GP2 (3GPP2 file format)]:\n'
+            '   Common extensions: 3g2.\n'
+            '   Default audio codec:\n'
+        )
+
+        with mock.patch.object(commands, 'exec_cmd_to_string', return_value=sample_ffmpeg_output):
+            muxer_info = commands.query_muxer_info(formats.Container.c_3G2)
+            self.assertIsInstance(muxer_info, dict)
+            self.assertEqual(muxer_info['default_audio_codec'], '')
+
     def test_should_raise_if_multiple_matches_found_in_ffmpeg_output(self):
         sample_ffmpeg_output = (
             'Muxer 3g2 [3GP2 (3GPP2 file format)]:\n'
@@ -543,6 +555,8 @@ class TestQueryMuxerInfo(TestCase):
         ('Default audio codec: amr_nb_\n', ['amr_nb_']),
         ('Default audio codec: amr_nb. Default audio codec: mp2 \n', ['amr_nb. Default audio codec: mp2']),
         ('    Default audio codec: amr_nb-x!\n', ['amr_nb-x!']),
+        ('Default audio codec:\n', ['']),
+        ('Default audio codec: \n', ['']),
     ])
     def test_default_audio_encoder_parsing_corner_cases(
         self,
@@ -616,6 +630,8 @@ class TestQueryEncoderInfo(TestCase):
         ('  Supported sample rates: 44100 48000 \n', ['44100 48000']),
         ('Supported sample rates: 44100 48000. something after \n', ['44100 48000. something after']),
         ('Supported sample rates: 44100 48000 Supported sample rates: 16000 24000 \n', ['44100 48000 Supported sample rates: 16000 24000']),
+        ('Supported sample rates:\n', ['']),
+        ('Supported sample rates: \n', ['']),
     ])
     def test_sample_rate_parsing_corner_cases(self, input_line, expected_result):
         sample_ffmpeg_output = (

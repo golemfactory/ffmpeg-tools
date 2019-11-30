@@ -683,7 +683,7 @@ def _parse_default_audio_codec_out_of_muxer_info(muxer_info: str) -> List[str]:
         r"""
         ^\s*                        # Leading whitespace
         Default\ ?audio\ ?codec:\ * # Label
-        (.*[^\s.])\s*               # Codec name
+        (.*[^\s.]|)\s*              # Codec name
         \.?                         # Optional dot at the end of the line
         \s*$                        # Trailing whitespace
         """,
@@ -745,7 +745,7 @@ def _parse_supported_sample_rates_out_of_encoder_info(codec_info):
         r"""
         ^\s*                           # Leading whitespace
         Supported\ ?sample\ ?rates:\ * # Label
-        (.*[^\s])\s*$                  # Sample rate list
+        (.*[^\s]|)\s*$                 # Sample rate list
         """,
         codec_info,
         re.X | re.MULTILINE
