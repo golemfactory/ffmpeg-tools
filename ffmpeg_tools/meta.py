@@ -21,11 +21,23 @@ def get_resolution(metadata):
     return [0, 0]
 
 
+def get_resolutions(metadata: Dict['str', Any]) -> List[List[Any]]:
+    return [
+        [stream.get('width'), stream.get('height')]
+        for stream in metadata.get('streams', [])
+        if stream.get('codec_type') == 'video'
+    ]
+
+
 def get_frame_rate(metadata):
     for stream in metadata["streams"]:
         if stream["codec_type"] == "video":
             return stream["r_frame_rate"]
     return None
+
+
+def get_frame_rates(metadata: Dict['str', Any]) -> List[Any]:
+    return get_attribute_from_all_streams(metadata, 'r_frame_rate', 'video')
 
 
 def _try_int(value: Any) -> Any:
@@ -57,6 +69,13 @@ def get_duration(metadata, stream=0):
     return float(metadata["format"]["duration"])
 
 
+def get_codecs(
+    metadata: Dict['str', Any],
+    codec_type: str=None) -> List[Any]:
+
+    return get_attribute_from_all_streams(metadata, 'codec_name', codec_type)
+
+
 def get_video_codec(metadata):
     for stream in metadata["streams"]:
         if stream["codec_type"] == "video":
@@ -80,6 +99,20 @@ def get_audio_stream(metadata):
         if stream["codec_type"] == "audio":
             return stream
     return None
+
+
+def get_streams(
+    metadata: Dict['str', Any],
+    codec_type: str=None) -> Dict['str', Any]:
+
+    return [
+        stream
+        for stream in metadata.get('streams', [])
+        if (
+            codec_type is None or
+            stream.get('codec_type') == codec_type
+        )
+    ]
 
 
 def count_streams(
