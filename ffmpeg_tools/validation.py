@@ -80,10 +80,10 @@ def validate_transcoding_params(
 
     # Validate video codec
     validate_video_codecs(meta.get_format(src_metadata), meta.get_codecs(src_metadata, codec_type='video'))
-    validate_video_codecs(dst_params['container'], [dst_params["video"]["codec"]])
+    validate_video_codecs(dst_params['container'], [dst_params["video"].get("codec")])
 
     for src_video_codec in meta.get_codecs(src_metadata, 'video'):
-        validate_video_codec_conversion(src_video_codec, dst_params["video"]["codec"])
+        validate_video_codec_conversion(src_video_codec, dst_params["video"].get("codec"))
 
     # Validate audio codec. Audio codec can not be set and ffmpeg should
     # either remain with currently used codec or transcode using default behavior
@@ -221,6 +221,9 @@ def validate_video_codecs(video_format, video_codecs):
     assert formats.is_supported(video_format)
 
     for video_codec in video_codecs:
+        if video_codec is None:
+            raise exceptions.MissingVideoCodec
+
         if not formats.is_supported_video_codec(vformat=video_format, codec=video_codec):
             raise exceptions.UnsupportedVideoCodec(video_codec=video_codec, video_format=video_format)
 

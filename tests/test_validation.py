@@ -72,6 +72,12 @@ class TestInputValidation(TestCase):
         self.assertTrue(validation.validate_video_codecs("mp4", []))
 
 
+    @mock.patch.object(formats, 'is_supported_video_codec', return_value=True)
+    def test_validate_video_codecs_should_reject_missing_codec_name(self, _mock_is_supported_video_codec):
+        with self.assertRaises(exceptions.MissingVideoCodec):
+            validation.validate_video_codecs("mp4", ['h264', None, 'mjpeg', 'flv1'])
+
+
     def test_validate_valid_audio_codecs(self):
         for video_format in self._supported_formats:
             supported_audio_codecs = formats.list_supported_audio_codecs(video_format)
@@ -283,6 +289,14 @@ class TestConversionValidation(TestCase):
             })
 
         return metadata
+
+
+    def test_validate_transcoding_params_should_reject_dst_params_without_video_codec(self):
+        metadata = self.modify_metadata_with_passed_values("mp4", [1920, 1080], "h264", "mp3", 60)
+        dst_params = self.create_params("mp4", [640, 480], None, "mp3", 60)
+
+        with self.assertRaises(exceptions.MissingVideoCodec):
+            validation.validate_transcoding_params(dst_params, metadata, {}, {})
 
 
     @mock.patch.object(formats, 'is_supported_audio_codec', side_effect=(lambda vformat, codec: True))

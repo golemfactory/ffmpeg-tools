@@ -61,6 +61,11 @@ class MissingVideoStream(InvalidVideo):
         super().__init__(message="Missing video stream")
 
 
+class MissingVideoCodec(InvalidVideo):
+    def __init__(self):
+        super().__init__(message="Video codec name not found")
+
+
 class InvalidFormatMetadata(InvalidVideo):
     def __init__(self, message):
         super().__init__(message=message)
