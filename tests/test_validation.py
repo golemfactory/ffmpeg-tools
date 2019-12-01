@@ -251,37 +251,75 @@ class TestConversionValidation(TestCase):
         return metadata
 
 
-    @mock.patch('ffmpeg_tools.validation.meta.get_sample_rates', return_value=[48000, 24000])
-    def test_target_audio_codec_supports_source_sample_rates(self, _mock_get_sample_rates):
-        metadata = self.modify_metadata_with_passed_values("mp4", [640, 480], "h264", "mp3", 60)
+    def modify_metadata_for_sample_rate_validation_tests(self, container, video_codec, audio_codec_rate_pairs):
+        assert len(audio_codec_rate_pairs) >= 1
+
+        metadata = self.modify_metadata_with_passed_values(container, [640, 480], video_codec, "mp3", 60)
+        assert len(metadata['streams']) == 2
+        assert metadata['streams'][0]['codec_type'] != 'audio'
+        assert metadata['streams'][1]['codec_type'] == 'audio'
+
+        metadata['streams'][1]['codec_name'] = audio_codec_rate_pairs[0][0]
+        metadata['streams'][1]['sample_rate'] = audio_codec_rate_pairs[0][1]
+
+        for i, (audio_codec, sample_rate) in enumerate(audio_codec_rate_pairs[1:]):
+            metadata['streams'].append({
+                'index': i + 2,
+                'codec_type': 'audio',
+                'codec_name': audio_codec,
+                'sample_rate': sample_rate,
+            })
+
+        return metadata
+
+
+    def test_target_audio_codec_supports_source_sample_rates(self):
+        metadata = self.modify_metadata_for_sample_rate_validation_tests("mp4", "h264", [
+            ('aac', 44100),
+            ('mp3', 48000),
+            ('pcm_u8', 24000),
+            ('amr_nb', 8000),
+        ])
         dst_params = self.create_params("mp4", [640, 480], "h264", "mp3", 60)
 
         self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, {}))
 
 
-    @mock.patch('ffmpeg_tools.validation.meta.get_sample_rates', return_value=[48000, 24000])
-    def test_default_target_audio_codec_supports_source_sample_rate(self, _mock_get_sample_rates):
-        metadata = self.modify_metadata_with_passed_values("mp4", [640, 480], "h264", "mp3", 60)
+    def test_default_target_audio_codec_supports_source_sample_rate(self):
+        metadata = self.modify_metadata_for_sample_rate_validation_tests("mp4", "h264", [
+            ('aac', 44100),
+            ('mp3', 48000),
+            ('pcm_u8', 24000),
+            ('amr_nb', 8000),
+        ])
         dst_params = self.create_params("mp4", [640, 480], "h264")
-        dst_muxer_info = {'default_audio_codec': "aac"}
+        dst_muxer_info = {'default_audio_codec': "mp3"}
 
         self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, dst_muxer_info))
 
 
-    @mock.patch('ffmpeg_tools.validation.meta.get_sample_rates', return_value=[48000, 5000])
-    def test_target_audio_codec_does_not_support_source_sample_rate(self, _mock_get_sample_rates):
-        metadata = self.modify_metadata_with_passed_values("mp4", [640, 480], "h264", "mp3", 60)
+    def test_target_audio_codec_does_not_support_source_sample_rate(self):
+        metadata = self.modify_metadata_for_sample_rate_validation_tests("mp4", "h264", [
+            ('aac', 44100),
+            ('mp3', 48000),
+            ('pcm_u8', 5000),
+            ('amr_nb', 8000),
+        ])
         dst_params = self.create_params("mp4", [640, 480], "h264", "mp3", 60)
 
         with self.assertRaises(exceptions.UnsupportedSampleRate):
             validation.validate_transcoding_params(dst_params, metadata, {})
 
 
-    @mock.patch('ffmpeg_tools.validation.meta.get_sample_rates', return_value=[48000, 5000])
-    def test_default_target_audio_codec_does_not_support_source_sample_rate(self, _mock_get_sample_rates):
-        metadata = self.modify_metadata_with_passed_values("mp4", [640, 480], "h264", "mp3", 60)
+    def test_default_target_audio_codec_does_not_support_source_sample_rate(self):
+        metadata = self.modify_metadata_for_sample_rate_validation_tests("mp4", "h264", [
+            ('aac', 44100),
+            ('mp3', 48000),
+            ('pcm_u8', 5000),
+            ('amr_nb', 8000),
+        ])
         dst_params = self.create_params("mp4", [640, 480], "h264")
-        dst_muxer_info = {'default_audio_codec': "aac"}
+        dst_muxer_info = {'default_audio_codec': "mp3"}
 
         with self.assertRaises(exceptions.UnsupportedSampleRate):
             self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, dst_muxer_info))
