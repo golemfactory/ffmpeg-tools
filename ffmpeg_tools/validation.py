@@ -28,12 +28,6 @@ def validate_video(metadata):
     return True
 
 
-def _get_src_audio_codec(src_params):
-    if src_params.get("audio", {}).get("codec") is not None:
-        return src_params['audio']['codec']
-    return None
-
-
 def _get_dst_audio_codec(dst_params: dict, dst_muxer_info: Optional[Dict[str, Any]]) -> Optional[str]:
     assert not formats.Container(dst_params["container"]).is_exclusive_demuxer()
 
@@ -80,39 +74,32 @@ def validate_transcoding_params(
         the replace command is going to strip them anyway.
     """
 
-    src_params = meta.create_params(
-        meta.get_format(src_metadata),
-        meta.get_resolution(src_metadata),
-        meta.get_video_codec(src_metadata),
-        meta.get_audio_codec(src_metadata),
-        meta.get_frame_rate(src_metadata))
-
     # Validate format
-    validate_format(src_params['container'])
+    validate_format(meta.get_format(src_metadata))
     validate_target_format(dst_params['container'])
 
     # Validate video codec
-    validate_video_codecs(src_params['container'], meta.get_codecs(src_metadata, codec_type='video'))
+    validate_video_codecs(meta.get_format(src_metadata), meta.get_codecs(src_metadata, codec_type='video'))
     validate_video_codecs(dst_params['container'], [dst_params["video"]["codec"]])
-    validate_video_codec_conversion(src_params["video"]["codec"], dst_params["video"]["codec"])
+
+    for src_video_codec in meta.get_codecs(src_metadata, 'video'):
+        validate_video_codec_conversion(src_video_codec, dst_params["video"]["codec"])
 
     # Validate audio codec. Audio codec can not be set and ffmpeg should
     # either remain with currently used codec or transcode using default behavior
     # if it is necessary.
-    src_audio_codec = _get_src_audio_codec(src_params)
-    audio_stream = meta.get_audio_stream(src_metadata)
-
-    if src_audio_codec is not None:
-        validate_audio_codecs(src_params["container"], meta.get_codecs(src_metadata, codec_type='audio'))
+    if meta.count_streams(src_metadata, 'audio') > 0:
+        validate_audio_codecs(meta.get_format(src_metadata), meta.get_codecs(src_metadata, codec_type='audio'))
 
         dest_audio_codec = _get_dst_audio_codec(dst_params, dst_muxer_info)
         if dest_audio_codec is not None:
             validate_audio_codecs(dst_params["container"], [dest_audio_codec])
-            validate_audio_codec_conversion(
-                src_audio_codec,
-                dest_audio_codec,
-                audio_stream
-            )
+            for audio_stream in meta.get_streams(src_metadata, 'audio'):
+                validate_audio_codec_conversion(
+                    audio_stream.get('codec_name'),
+                    dest_audio_codec,
+                    audio_stream['channels'],
+                )
 
             validate_audio_sample_rates(
                 src_metadata,
@@ -122,12 +109,14 @@ def validate_transcoding_params(
             # Treat situations of user opting out of providing muxer info (dst_muxer_info == None)
             # and ffmpeg not having the info we need ('default_audio_codec' not present in
             # dst_muxer_info or empty) differently.
-            raise exceptions.UnsupportedAudioCodecConversion(src_audio_codec, dest_audio_codec)
+            raise exceptions.UnsupportedAudioCodecConversion(meta.get_codecs(src_metadata, 'audio'), dest_audio_codec)
 
     # Validate resolution change
-    validate_resolution(src_params["resolution"], dst_params["resolution"])
+    for resolution in meta.get_resolutions(src_metadata):
+        validate_resolution(resolution, dst_params["resolution"])
 
-    validate_frame_rate(dst_params, src_params.get("frame_rate"))
+    for frame_rate in meta.get_frame_rates(src_metadata):
+        validate_frame_rate(dst_params, frame_rate)
 
     validate_unsupported_data_streams(
         src_metadata,
@@ -350,15 +339,16 @@ def validate_video_codec_conversion(src_codec, dst_codec):
     return True
 
 
-def validate_audio_codec_conversion(src_codec, dst_codec, audio_stream):
+def validate_audio_codec_conversion(src_codec, dst_codec, src_channel_count):
     codec = codecs.AudioCodec(src_codec)
+
     if dst_codec not in codec.get_supported_conversions():
         raise exceptions.UnsupportedAudioCodecConversion(src_codec, dst_codec)
-    if src_codec != dst_codec and \
-            audio_stream['channels'] > _MAX_SUPPORTED_AUDIO_CHANNELS:
+    if src_codec != dst_codec and src_channel_count > _MAX_SUPPORTED_AUDIO_CHANNELS:
         # Multi-channel audio is not supported by all audio codecs.
         # We want to avoid creating another list to keep this information,
         # so we’ll just assume that if we found multi-channel audio in the input,
         # it’s OK and otherwise it’s not supported.
-        raise exceptions.UnsupportedAudioChannelLayout(audio_stream['channels'])
+        raise exceptions.UnsupportedAudioChannelLayout(src_channel_count)
+
     return True

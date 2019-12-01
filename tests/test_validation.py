@@ -279,6 +279,7 @@ class TestConversionValidation(TestCase):
                 'codec_type': 'audio',
                 'codec_name': audio_codec,
                 'sample_rate': sample_rate,
+                'channels': 1,
             })
 
         return metadata
