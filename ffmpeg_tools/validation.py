@@ -50,6 +50,7 @@ def validate_transcoding_params(
     dst_params,
     src_metadata,
     dst_muxer_info = None,
+    dst_audio_encoder_info = {},
     strip_unsupported_data_streams=False,
     strip_unsupported_subtitle_streams=False,
 ):
@@ -84,8 +85,7 @@ def validate_transcoding_params(
         meta.get_resolution(src_metadata),
         meta.get_video_codec(src_metadata),
         meta.get_audio_codec(src_metadata),
-        meta.get_frame_rate(src_metadata),
-        sample_rates=meta.get_sample_rates(src_metadata))
+        meta.get_frame_rate(src_metadata))
 
     # Validate format
     validate_format(src_params["format"])
@@ -114,16 +114,10 @@ def validate_transcoding_params(
                 audio_stream
             )
 
-            # ffmpeg returns information about sample rates only for half of the codecs.
-            # At the time of writing of this comment those were:
-            # aac, mp2, mp3, libmp3lame, opus, libopus.
-            # For other codecs there is no information about sample rates. For now
-            # we don't support transcoding for these codecs when the sample rate
-            # differs (it will result in a validation error).
-            # TODO: Add support for the remaining codecs.
-            validate_audio_sample_rate(
-                dest_audio_codec=dest_audio_codec,
-                source_sample_rates=src_params['audio'].get('sample_rates'))
+            validate_audio_sample_rates(
+                src_metadata,
+                dest_audio_codec,
+                dst_audio_encoder_info)
         elif dst_muxer_info is not None:
             # Treat situations of user opting out of providing muxer info (dst_muxer_info == None)
             # and ffmpeg not having the info we need ('default_audio_codec' not present in
@@ -321,14 +315,45 @@ def validate_frame_rate(
     return True
 
 
-def validate_audio_sample_rate(dest_audio_codec: str, source_sample_rates: Optional[Union[List[Any], Set[Any]]]) -> bool:
-    if source_sample_rates is None:
-        return
+def validate_audio_sample_rates(
+        src_metadata: Dict[str, Any],
+        dest_audio_codec: str,
+        dst_audio_encoder_info: Dict[str, Any]) -> bool:
 
-    dest_encoder_info = commands.query_encoder_info(dest_audio_codec)
-    unsupported_sample_rates = set(source_sample_rates) - set(dest_encoder_info.get('sample_rates'))
+    assert dest_audio_codec in codecs.AudioCodec._value2member_map_
+    assert codecs.AudioCodec(dest_audio_codec).get_encoder() is not None
+
+    if 'sample_rates' not in dst_audio_encoder_info:
+        # NOTE: `ffmpeg -h` unfortunately does not provide sample rates in all
+        # cases. The following encoders we support do not have this info:
+        # libopencore_amrnb, ac3, libvorbis, wmav2, pcm_u8.
+        #
+        # From emprical testing with ffmpeg I discovered the following:
+        # - pcm_u8 supports any value (tried up to 100 000 kHz).
+        # - libvorbis supports any value up to 200 kHz but crashes
+        #    on some unusual values (especially between 70 and 520 Hz).
+        # - wmav2 supports everything between 2 and 48 kHz.
+        # - ac3 supports only a few specific values, same as mp3.
+        # - libopencore_amrnb supports only 8 kHz.
+        #
+        # We'll need to find a way to get this info from ffmpeg or just hard-code
+        # these values. Until then we'll assume that no information means that
+        # every value is supported. This means that an input stream with an
+        # unsupported value can crash the replace step which runs on requestor's
+        # machine after the transcoding. This is bad but no worse than what we
+        # had before sample rate validation was introduced and just blocking these
+        # codecs altogether is not a good idea at the library level.
+        return True
+
+    unsupported_sample_rates = (
+        set(meta.get_sample_rates(src_metadata)) -
+        set(dst_audio_encoder_info['sample_rates'])
+    )
+
     if len(unsupported_sample_rates) > 0:
         raise exceptions.UnsupportedSampleRate(unsupported_sample_rates, dest_audio_codec)
+
+    return True
 
 
 def validate_video_codec_conversion(src_codec, dst_codec):

@@ -120,13 +120,9 @@ def create_params(
     video_bitrate=None,
     audio_bitrate=None,
     scaling_algorithm=None,
-    sample_rates=None
 ):
 
     args = {}
-
-    if sample_rates is None:
-        sample_rates = []
 
     args["format"] = vformat
 
@@ -146,14 +142,11 @@ def create_params(
         args["frame_rate"] = frame_rate
 
     # Audio parameters
-    if acodec or audio_bitrate or sample_rates:
+    if acodec or audio_bitrate:
         args["audio"] = {}
 
     if acodec:
         args["audio"]["codec"] = acodec
-
-    if sample_rates:
-        args["audio"]["sample_rates"] = sample_rates
 
     if audio_bitrate:
         args["audio"]["bitrate"] = audio_bitrate

@@ -281,8 +281,9 @@ class TestConversionValidation(TestCase):
             ('amr_nb', 8000),
         ])
         dst_params = self.create_params("mp4", [640, 480], "h264", "mp3", 60)
+        dst_audio_encoder_info = {'sample_rates': [48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000]}
 
-        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, {}))
+        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, {}, dst_audio_encoder_info))
 
 
     def test_default_target_audio_codec_supports_source_sample_rate(self):
@@ -294,8 +295,9 @@ class TestConversionValidation(TestCase):
         ])
         dst_params = self.create_params("mp4", [640, 480], "h264")
         dst_muxer_info = {'default_audio_codec': "mp3"}
+        dst_audio_encoder_info = {'sample_rates': [48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000]}
 
-        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, dst_muxer_info))
+        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, dst_muxer_info, dst_audio_encoder_info))
 
 
     def test_target_audio_codec_does_not_support_source_sample_rate(self):
@@ -306,9 +308,10 @@ class TestConversionValidation(TestCase):
             ('amr_nb', 8000),
         ])
         dst_params = self.create_params("mp4", [640, 480], "h264", "mp3", 60)
+        dst_audio_encoder_info = {'sample_rates': [48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000]}
 
         with self.assertRaises(exceptions.UnsupportedSampleRate):
-            validation.validate_transcoding_params(dst_params, metadata, {})
+            validation.validate_transcoding_params(dst_params, metadata, {}, dst_audio_encoder_info)
 
 
     def test_default_target_audio_codec_does_not_support_source_sample_rate(self):
@@ -320,16 +323,17 @@ class TestConversionValidation(TestCase):
         ])
         dst_params = self.create_params("mp4", [640, 480], "h264")
         dst_muxer_info = {'default_audio_codec': "mp3"}
+        dst_audio_encoder_info = {'sample_rates': [48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000]}
 
         with self.assertRaises(exceptions.UnsupportedSampleRate):
-            self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, dst_muxer_info))
+            self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, dst_muxer_info, dst_audio_encoder_info))
 
 
     def test_container_change(self):
         metadata = self.modify_metadata_with_passed_values("mp4", [1920, 1080], "h264", "mp3", 60)
         dst_params = self.create_params("mov", [1920, 1080], "h264", "mp3", 60)
 
-        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, {}))
+        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, {}, {}))
 
 
     def test_container_change_when_target_is_an_exclusive_demuxer(self):
@@ -338,14 +342,14 @@ class TestConversionValidation(TestCase):
         metadata = self.modify_metadata_with_passed_values("matroska", [1920, 1080], "h264", "mp3")
         dst_params = self.create_params(formats.Container.c_MATROSKA_WEBM_DEMUXER.value, [1920, 1080], "h264")
         with self.assertRaises(exceptions.UnsupportedTargetVideoFormat):
-            validation.validate_transcoding_params(dst_params, metadata, {})
+            validation.validate_transcoding_params(dst_params, metadata, {}, {})
 
 
     def test_video_codec_change(self):
         metadata = self.modify_metadata_with_passed_values("mp4", [1920, 1080], "h264", "mp3", 60)
         dst_params = self.create_params("mp4", [1920, 1080], "h265", "mp3", 60)
 
-        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, {}))
+        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, {}, {}))
 
 
     def test_invalid_audio_codec_change(self):
@@ -354,14 +358,14 @@ class TestConversionValidation(TestCase):
         dst_params = self.create_params("mp4", [1920, 1080], "h264", "wmapro", 60)
 
         with self.assertRaises(exceptions.UnsupportedAudioCodec):
-            validation.validate_transcoding_params(dst_params, metadata, {})
+            validation.validate_transcoding_params(dst_params, metadata, {}, {})
 
 
     def test_resolution_change(self):
         metadata = self.modify_metadata_with_passed_values("mp4", [1920, 1080], "h264", "mp3", 60)
         dst_params = self.create_params("mp4", [640, 360], "h264", "mp3", 60)
 
-        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, {}))
+        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, {}, {}))
 
 
     def test_no_audio_codec(self):
@@ -370,7 +374,7 @@ class TestConversionValidation(TestCase):
         dst_params = self.create_params("mp4", [640, 360], "h264", None, 60)
         dst_muxer_info = {'default_audio_codec': "aac"}
 
-        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, dst_muxer_info))
+        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, dst_muxer_info, {}))
 
 
     def test_invalid_src_video_codec(self):
@@ -378,7 +382,7 @@ class TestConversionValidation(TestCase):
         dst_params = self.create_params("mp4", [1920, 1080], "h264", "mp3", 60)
 
         with self.assertRaises(exceptions.UnsupportedVideoCodec):
-            validation.validate_transcoding_params(dst_params, metadata, {})
+            validation.validate_transcoding_params(dst_params, metadata, {}, {})
 
 
     def test_invalid_dst_video_codec(self):
@@ -386,7 +390,7 @@ class TestConversionValidation(TestCase):
         dst_params = self.create_params("mp4", [1920, 1080], "avi", "mp3", 60)
 
         with self.assertRaises(exceptions.UnsupportedVideoCodec):
-            validation.validate_transcoding_params(dst_params, metadata, {})
+            validation.validate_transcoding_params(dst_params, metadata, {}, {})
 
 
     def test_invalid_resolution_change(self):
@@ -394,7 +398,7 @@ class TestConversionValidation(TestCase):
         dst_params = self.create_params("mp4", [1280, 1024], "h264", "mp3", 60)
 
         with self.assertRaises(exceptions.InvalidResolution):
-            validation.validate_transcoding_params(dst_params, metadata, {})
+            validation.validate_transcoding_params(dst_params, metadata, {}, {})
 
     @parameterized.expand(
         [
@@ -415,7 +419,7 @@ class TestConversionValidation(TestCase):
         metadata = self.modify_metadata_with_passed_values("mp4", src_resolution, "h264", "mp3", 60)
         dst_params = self.create_params("mp4", target_resolution, "h264", "mp3", 60)
 
-        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, {}))
+        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, {}, {}))
 
     def test_validate_audio_codec_conversion_should_reject_videos_with_more_than_two_channels_if_audio_must_be_transcoded(self):
         dst_params = self.create_params("mp4", [1920, 1080], "h264", "mp3", 60)
@@ -424,7 +428,7 @@ class TestConversionValidation(TestCase):
         assert unsupported_metadata['streams'][1]['codec_name'] != "mp3"
 
         with self.assertRaises(exceptions.UnsupportedAudioChannelLayout):
-            validation.validate_transcoding_params(dst_params, unsupported_metadata, {})
+            validation.validate_transcoding_params(dst_params, unsupported_metadata, {}, {})
 
     def test_validate_audio_codec_conversion_should_not_reject_videos_with_two_or_less_channels_even_if_audio_must_be_transcoded(self):
         dst_params = self.create_params("mp4", [1920, 1080], "h264", "mp3", 60)
@@ -432,7 +436,7 @@ class TestConversionValidation(TestCase):
         unsupported_metadata['streams'][1]['channels'] = 1
         assert unsupported_metadata['streams'][1]['codec_name'] != "mp3"
 
-        self.assertTrue(validation.validate_transcoding_params(dst_params, unsupported_metadata, {}))
+        self.assertTrue(validation.validate_transcoding_params(dst_params, unsupported_metadata, {}, {}))
 
     def test_validate_audio_codec_conversion_should_accept_videos_with_more_than_two_channels_if_audio_does_not_have_to_be_transcoded(self):
         dst_params = self.create_params("mp4", [1920, 1080], "h264", "aac", 60)
@@ -440,27 +444,27 @@ class TestConversionValidation(TestCase):
         unsupported_metadata['streams'][1]['channels'] = validation._MAX_SUPPORTED_AUDIO_CHANNELS + 1
         assert unsupported_metadata['streams'][1]['codec_name'] == "aac"
 
-        self.assertTrue(validation.validate_transcoding_params(dst_params, unsupported_metadata, {}))
+        self.assertTrue(validation.validate_transcoding_params(dst_params, unsupported_metadata, {}, {}))
 
     def test_default_audio_codec_should_be_validated_if_dst_audio_codec_missing(self):
         metadata = self.modify_metadata_with_passed_values("mp4", [1920, 1080], "h264", "mp3", frame_rate=60)
         dst_params = self.create_params("mp4", [1920, 1080], "h264", acodec=None)
         dst_muxer_info = {'default_audio_codec': "unsupported_audio_codec"}
         with self.assertRaises(exceptions.UnsupportedAudioCodec):
-            validation.validate_transcoding_params(dst_params, metadata, dst_muxer_info)
+            validation.validate_transcoding_params(dst_params, metadata, dst_muxer_info, {})
 
     def test_default_audio_codec_should_be_ignored_if_dst_audio_codec_present(self):
         metadata = self.modify_metadata_with_passed_values("mp4", [1920, 1080], "h264", "mp3", frame_rate=60)
         dst_params = self.create_params("mp4", [1920, 1080], "h264", acodec="aac")
         dst_muxer_info = {'default_audio_codec': "unsupported_audio_codec"}
-        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, dst_muxer_info))
+        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, dst_muxer_info, {}))
 
     def test_validation_should_fail_if_ffmpeg_reports_no_default_audio_codec_for_a_format(self):
         metadata = self.modify_metadata_with_passed_values("mp4", [1920, 1080], "h264", "aac", frame_rate=60)
         dst_params = self.create_params("mpeg", [1920, 1080], "mpeg1video")
         dst_muxer_info = {}
         with self.assertRaises(exceptions.UnsupportedAudioCodecConversion):
-            validation.validate_transcoding_params(dst_params, metadata, dst_muxer_info)
+            validation.validate_transcoding_params(dst_params, metadata, dst_muxer_info, {})
 
     def test_validation_should_not_fail_even_if_audio_codec_is_not_specified_and_muxer_info_is_not_available(self):
         metadata = self.modify_metadata_with_passed_values("mp4", [1920, 1080], "h264", "aac", frame_rate=60)
@@ -484,7 +488,7 @@ class TestConversionValidation(TestCase):
 
         metadata = self.modify_metadata_with_passed_values("mov", [1920, 1080], codecs.VideoCodec.MPEG_1.value, "aac", frame_rate=src_frame_rate)
         dst_params = self.create_params("mov", [1920, 1080], codecs.VideoCodec.MPEG_1.value, "aac", frame_rate=None)
-        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, {}))
+        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, {}, {}))
 
     @parameterized.expand(
         [
@@ -503,7 +507,7 @@ class TestConversionValidation(TestCase):
         metadata = self.modify_metadata_with_passed_values("mov", [1920, 1080], codecs.VideoCodec.MPEG_1.value, "aac", frame_rate=30)
         dst_params = self.create_params("mov", [1920, 1080], codecs.VideoCodec.MPEG_1.value, "aac", frame_rate=dst_frame_rate)
         with self.assertRaises(exceptions.InvalidFrameRate):
-            validation.validate_transcoding_params(dst_params, metadata, {})
+            validation.validate_transcoding_params(dst_params, metadata, {}, {})
 
     def test_source_frame_rate_when_substituted_is_validated_as_the_resulting_value_when_implicitly_used_as_target_frame_rate(self):
         assert frame_rate.FrameRate(25, 2) in codecs.FRAME_RATE_SUBSTITUTIONS.get(codecs.VideoCodec.MPEG_2.value, {})
@@ -512,7 +516,7 @@ class TestConversionValidation(TestCase):
 
         metadata = self.modify_metadata_with_passed_values("mov", [1920, 1080], "mpeg2video", "aac", frame_rate='25/2')
         dst_params = self.create_params("mov", [1920, 1080], "mpeg2video", "aac", frame_rate=None)
-        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, {}))
+        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, {}, {}))
 
     def test_explicitly_set_target_frame_rate_is_not_substituted(self):
         assert frame_rate.FrameRate(25, 2) in codecs.FRAME_RATE_SUBSTITUTIONS.get(codecs.VideoCodec.MPEG_2.value, {})
@@ -522,12 +526,12 @@ class TestConversionValidation(TestCase):
         metadata = self.modify_metadata_with_passed_values("mov", [1920, 1080], "mpeg2video", "aac", frame_rate=30)
         dst_params = self.create_params("mov", [1920, 1080], "mpeg2video", "aac", frame_rate='25/2')
         with self.assertRaises(exceptions.InvalidFrameRate):
-            self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, {}))
+            self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, {}, {}))
 
     def test_target_frame_rate_not_specified(self):
         metadata = self.modify_metadata_with_passed_values("mp4", [1920, 1080], "h264", "aac", frame_rate=60)
         dst_params = self.create_params("mp4", [1920, 1080], "h264", "aac", frame_rate=None)
-        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, {}))
+        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, {}, {}))
 
     @parameterized.expand(
         [
@@ -652,6 +656,7 @@ class TestConversionValidation(TestCase):
             dst_params,
             metadata,
             dst_muxer_info={},
+            dst_audio_encoder_info={},
             strip_unsupported_data_streams=False,
             strip_unsupported_subtitle_streams=False,
         ))
@@ -680,6 +685,7 @@ class TestConversionValidation(TestCase):
                 dst_params,
                 metadata,
                 dst_muxer_info={},
+                dst_audio_encoder_info={},
                 strip_unsupported_data_streams=False,
                 strip_unsupported_subtitle_streams=False,
             )
@@ -701,6 +707,7 @@ class TestConversionValidation(TestCase):
                 dst_params,
                 metadata,
                 dst_muxer_info={},
+                dst_audio_encoder_info={},
                 strip_unsupported_data_streams=False,
                 strip_unsupported_subtitle_streams=False,
             )
@@ -779,3 +786,104 @@ class TestValidateUnsupportedStreams(TestCase):
                 strip_unsupported_subtitle_streams=False,
                 target_container=None,
             )
+
+
+class TestValidateAudioSampleRates(TestCase):
+
+    def test_should_allow_rates_supported_by_encoder_if_codec_does_not_change(self):
+        metadata = {'streams': [
+            {'index': 0, 'codec_type': 'audio', 'codec_name': 'mp3', 'sample_rate': 44100},
+            {'index': 1, 'codec_type': 'audio', 'codec_name': 'mp3', 'sample_rate': 48000},
+            {'index': 2, 'codec_type': 'audio', 'codec_name': 'mp3', 'sample_rate': 8000},
+        ]}
+        dst_encoder_info = {'sample_rates': {48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000}}
+
+        self.assertTrue(validation.validate_audio_sample_rates(metadata, 'mp3', dst_encoder_info))
+
+    def test_should_allow_rates_supported_by_encoder_if_codec_changes(self):
+        metadata = {'streams': [
+            {'index': 0, 'codec_type': 'audio', 'codec_name': 'aac', 'sample_rate': 44100},
+            {'index': 1, 'codec_type': 'audio', 'codec_name': 'amr_nb', 'sample_rate': 48000},
+            {'index': 2, 'codec_type': 'audio', 'codec_name': 'pcm_u8', 'sample_rate': 8000},
+        ]}
+        dst_encoder_info = {'sample_rates': {48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000}}
+
+        self.assertTrue(validation.validate_audio_sample_rates(metadata, 'mp3', dst_encoder_info))
+
+    def test_should_not_allow_rates_unsupported_by_encoder_if_codec_does_not_change(self):
+        metadata = {'streams': [
+            {'index': 0, 'codec_type': 'audio', 'codec_name': 'mp3', 'sample_rate': 44100},
+            {'index': 1, 'codec_type': 'audio', 'codec_name': 'mp3', 'sample_rate': 48000},
+            {'index': 2, 'codec_type': 'audio', 'codec_name': 'mp3', 'sample_rate': 8000},
+        ]}
+        dst_encoder_info = {'sample_rates': {48000}}
+
+        with self.assertRaises(exceptions.UnsupportedSampleRate):
+            validation.validate_audio_sample_rates(metadata, 'mp3', dst_encoder_info)
+
+    def test_should_not_allow_rates_unsupported_by_encoder_if_codec_changes(self):
+        metadata = {'streams': [
+            {'index': 0, 'codec_type': 'audio', 'codec_name': 'aac', 'sample_rate': 44100},
+            {'index': 1, 'codec_type': 'audio', 'codec_name': 'amr_nb', 'sample_rate': 48000},
+            {'index': 2, 'codec_type': 'audio', 'codec_name': 'pcm_u8', 'sample_rate': 8000},
+        ]}
+        dst_encoder_info = {'sample_rates': {48000}}
+
+        with self.assertRaises(exceptions.UnsupportedSampleRate):
+            validation.validate_audio_sample_rates(metadata, 'mp3', dst_encoder_info)
+
+    def test_should_allow_videos_with_no_audio(self):
+        metadata = {'streams': [
+            {'index': 0, 'codec_type': 'video', 'codec_name': 'h264'},
+            {'index': 1, 'codec_type': 'subtitle', 'codec_name': 'subrip'},
+        ]}
+        dst_encoder_info = {'sample_rates': {48000}}
+
+        self.assertTrue(validation.validate_audio_sample_rates(metadata, 'mp3', dst_encoder_info))
+        self.assertTrue(validation.validate_audio_sample_rates({'streams': []}, 'mp3', dst_encoder_info))
+        self.assertTrue(validation.validate_audio_sample_rates(metadata, 'mp3', {'sample_rates': {}}))
+
+    def test_should_not_allow_anything_if_encoder_supports_no_sample_rates(self):
+        metadata = {'streams': [
+            {'index': 0, 'codec_type': 'audio', 'codec_name': 'mp3', 'sample_rate': 44100},
+        ]}
+        dst_encoder_info = {'sample_rates': {}}
+
+        with self.assertRaises(exceptions.UnsupportedSampleRate):
+            validation.validate_audio_sample_rates(metadata, 'mp3', dst_encoder_info)
+
+    def test_should_allow_everything_if_encoder_does_not_provide_information_about_sample_rates(self):
+        metadata = {'streams': [
+            {'index': 0, 'codec_type': 'audio', 'codec_name': 'mp3', 'sample_rate': 44100},
+        ]}
+        dst_encoder_info = {}
+
+        self.assertTrue(validation.validate_audio_sample_rates(metadata, 'mp3', dst_encoder_info))
+
+    def test_should_not_allow_files_with_unknown_sample_rate(self):
+        metadata = {'streams': [
+            {'index': 0, 'codec_type': 'audio', 'codec_name': 'aac'},
+        ]}
+        dst_encoder_info = {'sample_rates': {48000}}
+
+        with self.assertRaises(exceptions.UnsupportedSampleRate):
+            validation.validate_audio_sample_rates(metadata, 'mp3', dst_encoder_info)
+
+    def test_should_allow_files_with_unknown_sample_rate_if_encoder_does_not_provide_information_about_sample_rates(self):
+        metadata = {'streams': [
+            {'index': 0, 'codec_type': 'audio', 'codec_name': 'aac'},
+        ]}
+        dst_encoder_info = {}
+
+        self.assertTrue(validation.validate_audio_sample_rates(metadata, 'mp3', dst_encoder_info))
+
+    def test_should_not_confuse_audio_with_other_types_of_streams(self):
+        metadata = {'streams': [
+            {'index': 0, 'codec_type': 'video', 'codec_name': 'aac', 'sample_rate': 44100},
+            {'index': 1, 'codec_type': 'subtitle', 'codec_name': 'aac', 'sample_rate': 48000},
+            {'index': 2, 'codec_type': 'data', 'codec_name': 'aac', 'sample_rate': 8000},
+            {'index': 3, 'codec_name': 'aac', 'sample_rate': 8000},
+        ]}
+        dst_encoder_info = {'aac': {22000}}
+
+        self.assertTrue(validation.validate_audio_sample_rates(metadata, 'aac', dst_encoder_info))
