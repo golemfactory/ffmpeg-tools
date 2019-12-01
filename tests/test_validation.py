@@ -520,7 +520,7 @@ class TestConversionValidation(TestCase):
         metadata = self.modify_metadata_with_passed_values("mp4", [1920, 1080], "h264", "aac", frame_rate=60)
         dst_params = self.create_params("mpeg", [1920, 1080], "mpeg1video")
         dst_muxer_info = {}
-        with self.assertRaises(exceptions.UnsupportedAudioCodecConversion):
+        with self.assertRaises(exceptions.MissingAudioCodec):
             validation.validate_transcoding_params(dst_params, metadata, dst_muxer_info, {})
 
     def test_validation_should_not_fail_even_if_audio_codec_is_not_specified_and_muxer_info_is_not_available(self):

@@ -109,7 +109,7 @@ def validate_transcoding_params(
             # Treat situations of user opting out of providing muxer info (dst_muxer_info == None)
             # and ffmpeg not having the info we need ('default_audio_codec' not present in
             # dst_muxer_info or empty) differently.
-            raise exceptions.UnsupportedAudioCodecConversion(meta.get_codecs(src_metadata, 'audio'), dest_audio_codec)
+            raise exceptions.MissingAudioCodec
 
     # Validate resolution change
     for resolution in meta.get_resolutions(src_metadata):
