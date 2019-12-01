@@ -261,12 +261,15 @@ class TestConversionValidation(TestCase):
 
 
     def modify_metadata_with_passed_values(self, container, resolution, vcodec, acodec=None, frame_rate=None):
+        width = resolution[0] if resolution is not None and len(resolution) >= 1 else None
+        height = resolution[1] if resolution is not None and len(resolution) >= 2 else None
+
         metadata = copy.deepcopy(self._metadata)
         metadata['format']['format_name'] = container
-        metadata['streams'][0]['width'] = resolution[0]
-        metadata['streams'][0]['coded_width'] = resolution[0]
-        metadata['streams'][0]['height'] = resolution[1]
-        metadata['streams'][0]['coded_height'] = resolution[1]
+        metadata['streams'][0]['width'] = width
+        metadata['streams'][0]['coded_width'] = width
+        metadata['streams'][0]['height'] = height
+        metadata['streams'][0]['coded_height'] = height
         metadata['streams'][0]['codec_name'] = vcodec
         metadata['streams'][0]['r_frame_rate'] = frame_rate
         if acodec is not None:
@@ -463,6 +466,25 @@ class TestConversionValidation(TestCase):
         with self.assertRaises(exceptions.InvalidResolution):
             validation.validate_transcoding_params(dst_params, metadata, {}, {})
 
+
+    def test_validate_transcoding_params_should_reject_missing_resolution(self):
+        with self.assertRaises(exceptions.InvalidResolution):
+            validation.validate_transcoding_params(
+                self.create_params("mp4", None, "h264", "mp3", 60),
+                self.modify_metadata_with_passed_values("mp4", [1920, 1080], "h264", "mp3", 60),
+                {},
+                {}
+            )
+
+        with self.assertRaises(exceptions.InvalidResolution):
+            validation.validate_transcoding_params(
+                self.create_params("mp4", [1280, 1024], "h264", "mp3", 60),
+                self.modify_metadata_with_passed_values("mp4", None, "h264", "mp3", 60),
+                {},
+                {}
+            )
+
+
     @parameterized.expand(
         [
             ([333, 333], [333, 333]),
@@ -483,6 +505,32 @@ class TestConversionValidation(TestCase):
         dst_params = self.create_params("mp4", target_resolution, "h264", "mp3", 60)
 
         self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, {}, {}))
+
+
+    @parameterized.expand(
+        [
+            ([None, 1080], [1366, 768]),
+            ([1920, None], [1366, 768]),
+            ([1920, 1080], [None, 768]),
+            ([1920, 1080], [1366, None]),
+            ([1920], [1366, 768]),
+            ([1920, 1080], [1366]),
+            ([], [1366, 768]),
+            ([1920, 1080], []),
+            (None, [1366, 768]),
+            ([1920, 1080], None),
+            ([1920, 1080, 333], [1366, 768]),
+            ([1920, 1080], [1366, 768, 333]),
+        ],
+        name_func=make_parameterized_test_name_generator_for_scalar_values(['source', 'target']),
+    )
+    def test_validate_resolution_should_reject_incomplete_or_invalid_resolution(
+            self,
+            src_resolution,
+            target_resolution,
+    ):
+        with self.assertRaises(exceptions.InvalidResolution):
+            validation.validate_resolution(src_resolution, target_resolution)
 
     def test_validate_audio_codec_conversion_should_reject_videos_with_more_than_two_channels_if_audio_must_be_transcoded(self):
         dst_params = self.create_params("mp4", [1920, 1080], "h264", "mp3", 60)

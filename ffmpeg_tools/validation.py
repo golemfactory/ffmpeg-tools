@@ -113,7 +113,7 @@ def validate_transcoding_params(
 
     # Validate resolution change
     for resolution in meta.get_resolutions(src_metadata):
-        validate_resolution(resolution, dst_params["resolution"])
+        validate_resolution(resolution, dst_params.get("resolution"))
 
     for frame_rate in meta.get_frame_rates(src_metadata):
         validate_frame_rate(dst_params, frame_rate)
@@ -248,9 +248,22 @@ def validate_resolution(src_resolution, target_resolution):
     Validate if aspect ratio of source resolution and
     target resolution are the same.
     """
-    if formats.get_effective_aspect_ratio(src_resolution) == \
-            formats.get_effective_aspect_ratio(target_resolution):
+    if (
+        src_resolution is None
+        or target_resolution is None
+        or len(src_resolution) != 2
+        or len(target_resolution) != 2
+        or None in src_resolution
+        or None in target_resolution
+    ):
+        raise exceptions.InvalidResolution(src_resolution, target_resolution)
+
+    if (
+        formats.get_effective_aspect_ratio(src_resolution) ==
+        formats.get_effective_aspect_ratio(target_resolution)
+    ):
         return True
+
     raise exceptions.InvalidResolution(src_resolution, target_resolution)
 
 
