@@ -59,24 +59,34 @@ class TestInputValidation(TestCase):
         for video_format in self._supported_formats:
             supported_video_codecs = formats.list_supported_video_codecs(video_format)
             for video_codec in supported_video_codecs:
-                self.assertTrue(validation.validate_video_codec(video_codec=video_codec, video_format=video_format))
+                self.assertTrue(validation.validate_video_codecs(video_codecs=[video_codec], video_format=video_format))
 
 
-    def test_validate_invalid_video_codec(self):
+    @mock.patch.object(formats, 'is_supported_video_codec', side_effect=(lambda vformat, codec: codec != 'unknown'))
+    def test_validate_invalid_video_codec(self, _mock_is_supported_video_codec):
         with self.assertRaises(exceptions.UnsupportedVideoCodec):
-            validation.validate_video_codec(video_codec="unknown", video_format="mp4")
+            validation.validate_video_codecs(video_codecs=['h264', 'unknown', 'mjpeg', 'flv1'], video_format="mp4", )
+
+
+    def test_validate_video_codecs_should_accept_empty_codec_list(self):
+        self.assertTrue(validation.validate_video_codecs("mp4", []))
 
 
     def test_validate_valid_audio_codecs(self):
         for video_format in self._supported_formats:
             supported_audio_codecs = formats.list_supported_audio_codecs(video_format)
             for audio_codec in supported_audio_codecs:
-                self.assertTrue(validation.validate_audio_codec(audio_codec=audio_codec, video_format=video_format))
+                self.assertTrue(validation.validate_audio_codecs(audio_codecs=[audio_codec], video_format=video_format))
 
 
-    def test_validate_invalid_audio_codec(self):
+    @mock.patch.object(formats, 'is_supported_audio_codec', side_effect=(lambda vformat, codec: codec != 'unknown'))
+    def test_validate_invalid_audio_codec(self, _mock_is_supported_audio_codec):
         with self.assertRaises(exceptions.UnsupportedAudioCodec):
-            validation.validate_audio_codec(audio_codec="unknown", video_format="mp4")
+            validation.validate_audio_codecs(audio_codecs=["unknown", 'ac3', 'mp3'], video_format="mp4")
+
+
+    def test_validate_audio_codecs_should_accept_empty_codec_list(self):
+        self.assertTrue(validation.validate_audio_codecs("mp4", []))
 
 
     def test_validate_audio_stream_valid_codecs(self):
@@ -274,7 +284,8 @@ class TestConversionValidation(TestCase):
         return metadata
 
 
-    def test_target_audio_codec_supports_source_sample_rates(self):
+    @mock.patch.object(formats, 'is_supported_audio_codec', side_effect=(lambda vformat, codec: True))
+    def test_target_audio_codec_supports_source_sample_rates(self, _mock_is_supported_audio_codec):
         metadata = self.modify_metadata_for_sample_rate_validation_tests("mp4", "h264", [
             ('aac', 44100),
             ('mp3', 48000),
@@ -287,7 +298,8 @@ class TestConversionValidation(TestCase):
         self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, {}, dst_audio_encoder_info))
 
 
-    def test_default_target_audio_codec_supports_source_sample_rate(self):
+    @mock.patch.object(formats, 'is_supported_audio_codec', side_effect=(lambda vformat, codec: True))
+    def test_default_target_audio_codec_supports_source_sample_rate(self, _mock_is_supported_audio_codec):
         metadata = self.modify_metadata_for_sample_rate_validation_tests("mp4", "h264", [
             ('aac', 44100),
             ('mp3', 48000),
@@ -301,7 +313,8 @@ class TestConversionValidation(TestCase):
         self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, dst_muxer_info, dst_audio_encoder_info))
 
 
-    def test_target_audio_codec_does_not_support_source_sample_rate(self):
+    @mock.patch.object(formats, 'is_supported_audio_codec', side_effect=(lambda vformat, codec: True))
+    def test_target_audio_codec_does_not_support_source_sample_rate(self, _mock_is_supported_audio_codec):
         metadata = self.modify_metadata_for_sample_rate_validation_tests("mp4", "h264", [
             ('aac', 44100),
             ('mp3', 48000),
@@ -315,7 +328,8 @@ class TestConversionValidation(TestCase):
             validation.validate_transcoding_params(dst_params, metadata, {}, dst_audio_encoder_info)
 
 
-    def test_default_target_audio_codec_does_not_support_source_sample_rate(self):
+    @mock.patch.object(formats, 'is_supported_audio_codec', side_effect=(lambda vformat, codec: True))
+    def test_default_target_audio_codec_does_not_support_source_sample_rate(self, _mock_is_supported_audio_codec):
         metadata = self.modify_metadata_for_sample_rate_validation_tests("mp4", "h264", [
             ('aac', 44100),
             ('mp3', 48000),

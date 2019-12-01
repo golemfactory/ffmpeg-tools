@@ -92,8 +92,8 @@ def validate_transcoding_params(
     validate_target_format(dst_params['container'])
 
     # Validate video codec
-    validate_video_codec(src_params['container'], src_params["video"]["codec"])
-    validate_video_codec(dst_params['container'], dst_params["video"]["codec"])
+    validate_video_codecs(src_params['container'], meta.get_codecs(src_metadata, codec_type='video'))
+    validate_video_codecs(dst_params['container'], [dst_params["video"]["codec"]])
     validate_video_codec_conversion(src_params["video"]["codec"], dst_params["video"]["codec"])
 
     # Validate audio codec. Audio codec can not be set and ffmpeg should
@@ -103,11 +103,11 @@ def validate_transcoding_params(
     audio_stream = meta.get_audio_stream(src_metadata)
 
     if src_audio_codec is not None:
-        validate_audio_codec(src_params["container"], src_audio_codec)
+        validate_audio_codecs(src_params["container"], meta.get_codecs(src_metadata, codec_type='audio'))
 
         dest_audio_codec = _get_dst_audio_codec(dst_params, dst_muxer_info)
         if dest_audio_codec is not None:
-            validate_audio_codec(dst_params["container"], dest_audio_codec)
+            validate_audio_codecs(dst_params["container"], [dest_audio_codec])
             validate_audio_codec_conversion(
                 src_audio_codec,
                 dest_audio_codec,
@@ -188,7 +188,7 @@ def validate_stream(stream, video_format):
 
 def validate_audio_stream(stream_metadata, video_format):
     try:
-        validate_audio_codec(video_format=video_format, audio_codec=stream_metadata["codec_name"])
+        validate_audio_codecs(video_format=video_format, audio_codecs=[stream_metadata["codec_name"]])
     except KeyError:
         raise exceptions.InvalidVideo(message="Audio stream without specified codec")
     return True
@@ -196,7 +196,7 @@ def validate_audio_stream(stream_metadata, video_format):
 
 def validate_video_stream(stream_metadata, video_format):
     try:
-        validate_video_codec(video_format=video_format, video_codec=stream_metadata["codec_name"])
+        validate_video_codecs(video_format=video_format, video_codecs=[stream_metadata["codec_name"]])
     except KeyError:
         raise exceptions.InvalidVideo(message="Video stream without specified codec")
     return True
@@ -233,15 +233,23 @@ def validate_unsupported_subtitle_streams(
     return True
 
 
-def validate_video_codec(video_format, video_codec):
-    if not formats.is_supported_video_codec(vformat=video_format, codec=video_codec):
-        raise exceptions.UnsupportedVideoCodec(video_codec=video_codec, video_format=video_format)
+def validate_video_codecs(video_format, video_codecs):
+    assert formats.is_supported(video_format)
+
+    for video_codec in video_codecs:
+        if not formats.is_supported_video_codec(vformat=video_format, codec=video_codec):
+            raise exceptions.UnsupportedVideoCodec(video_codec=video_codec, video_format=video_format)
+
     return True
 
 
-def validate_audio_codec(video_format, audio_codec):
-    if not formats.is_supported_audio_codec(vformat=video_format, codec=audio_codec):
-        raise exceptions.UnsupportedAudioCodec(audio_codec=audio_codec, video_format=video_format)
+def validate_audio_codecs(video_format, audio_codecs):
+    assert formats.is_supported(video_format)
+
+    for audio_codec in audio_codecs:
+        if not formats.is_supported_audio_codec(vformat=video_format, codec=audio_codec):
+            raise exceptions.UnsupportedAudioCodec(audio_codec=audio_codec, video_format=video_format)
+
     return True
 
 
