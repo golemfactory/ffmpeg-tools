@@ -30,7 +30,7 @@ def get_frame_rate(metadata):
 
 def get_sample_rates(metadata):
     return [
-        stream["sample_rate"]
+        stream.get("sample_rate")
         for stream in metadata["streams"]
         if stream["codec_type"] == "audio"
     ]
