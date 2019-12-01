@@ -1,6 +1,7 @@
 import os
 import re
 import subprocess
+import sys
 import json
 from typing import Any, Dict, List
 
@@ -757,6 +758,8 @@ def query_encoder_info(encoder):
     matches = _parse_supported_sample_rates_out_of_encoder_info(ffmpeg_output)
 
     if len(matches) == 0:
+        # We won't be able to validate target sample rate without this information
+        print(f"WARNING: ffmpeg does not provide information about sample rates for encoder '{encoder}'.", file=sys.stderr)
         return {}
 
     if len(matches) >= 2:
