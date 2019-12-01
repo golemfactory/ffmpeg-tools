@@ -134,10 +134,10 @@ class TestIntegration(TestCase):
         replace_step_output_metadata = commands.get_metadata_json(replace_step_output_path)
 
         self.assertEqual(meta.get_format(replace_step_output_metadata), formats.Container.c_MATROSKA_WEBM_DEMUXER.value)
-        self.assertEqual(meta.get_video_codec(replace_step_output_metadata), codecs.VideoCodec.VP8.value)
-        self.assertEqual(meta.get_resolution(replace_step_output_metadata), [200, 100])
-        self.assertEqual(meta.get_frame_rate(replace_step_output_metadata), '25/1')
-        self.assertEqual(meta.get_audio_codec(replace_step_output_metadata), codecs.AudioCodec.MP3.value)
+        self.assertEqual(meta.get_codecs(replace_step_output_metadata, 'video'), [codecs.VideoCodec.VP8.value])
+        self.assertEqual(meta.get_resolutions(replace_step_output_metadata), [[200, 100]])
+        self.assertEqual(meta.get_frame_rates(replace_step_output_metadata), ['25/1'])
+        self.assertEqual(meta.get_codecs(replace_step_output_metadata, 'audio'), [codecs.AudioCodec.MP3.value])
         self.assertEqual(round(meta.get_duration(replace_step_output_metadata)), round(meta.get_duration(input_metadata)))
 
     def test_replace_streams_converts_subtitles(self):
