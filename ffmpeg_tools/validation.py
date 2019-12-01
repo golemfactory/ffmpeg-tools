@@ -156,14 +156,9 @@ def validate_format_metadata(metadata):
 
 
 def validate_video_stream_existence(metadata):
-    try:
-        for stream in metadata['streams']:
-            if stream["codec_type"].lower() == "video":
-                return True
-    except KeyError:
-        raise exceptions.InvalidVideo("Invalid stream metadata")
+    if meta.count_streams(metadata, 'video') == 0:
+        raise exceptions.MissingVideoStream()
 
-    raise exceptions.MissingVideoStream()
     return True
 
 
