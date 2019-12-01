@@ -98,7 +98,7 @@ def validate_transcoding_params(
                 validate_audio_codec_conversion(
                     audio_stream.get('codec_name'),
                     dest_audio_codec,
-                    audio_stream['channels'],
+                    audio_stream.get('channels'),
                 )
 
             validate_audio_sample_rates(
@@ -344,7 +344,8 @@ def validate_audio_codec_conversion(src_codec, dst_codec, src_channel_count):
 
     if dst_codec not in codec.get_supported_conversions():
         raise exceptions.UnsupportedAudioCodecConversion(src_codec, dst_codec)
-    if src_codec != dst_codec and src_channel_count > _MAX_SUPPORTED_AUDIO_CHANNELS:
+
+    if src_codec != dst_codec and (src_channel_count is None or src_channel_count > _MAX_SUPPORTED_AUDIO_CHANNELS):
         # Multi-channel audio is not supported by all audio codecs.
         # We want to avoid creating another list to keep this information,
         # so we’ll just assume that if we found multi-channel audio in the input,
