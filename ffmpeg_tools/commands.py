@@ -5,6 +5,7 @@ import json
 from typing import Any, Dict, List
 
 from . import codecs
+from . import exceptions
 from . import meta
 
 
@@ -12,29 +13,6 @@ FFMPEG_COMMAND = "ffmpeg"
 FFPROBE_COMMAND = "ffprobe"
 
 TMP_DIR = "/golem/work/tmp/"
-
-
-class NoMatchingEncoder(Exception):
-    pass
-
-
-class CommandFailed(Exception):
-    def __init__(self, command, error_code):
-        super().__init__()
-        self.command = command
-        self.error_code = error_code
-
-
-class InvalidArgument(Exception):
-    pass
-
-
-class InvalidCommandOutput(Exception):
-    pass
-
-
-class FileAlreadyExists(Exception):
-    pass
 
 
 def flatten_list(list_of_lists):
@@ -49,7 +27,7 @@ def exec_cmd(cmd, file=None):
 
     ret = pc.wait()
     if ret != 0:
-        raise CommandFailed(cmd, ret)
+        raise exceptions.CommandFailed(cmd, ret)
 
 
 def exec_cmd_to_file(cmd, filepath):
@@ -71,7 +49,7 @@ def exec_cmd_to_string(cmd):
     result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     if result.returncode != 0:
-        raise CommandFailed(cmd, result.returncode)
+        raise exceptions.CommandFailed(cmd, result.returncode)
     return result.stdout.decode('utf-8')
 
 
@@ -149,7 +127,7 @@ def strip_suffix_from_segments_and_rename_files(output_list_file_path, suffix):
         if not file_path.endswith(suffix):
             # Should not happen if the list contains what we expect but we
             # can't just assume that.
-            raise InvalidCommandOutput(
+            raise exceptions.InvalidCommandOutput(
                 f"Segment name does not match the expected pattern: {file_path}")
 
         # Segment paths are relative to the location of the list file
@@ -160,7 +138,7 @@ def strip_suffix_from_segments_and_rename_files(output_list_file_path, suffix):
         if os.path.exists(new_path):
             # This should never happen but is not impossible (filesystem is not
             # under our sole control) so an assert is not appropriate.
-            raise FileAlreadyExists(
+            raise exceptions.FileAlreadyExists(
                 f"Renaming '{file_path}' to '{new_path}' would overwrite the other file.")
 
         os.rename(full_file_path, full_new_path)
@@ -250,7 +228,7 @@ def transcode_video_command(track, output_file, targs):
         # We assume that it was though, because doing otherwise is not useful in practice.
         # We could inspect the file with ffprobe (again) to be sure but I don't think
         # it's worth it for such a fringe case.
-        raise InvalidArgument(
+        raise exceptions.InvalidArgument(
             "The 'transcode' command works with a video stream extracted from the input video. "
             "Audio parameters would have no effect when used here. "
             "You should pass them to the 'replace' command instead.")
@@ -393,7 +371,7 @@ def replace_streams_command(input_file,
     """
     VALID_STREAM_TYPES = {'v', 'V', 'a', 's', 'd', 't'}
     if stream_type not in VALID_STREAM_TYPES:
-        raise InvalidArgument(
+        raise exceptions.InvalidArgument(
             f"Invalid value of 'stream_type'. "
             f"Should be one of: {', '.join(VALID_STREAM_TYPES)}"
         )
@@ -404,7 +382,7 @@ def replace_streams_command(input_file,
         # being transcoded again - i.e. work that was supposed to be already
         # performed by the 'transcode' command, potentially on a completely
         # different machine.
-        raise InvalidArgument(
+        raise exceptions.InvalidArgument(
             "The video has already been transcoded so it's too late to specify video parameters. "
             "Then would have no effect when used here. "
             "You should pass them to the 'transcode' command instead.")
@@ -591,7 +569,7 @@ def query_muxer_info(muxer: str) -> Dict[str, Any]:
         return {}
 
     if len(audio_codecs) >= 2:
-        raise NoMatchingEncoder(
+        raise exceptions.NoMatchingEncoder(
             f"Found {len(audio_codecs)} things in ffmpeg output that could be the default audio codec name. "
             f"Expected exactly one.")
 

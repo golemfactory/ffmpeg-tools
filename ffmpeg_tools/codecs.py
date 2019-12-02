@@ -1,7 +1,7 @@
 import enum
 
+from . import exceptions
 from . import formats
-from . import validation
 
 DATA_STREAM_WHITELIST = [
     'bin_data'
@@ -39,7 +39,7 @@ class VideoCodec(enum.Enum):
     # enum when all conversion options failed.
     @classmethod
     def _missing_(cls, value):
-        raise validation.UnsupportedVideoCodec(value, "")
+        raise exceptions.UnsupportedVideoCodec(value, "")
 
     @staticmethod
     def from_name(name: str) -> 'VideoCodec':
@@ -75,7 +75,7 @@ class AudioCodec(enum.Enum):
     # enum when all conversion options failed.
     @classmethod
     def _missing_(cls, value):
-        raise validation.UnsupportedAudioCodec(value, "")
+        raise exceptions.UnsupportedAudioCodec(value, "")
 
     @staticmethod
     def from_name(name: str) -> 'AudioCodec':

@@ -2,8 +2,8 @@ import enum
 from math import gcd
 from typing import Any, NamedTuple, Union
 
-from . import validation
 from . import codecs
+from . import exceptions
 
 
 
@@ -45,7 +45,7 @@ class Container(enum.Enum):
     # enum when all conversion options failed.
     @classmethod
     def _missing_(cls, value):
-        raise validation.UnsupportedVideoFormat(value)
+        raise exceptions.UnsupportedVideoFormat(value)
 
     @staticmethod
     def from_name(name: str) -> 'Container':

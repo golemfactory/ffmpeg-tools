@@ -8,6 +8,7 @@ from parameterized import parameterized
 
 from ffmpeg_tools import codecs
 from ffmpeg_tools import commands
+from ffmpeg_tools import exceptions
 from ffmpeg_tools import formats
 from ffmpeg_tools import meta
 from tests.test_meta import example_metadata
@@ -87,7 +88,7 @@ class TestCommands(TestCase):
 
 
     def test_failed_command(self):
-        with self.assertRaises(commands.CommandFailed):
+        with self.assertRaises(exceptions.CommandFailed):
             commands.get_video_len("bla")
 
 
@@ -140,7 +141,7 @@ class TestCommands(TestCase):
 
 
     def test_transcode_video_command_does_not_accept_audio_parameters(self):
-        with self.assertRaises(commands.InvalidArgument):
+        with self.assertRaises(exceptions.InvalidArgument):
             commands.transcode_video_command(
                 "input.mp4",
                 "output.mkv",
@@ -186,7 +187,7 @@ class TestCommands(TestCase):
 
 
     def test_replace_streams_command_validates_stream_type(self):
-        with self.assertRaises(commands.InvalidArgument):
+        with self.assertRaises(exceptions.InvalidArgument):
             commands.replace_streams_command(
                 "tests/resources/ForBiggerBlazes-[codec=h264].mp4",
                 "tests/resources/ForBiggerBlazes-[codec=h264][video-only].mkv",
@@ -229,7 +230,7 @@ class TestCommands(TestCase):
 
 
     def test_replace_streams_command_does_not_accept_video_parameters(self):
-        with self.assertRaises(commands.InvalidArgument):
+        with self.assertRaises(exceptions.InvalidArgument):
             commands.replace_streams_command(
                 "tests/resources/ForBiggerBlazes-[codec=h264].mp4",
                 "tests/resources/ForBiggerBlazes-[codec=h264][video-only].mkv",
@@ -326,7 +327,7 @@ class TestQueryMuxerInfo(TestCase):
         )
 
         with mock.patch.object(commands, 'exec_cmd_to_string', return_value=sample_ffmpeg_output):
-            with self.assertRaises(commands.NoMatchingEncoder):
+            with self.assertRaises(exceptions.NoMatchingEncoder):
                 commands.query_muxer_info(formats.Container.c_3G2)
 
     def test_muxer_not_recognized_by_ffmpeg_should_result_in_default_audio_codec_not_being_found(self):

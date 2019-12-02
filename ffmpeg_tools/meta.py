@@ -1,6 +1,7 @@
 import json
 
 from . import commands
+from . import exceptions
 
 
 def get_metadata(video):
@@ -8,7 +9,7 @@ def get_metadata(video):
     try:
         metadata_str = commands.get_metadata_str(video)
         return json.loads(metadata_str)
-    except commands.CommandFailed:
+    except exceptions.CommandFailed:
         return {}
 
 
