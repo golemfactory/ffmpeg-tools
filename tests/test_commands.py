@@ -582,7 +582,7 @@ class TestQueryEncoderInfo(TestCase):
             'Supported sample formats: s32p fltp s16p\n'
             'Supported channel layouts: mono stereo\n'
         )
-        expected_encoder_info = {'sample_rates': {44100, 48000, 32000, 22050, 24000, 16000, 11025, 12000, 8000}}
+        expected_encoder_info = {'sample_rates': [44100, 48000, 32000, 22050, 24000, 16000, 11025, 12000, 8000]}
 
         with mock.patch.object(commands, 'exec_cmd_to_string', return_value=sample_ffmpeg_output):
             encoder_info = commands.query_encoder_info('mp3')
@@ -644,11 +644,11 @@ class TestQueryEncoderInfo(TestCase):
 
     @parameterized.expand(
         [
-            ('', set()),
-            ('44100 48000', {44100, 48000}),
-            ('44100 -48000 0', {44100, -48000, 0}),
-            ('44100 44100 44100', {44100}),
-            ('4410044100441004410044100441004410044100', {4410044100441004410044100441004410044100}),
+            ('', []),
+            ('44100 48000', [44100, 48000]),
+            ('44100 -48000 0', [44100, -48000, 0]),
+            ('44100 44100 44100', [44100, 44100, 44100]),
+            ('4410044100441004410044100441004410044100', [4410044100441004410044100441004410044100]),
         ],
         name_func=make_parameterized_test_name_generator_for_scalar_values(['input', 'output']),
     )
