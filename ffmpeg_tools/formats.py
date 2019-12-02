@@ -297,7 +297,6 @@ _WEBM_CODECS = {
     "audiocodecs": [
         "opus",
         "vorbis",
-        "vp8",
     ],
     'subtitlecodecs': [
         'webvtt',
