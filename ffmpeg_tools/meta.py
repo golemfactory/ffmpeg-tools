@@ -1,5 +1,5 @@
 import json
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
 
 from . import commands
 from . import exceptions
@@ -38,15 +38,18 @@ def _try_int(value: Any) -> Any:
     return value
 
 
-def get_sample_rates(metadata):
+def get_sample_rates(metadata: Dict[str, Any]) -> List[Union[str, int]]:
     return [
         # Sample rates should always be integers but just in case we get a weird
         # file for which ffprobe reports garbage, we'll return raw values if
         # they cannot be converted. That's more useful that just refusing to work
         # and it's the job of validations to reject these values if they're invalid.
-        _try_int(stream.get("sample_rate"))
-        for stream in metadata["streams"]
-        if stream["codec_type"] == "audio"
+        _try_int(s)
+        for s in get_attribute_from_all_streams(
+            metadata,
+            'sample_rate',
+            'audio'
+        )
     ]
 
 
