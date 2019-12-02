@@ -19,7 +19,6 @@ class TestInputValidation(TestCase):
     def setUpClass(cls) -> None:
         cls._filename = get_absolute_resource_path('ForBiggerBlazes-[codec=h264].mp4')
         cls._metadata = meta.get_metadata(cls._filename)
-        cls._supported_formats = formats.list_supported_formats()
         cls._format_metadata = {"format_name": "mov", "duration": "10"}
         cls._audio_stream = {"codec_name": "mp3", "codec_type": "audio"}
         cls._video_stream = {"codec_name": "h264", "codec_type": "video", "width": 800, "height": 600}
@@ -32,9 +31,15 @@ class TestInputValidation(TestCase):
         pass
 
 
-    def test_validate_valid_video_format(self):
-        for video_format in self._supported_formats:
-            self.assertTrue(validation.validate_format(video_format))
+    @parameterized.expand(
+        [
+            (video_format,)
+            for video_format in formats.list_supported_formats()
+        ],
+        name_func=make_parameterized_test_name_generator_for_scalar_values(['format'])
+    )
+    def test_validate_valid_video_format(self, video_format):
+        self.assertTrue(validation.validate_format(video_format))
 
 
     def test_validate_invalid_video_format(self):
@@ -55,11 +60,16 @@ class TestInputValidation(TestCase):
             validation.validate_target_format(formats.Container.c_QUICK_TIME_DEMUXER.value)
 
 
-    def test_validate_valid_video_codecs(self):
-        for video_format in self._supported_formats:
-            supported_video_codecs = formats.list_supported_video_codecs(video_format)
-            for video_codec in supported_video_codecs:
-                self.assertTrue(validation.validate_video_codecs(video_codecs=[video_codec], video_format=video_format))
+    @parameterized.expand(
+        [
+            (video_format, video_codec)
+            for video_format in formats.list_supported_formats()
+            for video_codec in formats.list_supported_video_codecs(video_format)
+        ],
+        name_func=make_parameterized_test_name_generator_for_scalar_values(['format', 'video'])
+    )
+    def test_validate_valid_video_codecs(self, video_format, video_codec):
+        self.assertTrue(validation.validate_video_codecs(video_codecs=[video_codec], video_format=video_format))
 
 
     @mock.patch.object(formats, 'is_supported_video_codec', side_effect=(lambda vformat, codec: codec != 'unknown'))
@@ -78,11 +88,16 @@ class TestInputValidation(TestCase):
             validation.validate_video_codecs("mp4", ['h264', None, 'mjpeg', 'flv1'])
 
 
-    def test_validate_valid_audio_codecs(self):
-        for video_format in self._supported_formats:
-            supported_audio_codecs = formats.list_supported_audio_codecs(video_format)
-            for audio_codec in supported_audio_codecs:
-                self.assertTrue(validation.validate_audio_codecs(audio_codecs=[audio_codec], video_format=video_format))
+    @parameterized.expand(
+        [
+            (video_format, audio_codec)
+            for video_format in formats.list_supported_formats()
+            for audio_codec in formats.list_supported_audio_codecs(video_format)
+        ],
+        name_func=make_parameterized_test_name_generator_for_scalar_values(['format', 'audio'])
+    )
+    def test_validate_valid_audio_codecs(self, video_format, audio_codec):
+        self.assertTrue(validation.validate_audio_codecs(audio_codecs=[audio_codec], video_format=video_format))
 
 
     @mock.patch.object(formats, 'is_supported_audio_codec', side_effect=(lambda vformat, codec: codec != 'unknown'))
@@ -101,12 +116,21 @@ class TestInputValidation(TestCase):
             validation.validate_audio_codecs("mp4", [None, 'ac3', 'mp3'])
 
 
-    def test_validate_audio_stream_valid_codecs(self):
-        for video_format in self._supported_formats:
-            supported_audio_codecs = formats.list_supported_audio_codecs(video_format)
-            for audio_codec in supported_audio_codecs:
-                self.assertTrue(validation.validate_audio_stream(stream_metadata={"codec_name": "{}".format(audio_codec)},
-                                                      video_format=video_format))
+    @parameterized.expand(
+        [
+            (video_format, audio_codec)
+            for video_format in formats.list_supported_formats()
+            for audio_codec in formats.list_supported_audio_codecs(video_format)
+        ],
+        name_func=make_parameterized_test_name_generator_for_scalar_values(['format', 'audio'])
+    )
+    def test_validate_audio_stream_valid_codecs(self, video_format, audio_codec):
+        self.assertTrue(
+            validation.validate_audio_stream(
+                stream_metadata={"codec_name": audio_codec},
+                video_format=video_format,
+            )
+        )
 
 
     def test_validate_audio_stream_invalid_codec(self):
@@ -119,12 +143,21 @@ class TestInputValidation(TestCase):
             validation.validate_audio_stream(stream_metadata={}, video_format="mp4")
 
 
-    def test_validate_video_stream_valid_codecs(self):
-        for video_format in self._supported_formats:
-            supported_video_codecs = formats.list_supported_video_codecs(video_format)
-            for video_codec in supported_video_codecs:
-                self.assertTrue(validation.validate_video_stream(stream_metadata={"codec_name": "{}".format(video_codec)},
-                                                      video_format=video_format))
+    @parameterized.expand(
+        [
+            (video_format, video_codec)
+            for video_format in formats.list_supported_formats()
+            for video_codec in formats.list_supported_video_codecs(video_format)
+        ],
+        name_func=make_parameterized_test_name_generator_for_scalar_values(['format', 'video'])
+    )
+    def test_validate_video_stream_valid_codecs(self, video_format, video_codec):
+        self.assertTrue(
+            validation.validate_video_stream(
+                stream_metadata={"codec_name": video_codec},
+                video_format=video_format,
+            )
+        )
 
     def test_validate_video_stream_invalid_codec(self):
         with self.assertRaises(exceptions.UnsupportedVideoCodec):
@@ -175,27 +208,31 @@ class TestInputValidation(TestCase):
             validation.validate_video(metadata=metadata)
 
 
-    def test_validate_video_valid_codecs(self):
-        for video_format in self._supported_formats:
-            video_codecs = formats.list_supported_video_codecs(video_format)
-            audio_codecs = formats.list_supported_audio_codecs(video_format)
-            for video_codec in video_codecs:
-                for audio_codec in audio_codecs:
-                    metadata = {
-                        "format": {"format_name": video_format},
-                        "streams": [
-                            {
-                                "codec_type": "video",
-                                "codec_name": video_codec
-                            },
-                            {
-                                "codec_type": "audio",
-                                "codec_name": audio_codec
-                            }
-                        ]
-                    }
+    @parameterized.expand(
+        [
+            (video_format, video_codec, audio_codec)
+            for video_format in formats.list_supported_formats()
+            for video_codec in formats.list_supported_video_codecs(video_format)
+            for audio_codec in formats.list_supported_audio_codecs(video_format)
+        ],
+        name_func=make_parameterized_test_name_generator_for_scalar_values(['format', 'video', 'audio'])
+    )
+    def test_validate_video_valid_codecs(self, video_format, video_codec, audio_codec):
+        metadata = {
+            "format": {"format_name": video_format},
+            "streams": [
+                {
+                    "codec_type": "video",
+                    "codec_name": video_codec
+                },
+                {
+                    "codec_type": "audio",
+                    "codec_name": audio_codec
+                }
+            ]
+        }
 
-                    self.assertTrue(validation.validate_video(metadata=metadata))
+        self.assertTrue(validation.validate_video(metadata=metadata))
 
 
     def test_validate_video_invalid_audio_codec(self):
