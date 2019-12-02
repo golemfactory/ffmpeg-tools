@@ -601,7 +601,7 @@ class TestConversionValidation(TestCase):
             {'index': 3, 'codec_type': 'subtitle', 'codec_name': 'ass'},
         ]
 
-        with self.assertRaises(exceptions.UnsupportedStream):
+        with self.assertRaises(exceptions.UnsupportedSubtitleCodecConversion):
             validation.validate_transcoding_params(
                 dst_params,
                 metadata,
@@ -622,7 +622,7 @@ class TestConversionValidation(TestCase):
             {'index': 2, 'codec_type': 'subtitle', 'codec_name': 'undefined codec'},
         ]
 
-        with self.assertRaises(exceptions.UnsupportedStream):
+        with self.assertRaises(exceptions.UnsupportedSubtitleCodecConversion):
             validation.validate_transcoding_params(
                 dst_params,
                 metadata,
@@ -669,7 +669,7 @@ class TestValidateUnsupportedStreams(TestCase):
         self,
         _mock_find_unsupported_subtitle_streams,
     ):
-        with self.assertRaises(exceptions.UnsupportedStream):
+        with self.assertRaises(exceptions.UnsupportedSubtitleCodecConversion):
             validation.validate_unsupported_subtitle_streams(
                 metadata={},
                 strip_unsupported_subtitle_streams=False,

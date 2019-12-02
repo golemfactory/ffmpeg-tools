@@ -213,7 +213,7 @@ def validate_unsupported_subtitle_streams(
     unsupported_subtitle_streams = commands.find_unsupported_subtitle_streams(metadata, target_container)
 
     if not strip_unsupported_subtitle_streams and len(unsupported_subtitle_streams) != 0:
-        raise exceptions.UnsupportedStream('subtitle', unsupported_subtitle_streams)
+        raise exceptions.UnsupportedSubtitleCodecConversion('subtitle', unsupported_subtitle_streams)
 
     return True
 

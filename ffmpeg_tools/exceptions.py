@@ -82,6 +82,11 @@ class UnsupportedAudioCodecConversion(InvalidVideo):
         super().__init__(message="Unsupported audio codec conversion from {} to {}".format(src_codec, dst_codec))
 
 
+class UnsupportedSubtitleCodecConversion(InvalidVideo):
+    def __init__(self, src_codec, video_format):
+        super().__init__(message="Unsupported subtitle codec conversion from codec {} to any codec supported by container {}".format(src_codec, video_format))
+
+
 class UnsupportedStream(InvalidVideo):
     def __init__(self, stream_type, index):
         super().__init__(message="Unsupported {} stream. Stream index: {}."
