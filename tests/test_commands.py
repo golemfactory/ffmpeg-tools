@@ -558,7 +558,7 @@ class TestQueryMuxerInfo(TestCase):
         self.assertEqual(result, expected_result)
 
 
-class TestEncoderInfo(TestCase):
+class TestQueryEncoderInfo(TestCase):
     def test_should_return_sample_rates(self):
         sample_ffmpeg_output = (
             'Encoder libmp3lame [libmp3lame MP3 (MPEG audio layer 3)]:\n'
@@ -571,7 +571,7 @@ class TestEncoderInfo(TestCase):
         expected_encoder_info = {'sample_rates': {44100, 48000, 32000, 22050, 24000, 16000, 11025, 12000, 8000}}
 
         with mock.patch.object(commands, 'exec_cmd_to_string', return_value=sample_ffmpeg_output):
-            encoder_info = commands.encoder_info('mp3')
+            encoder_info = commands.query_encoder_info('mp3')
 
         self.assertEqual(encoder_info, expected_encoder_info)
 
@@ -583,8 +583,32 @@ class TestEncoderInfo(TestCase):
         )
 
         with mock.patch.object(commands, 'exec_cmd_to_string', return_value=sample_ffmpeg_output):
-            encoder_info = commands.encoder_info('h264')
-            self.assertEqual({'sample_rates': []}, encoder_info)
+            encoder_info = commands.query_encoder_info('h264')
+
+        self.assertEqual(encoder_info, {})
+
+    def test_should_raise_if_multiple_matches_found_in_ffmpeg_output(self):
+        sample_ffmpeg_output = (
+            'Encoder libmp3lame [libmp3lame MP3 (MPEG audio layer 3)]:\n'
+            'Supported sample rates: 44100 48000 32000 22050 24000 16000 11025 12000 8000\n'
+            'Supported sample rates: 22050 8000\n'
+            'Supported sample formats: s32p fltp s16p\n'
+        )
+
+        with mock.patch.object(commands, 'exec_cmd_to_string', return_value=sample_ffmpeg_output):
+            with self.assertRaises(exceptions.InvalidSampleRateInfo):
+                commands.query_encoder_info('mp3')
+
+    def test_encoder_not_recognized_by_ffmpeg_should_result_in_sample_rates_not_being_found(self):
+        sample_ffmpeg_output = (
+            "Codec 'invalid encoder' is not recognized by FFmpeg.\n"
+        )
+
+        with mock.patch.object(commands, 'exec_cmd_to_string', return_value=sample_ffmpeg_output):
+            encoder_info = commands.query_encoder_info('invalid encoder')
+
+        self.assertIsInstance(encoder_info, dict)
+        self.assertNotIn('sample_rates', encoder_info)
 
     @parameterized.expand([
         ('Supported sample rates: 44100 48000 32000 22050 24000 16000 11025 12000 8000\n', ['44100 48000 32000 22050 24000 16000 11025 12000 8000']),
@@ -600,5 +624,5 @@ class TestEncoderInfo(TestCase):
             f'{input_line}'
             'some text after sample line \n'
         )
-        result = commands._parse_supported_sample_rates_out_of_codec_info(sample_ffmpeg_output)
+        result = commands._parse_supported_sample_rates_out_of_encoder_info(sample_ffmpeg_output)
         self.assertEqual(result, expected_result)

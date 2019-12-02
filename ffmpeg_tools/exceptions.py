@@ -2,6 +2,10 @@ class NoMatchingEncoder(Exception):
     pass
 
 
+class InvalidSampleRateInfo(Exception):
+    pass
+
+
 class CommandFailed(Exception):
     def __init__(self, command, error_code):
         super().__init__()

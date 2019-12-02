@@ -719,37 +719,54 @@ def query_muxer_info(muxer: str) -> Dict[str, Any]:
     }
 
 
-def _parse_supported_sample_rates_out_of_codec_info(codec_info):
-    # This looks for supported sample rates in ffmpeg output. Part of sample:
-    # 'Threading capabilities: none\n'
-    # 'Supported sample rates: 44100 48000 32000 22050 24000 16000 11025 \n'
-    # 'Supported sample formats: s32p fltp s16p\n'
+def get_query_encoder_info_command(encoder: str) -> List[str]:
+    return [
+        FFMPEG_COMMAND,
+        '-nostdin',
+        '-hide_banner',
+        '-h', f'encoder={encoder}',
+    ]
+
+
+def _parse_supported_sample_rates_out_of_encoder_info(codec_info):
+    """
+    Looks for supported sample rates in ffmpeg output.
+
+    Currently this includes the following fields (more may be added in the future):
+    - `sample_rates`: list of the sampling rates supported by the codec.
+    """
+
+    # Sample of expected text passed to the regex:
+    #
+    # Threading capabilities: none
+    # Supported sample rates: 44100 48000 32000 22050 24000 16000 11025
+    # Supported sample formats: s32p fltp s16p
     return re.findall(
         r"""
-        ^\s*
-        Supported\ ?sample\ ?rates:\s*
-        (.*[^\s.])\s*
-        \.?
-        \s*$
+        ^\s*                           # Leading whitespace
+        Supported\ ?sample\ ?rates:\s* # Label
+        (.*[^\s.])\s*                  # Sample rate list
+        \.?                            # Optional dot at the end of the line
+        \s*$                           # Trailing whitespace
         """,
         codec_info,
         re.X | re.MULTILINE
     )
 
 
-def encoder_info(audio_codec_name):
+def query_encoder_info(encoder):
+    ffmpeg_output = exec_cmd_to_string(get_query_encoder_info_command(encoder))
+    matches = _parse_supported_sample_rates_out_of_encoder_info(ffmpeg_output)
 
-    codec_info = exec_cmd_to_string(
-        ['ffmpeg', '-h', f'encoder={audio_codec_name}']
-    )
-    audio_codecs = _parse_supported_sample_rates_out_of_codec_info(codec_info)
+    if len(matches) == 0:
+        return {}
 
-    # Returned list should be empty (if sample rates not found, for e.g. video
-    # codecs) or contain only one element. This information should be only once
-    assert len(audio_codecs) <= 1
+    if len(matches) >= 2:
+        raise exceptions.InvalidSampleRateInfo(
+            f"Found {len(matches)} things in ffmpeg output that could be the sample rate list for '{encoder}'. "
+            f"Expected exactly one.")
 
-    if len(audio_codecs) == 0:
-        return {'sample_rates': []}
-    elif len(audio_codecs) == 1:
-        sample_rates = {int(sr) for sr in audio_codecs[0].strip().split(" ")}
-        return {'sample_rates': sample_rates}
+    if len(matches) == 1:
+        return {
+            'sample_rates': {int(sr) for sr in matches[0].strip().split(" ")},
+        }
