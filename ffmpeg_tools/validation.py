@@ -348,8 +348,13 @@ def validate_audio_sample_rates(
 
 def validate_video_codec_conversion(src_codec, dst_codec):
     codec = codecs.VideoCodec(src_codec)
+
     if dst_codec not in codec.get_supported_conversions():
         raise exceptions.UnsupportedVideoCodecConversion(src_codec, dst_codec)
+
+    if codecs.VideoCodec(dst_codec).get_encoder() is None:
+        raise exceptions.MissingVideoEncoder(video_codec=dst_codec)
+
     return True
 
 
@@ -358,6 +363,9 @@ def validate_audio_codec_conversion(src_codec, dst_codec, src_channel_count):
 
     if dst_codec not in codec.get_supported_conversions():
         raise exceptions.UnsupportedAudioCodecConversion(src_codec, dst_codec)
+
+    if codecs.AudioCodec(dst_codec).get_encoder() is None:
+        raise exceptions.MissingAudioEncoder(audio_codec=dst_codec)
 
     if src_codec != dst_codec and (src_channel_count is None or src_channel_count > _MAX_SUPPORTED_AUDIO_CHANNELS):
         # Multi-channel audio is not supported by all audio codecs.

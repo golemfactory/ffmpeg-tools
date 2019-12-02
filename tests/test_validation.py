@@ -65,6 +65,7 @@ class TestInputValidation(TestCase):
             (video_format, video_codec)
             for video_format in formats.list_supported_formats()
             for video_codec in formats.list_supported_video_codecs(video_format)
+            if codecs.VideoCodec(video_codec).get_encoder() is not None
         ],
         name_func=make_parameterized_test_name_generator_for_scalar_values(['format', 'video'])
     )
@@ -88,11 +89,23 @@ class TestInputValidation(TestCase):
             validation.validate_video_codecs("mp4", ['h264', None, 'mjpeg', 'flv1'])
 
 
+    @mock.patch.object(codecs.VideoCodec, 'get_supported_conversions', return_value=['av1'])
+    @mock.patch.object(codecs.VideoCodec, 'get_encoder', return_value=None)
+    def test_validate_video_codec_conversion_should_reject_target_codec_which_has_no_encoder_defined(
+        self,
+        _mock_get_encdoer,
+        _mock_get_supported_conversions,
+    ):
+        with self.assertRaises(exceptions.MissingVideoEncoder):
+            validation.validate_video_codec_conversion("h264", "av1")
+
+
     @parameterized.expand(
         [
             (video_format, audio_codec)
             for video_format in formats.list_supported_formats()
             for audio_codec in formats.list_supported_audio_codecs(video_format)
+            if codecs.AudioCodec(audio_codec).get_encoder() is not None
         ],
         name_func=make_parameterized_test_name_generator_for_scalar_values(['format', 'audio'])
     )
@@ -116,11 +129,23 @@ class TestInputValidation(TestCase):
             validation.validate_audio_codecs("mp4", [None, 'ac3', 'mp3'])
 
 
+    @mock.patch.object(codecs.AudioCodec, 'get_supported_conversions', return_value=['wmav2'])
+    @mock.patch.object(codecs.AudioCodec, 'get_encoder', return_value=None)
+    def test_validate_audio_codec_conversion_should_reject_target_codec_which_has_no_encoder_defined(
+        self,
+        _mock_get_encdoer,
+        _mock_get_supported_conversions,
+    ):
+        with self.assertRaises(exceptions.MissingAudioEncoder):
+            validation.validate_audio_codec_conversion("mp3", "wmav2", 1)
+
+
     @parameterized.expand(
         [
             (video_format, audio_codec)
             for video_format in formats.list_supported_formats()
             for audio_codec in formats.list_supported_audio_codecs(video_format)
+            if codecs.AudioCodec(audio_codec).get_encoder() is not None
         ],
         name_func=make_parameterized_test_name_generator_for_scalar_values(['format', 'audio'])
     )
@@ -148,6 +173,7 @@ class TestInputValidation(TestCase):
             (video_format, video_codec)
             for video_format in formats.list_supported_formats()
             for video_codec in formats.list_supported_video_codecs(video_format)
+            if codecs.VideoCodec(video_codec).get_encoder() is not None
         ],
         name_func=make_parameterized_test_name_generator_for_scalar_values(['format', 'video'])
     )
@@ -214,6 +240,8 @@ class TestInputValidation(TestCase):
             for video_format in formats.list_supported_formats()
             for video_codec in formats.list_supported_video_codecs(video_format)
             for audio_codec in formats.list_supported_audio_codecs(video_format)
+            if codecs.VideoCodec(video_codec).get_encoder() is not None
+            if codecs.AudioCodec(audio_codec).get_encoder() is not None
         ],
         name_func=make_parameterized_test_name_generator_for_scalar_values(['format', 'video', 'audio'])
     )
