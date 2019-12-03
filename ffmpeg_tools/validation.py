@@ -65,6 +65,29 @@ def validate_transcoding_params(
     strip_unsupported_data_streams=False,
     strip_unsupported_subtitle_streams=False,
 ):
+    """
+    Validates the transcoding parameters. Fails if the operation
+    is not possible or may result in a video that's damaged or not conforming
+    to the specified parameters.
+
+    :param dst_params: dictionary containing transcoding parameters.
+    :param dst_params: dictionary with metadata obtained by running ffprobe on
+        the source video.
+    :param dst_muxer_info: General information about the target container.
+        The function uses it for example to determine the defaults ffmpeg will use
+        for parameters not specified explicitly. Not providing this information
+        makes it impossible to validate those parameters.
+        Note: this should be the result of running query_muxer_info().
+        It needs to be provided by the caller because the validations might
+        not be running on the same machine that does the video processing
+        and might not even have access to ffmpeg.
+    :param strip_unsupported_data_streams: If true, data streams using
+        codecs not listed in DATA_STREAM_WHITELIST will not be validated because
+        the replace command is going to strip them anyway.
+    :param strip_unsupported_subtitle_streams: If true, subtitle streams using
+        codecs not listed in SUBTITLE_STREAM_WHITELIST will not be validated because
+        the replace command is going to strip them anyway.
+    """
 
     src_params = meta.create_params(
         meta.get_format(src_metadata),
