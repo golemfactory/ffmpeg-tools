@@ -34,10 +34,13 @@ def _get_src_codec(src_params):
     return None
 
 
-def _get_dst_codec(dst_params: dict, dst_muxer_info: Dict[str, Any]) -> Optional[str]:
+def _get_dst_codec(dst_params: dict, dst_muxer_info: Optional[Dict[str, Any]]) -> Optional[str]:
     assert not formats.Container(dst_params["format"]).is_exclusive_demuxer()
 
     if dst_params.get("audio", {}).get("codec") is None:
+        if dst_muxer_info is None:
+            return None
+
         return dst_muxer_info.get('default_audio_codec')
 
     return dst_params['audio']['codec']
@@ -61,7 +64,7 @@ def validate_data_and_subtitle_streams(
 def validate_transcoding_params(
     dst_params,
     src_metadata,
-    dst_muxer_info,
+    dst_muxer_info = None,
     strip_unsupported_data_streams=False,
     strip_unsupported_subtitle_streams=False,
 ):
@@ -81,6 +84,8 @@ def validate_transcoding_params(
         It needs to be provided by the caller because the validations might
         not be running on the same machine that does the video processing
         and might not even have access to ffmpeg.
+        You can opt out of providing this information and validating the parameters
+        whose value was not set explicitly by setting the parameter to None.
     :param strip_unsupported_data_streams: If true, data streams using
         codecs not listed in DATA_STREAM_WHITELIST will not be validated because
         the replace command is going to strip them anyway.
@@ -112,17 +117,21 @@ def validate_transcoding_params(
     audio_stream = meta.get_audio_stream(src_metadata)
 
     if src_audio_codec is not None:
-        dest_audio_codec = _get_dst_codec(dst_params, dst_muxer_info)
-        if dest_audio_codec is None:
-            raise exceptions.UnsupportedAudioCodecConversion(src_audio_codec, dest_audio_codec)
-
         validate_audio_codec(src_params["format"], src_audio_codec)
-        validate_audio_codec(dst_params["format"], dest_audio_codec)
-        validate_audio_codec_conversion(
-            src_audio_codec,
-            dest_audio_codec,
-            audio_stream
-        )
+
+        dest_audio_codec = _get_dst_codec(dst_params, dst_muxer_info)
+        if dest_audio_codec is not None:
+            validate_audio_codec(dst_params["format"], dest_audio_codec)
+            validate_audio_codec_conversion(
+                src_audio_codec,
+                dest_audio_codec,
+                audio_stream
+            )
+        elif dst_muxer_info is not None:
+            # Treat situations of user opting out of providing muxer info (dst_muxer_info == None)
+            # and ffmpeg not having the info we need ('default_audio_codec' not present in
+            # dst_muxer_info or empty) differently.
+            raise exceptions.UnsupportedAudioCodecConversion(src_audio_codec, dest_audio_codec)
 
     # Validate resolution change
     validate_resolution(src_params["resolution"], dst_params["resolution"])
