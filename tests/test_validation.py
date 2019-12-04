@@ -95,6 +95,12 @@ class TestInputValidation(TestCase):
         self.assertTrue(validation.validate_audio_codecs("mp4", []))
 
 
+    @mock.patch.object(formats, 'is_supported_audio_codec', return_value=True)
+    def test_validate_audio_codecs_should_reject_missing_codec_name(self, _mock_is_supported_audio_codec):
+        with self.assertRaises(exceptions.MissingAudioCodec):
+            validation.validate_audio_codecs("mp4", [None, 'ac3', 'mp3'])
+
+
     def test_validate_audio_stream_valid_codecs(self):
         for video_format in self._supported_formats:
             supported_audio_codecs = formats.list_supported_audio_codecs(video_format)

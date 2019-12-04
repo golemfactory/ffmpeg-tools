@@ -234,6 +234,9 @@ def validate_audio_codecs(video_format, audio_codecs):
     assert formats.is_supported(video_format)
 
     for audio_codec in audio_codecs:
+        if audio_codec is None:
+            raise exceptions.MissingAudioCodec
+
         if not formats.is_supported_audio_codec(vformat=video_format, codec=audio_codec):
             raise exceptions.UnsupportedAudioCodec(audio_codec=audio_codec, video_format=video_format)
 
