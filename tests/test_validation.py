@@ -9,6 +9,7 @@ from ffmpeg_tools.meta import get_metadata
 import ffmpeg_tools.codecs as codecs
 import ffmpeg_tools.commands as commands
 import ffmpeg_tools.exceptions as exceptions
+import ffmpeg_tools.frame_rate as frame_rate
 import ffmpeg_tools.validation as validation
 import ffmpeg_tools.formats as formats
 import ffmpeg_tools.meta as meta
@@ -395,13 +396,13 @@ class TestConversionValidation(TestCase):
         self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, dst_muxer_info))
 
     def test_target_frame_rate_based_on_src_value_corner_case_mpeg1video(self):
-        assert formats.FrameRate(122) not in formats._frame_rates
+        assert frame_rate.FrameRate(122) not in formats._frame_rates
         metadata = self.modify_metadata_with_passed_values("mov", [1920, 1080], "mpeg1video", "aac", frame_rate=122)
         dst_params = self.create_params("mov", [1920, 1080], "mpeg1video", "aac", frame_rate=None)
         self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, {}))
 
     def test_target_frame_rate_based_on_src_value_corner_case_mpeg2video(self):
-        assert formats.FrameRate(122) not in formats._frame_rates
+        assert frame_rate.FrameRate(122) not in formats._frame_rates
         metadata = self.modify_metadata_with_passed_values("mov", [1920, 1080], "mpeg2video", "aac", frame_rate='25/2')
         dst_params = self.create_params("mov", [1920, 1080], "mpeg2video", "aac")
         self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, {}))
@@ -433,18 +434,18 @@ class TestConversionValidation(TestCase):
         self.assertTrue(validation.validate_frame_rate(dst_params, src_frame_rate))
 
     @parameterized.expand([
-        (formats.FrameRate(122), 'h264', formats.FrameRate(122)),
-        (formats.FrameRate(60), 'h264', formats.FrameRate(60)),
-        (formats.FrameRate(122), 'mpeg1video', formats.FrameRate(60)),
-        (formats.FrameRate(244, 2), 'mpeg1video', formats.FrameRate(60)),
-        (formats.FrameRate(44, 2), 'mpeg1video', formats.FrameRate(44, 2)),
-        (formats.FrameRate(22), 'mpeg1video', formats.FrameRate(22)),
-        (formats.FrameRate(60), 'mpeg1video', formats.FrameRate(60)),
-        (formats.FrameRate(61), 'mpeg1video', formats.FrameRate(60)),
-        (formats.FrameRate(24, 2), 'mpeg1video', formats.FrameRate(24, 2)),
-        (formats.FrameRate(25, 2), 'mpeg1video', formats.FrameRate(25, 2)),
-        (formats.FrameRate(24, 2), 'mpeg2video', formats.FrameRate(24, 2)),
-        (formats.FrameRate(25, 2), 'mpeg2video', formats.FrameRate(12, 1)),
+        (frame_rate.FrameRate(122), 'h264', frame_rate.FrameRate(122)),
+        (frame_rate.FrameRate(60), 'h264', frame_rate.FrameRate(60)),
+        (frame_rate.FrameRate(122), 'mpeg1video', frame_rate.FrameRate(60)),
+        (frame_rate.FrameRate(244, 2), 'mpeg1video', frame_rate.FrameRate(60)),
+        (frame_rate.FrameRate(44, 2), 'mpeg1video', frame_rate.FrameRate(44, 2)),
+        (frame_rate.FrameRate(22), 'mpeg1video', frame_rate.FrameRate(22)),
+        (frame_rate.FrameRate(60), 'mpeg1video', frame_rate.FrameRate(60)),
+        (frame_rate.FrameRate(61), 'mpeg1video', frame_rate.FrameRate(60)),
+        (frame_rate.FrameRate(24, 2), 'mpeg1video', frame_rate.FrameRate(24, 2)),
+        (frame_rate.FrameRate(25, 2), 'mpeg1video', frame_rate.FrameRate(25, 2)),
+        (frame_rate.FrameRate(24, 2), 'mpeg2video', frame_rate.FrameRate(24, 2)),
+        (frame_rate.FrameRate(25, 2), 'mpeg2video', frame_rate.FrameRate(12, 1)),
     ])
     def test_guess_target_frame_rate(self, src_frame_rate, dst_video_codec, expected_frame_rate):
         dst_params = self.create_params("mp4", [1920, 1080], dst_video_codec, frame_rate=None)
@@ -454,18 +455,18 @@ class TestConversionValidation(TestCase):
         )
 
     @parameterized.expand([
-        (formats.FrameRate(122), 'h264', None),
-        (formats.FrameRate(60), 'h264', None),
-        (formats.FrameRate(122), 'mpeg1video', formats.FrameRate(60)),
-        (formats.FrameRate(244, 2), 'mpeg1video', formats.FrameRate(60)),
-        (formats.FrameRate(44, 2), 'mpeg1video', None),
-        (formats.FrameRate(22), 'mpeg1video', None),
-        (formats.FrameRate(60), 'mpeg1video', None),
-        (formats.FrameRate(61), 'mpeg1video', formats.FrameRate(60)),
-        (formats.FrameRate(24, 2), 'mpeg1video', None),
-        (formats.FrameRate(25, 2), 'mpeg1video', None),
-        (formats.FrameRate(24, 2), 'mpeg2video', None),
-        (formats.FrameRate(25, 2), 'mpeg2video', formats.FrameRate(12, 1)),
+        (frame_rate.FrameRate(122), 'h264', None),
+        (frame_rate.FrameRate(60), 'h264', None),
+        (frame_rate.FrameRate(122), 'mpeg1video', frame_rate.FrameRate(60)),
+        (frame_rate.FrameRate(244, 2), 'mpeg1video', frame_rate.FrameRate(60)),
+        (frame_rate.FrameRate(44, 2), 'mpeg1video', None),
+        (frame_rate.FrameRate(22), 'mpeg1video', None),
+        (frame_rate.FrameRate(60), 'mpeg1video', None),
+        (frame_rate.FrameRate(61), 'mpeg1video', frame_rate.FrameRate(60)),
+        (frame_rate.FrameRate(24, 2), 'mpeg1video', None),
+        (frame_rate.FrameRate(25, 2), 'mpeg1video', None),
+        (frame_rate.FrameRate(24, 2), 'mpeg2video', None),
+        (frame_rate.FrameRate(25, 2), 'mpeg2video', frame_rate.FrameRate(12, 1)),
 
     ])
     def test_guess_target_frame_rate_for_special_cases(self, src_frame_rate, dst_video_codec, expected_value):

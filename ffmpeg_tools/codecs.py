@@ -1,7 +1,8 @@
 import enum
 
 from . import exceptions
-from . import formats
+from . import frame_rate
+
 
 DATA_STREAM_WHITELIST = [
     'bin_data'
@@ -206,7 +207,7 @@ MAX_SUPPORTED_FRAME_RATE = {
 
 FRAME_RATE_SUBSTITUTIONS = {
     VideoCodec.MPEG_2.value: {
-        formats.FrameRate(25, 2): formats.FrameRate(12),
+        frame_rate.FrameRate(25, 2): frame_rate.FrameRate(12),
     }
 }
 assert all(

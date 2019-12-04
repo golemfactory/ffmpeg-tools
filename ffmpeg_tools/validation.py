@@ -4,6 +4,7 @@ from typing import Any, Dict, Optional, Union
 
 from . import meta
 from . import formats
+from . import frame_rate
 from . import codecs
 from . import commands
 from . import exceptions
@@ -232,15 +233,15 @@ def validate_resolution(src_resolution, target_resolution):
 
 
 def _guess_target_frame_rate_for_special_cases(
-        src_frame_rate: 'formats.FrameRate',
-        dst_video_codec: str) -> Optional['formats.FrameRate']:
+        src_frame_rate: 'frame_rate.FrameRate',
+        dst_video_codec: str) -> Optional['frame_rate.FrameRate']:
 
     normalized_src_rate = src_frame_rate.normalized()
 
     if dst_video_codec in codecs.MAX_SUPPORTED_FRAME_RATE:
         max_supported_fps = codecs.MAX_SUPPORTED_FRAME_RATE[dst_video_codec]
         if normalized_src_rate.to_float() > max_supported_fps:
-            return formats.FrameRate(max_supported_fps)
+            return frame_rate.FrameRate(max_supported_fps)
 
     substitution_needed = (
         dst_video_codec in codecs.FRAME_RATE_SUBSTITUTIONS and
@@ -252,7 +253,7 @@ def _guess_target_frame_rate_for_special_cases(
 
 
 def _guess_target_frame_rate(
-        src_frame_rate: 'formats.FrameRate',
+        src_frame_rate: 'frame_rate.FrameRate',
         dst_params: Dict[str, Any]) -> str:
 
     target_frame_rate = _guess_target_frame_rate_for_special_cases(
@@ -268,7 +269,7 @@ def validate_frame_rate(
 
     if 'frame_rate' in dst_params:
         try:
-            target_frame_rate = formats.FrameRate.decode(dst_params['frame_rate'])
+            target_frame_rate = frame_rate.FrameRate.decode(dst_params['frame_rate'])
         except ValueError as exception:
             raise exceptions.InvalidFrameRate(src_frame_rate, dst_params['frame_rate'])
     else:
@@ -276,7 +277,7 @@ def validate_frame_rate(
             raise exceptions.InvalidFrameRate(None, dst_params.get('frame_rate'))
 
         try:
-            decoded_src_frame_rate = formats.FrameRate.decode(src_frame_rate)
+            decoded_src_frame_rate = frame_rate.FrameRate.decode(src_frame_rate)
         except ValueError as exception:
             raise exceptions.InvalidFrameRate(src_frame_rate, None)
 
