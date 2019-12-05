@@ -697,3 +697,11 @@ class TestValidateUnsupportedStreams(TestCase):
             strip_unsupported_subtitle_streams=False,
             target_container=formats.Container.c_MATROSKA,
         ))
+
+    def test_validate_unsupported_subtitle_streams_needs_a_known_target_container(self):
+        with self.assertRaises(exceptions.InvalidVideo):
+            validation.validate_unsupported_subtitle_streams(
+                metadata={},
+                strip_unsupported_subtitle_streams=False,
+                target_container=None,
+            )
