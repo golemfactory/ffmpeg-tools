@@ -1,76 +1,16 @@
 import os
+from math import gcd
+from typing import Any, Dict, Optional, Union
 
 from . import meta
 from . import formats
+from . import frame_rate
 from . import codecs
+from . import commands
+from . import exceptions
 
 
 _MAX_SUPPORTED_AUDIO_CHANNELS = 2
-
-
-class InvalidVideo(Exception):
-    def __init__(self, message):
-        super().__init__()
-        self.response_message = message
-
-
-class UnsupportedVideoFormat(InvalidVideo):
-    def __init__(self, video_format):
-        super().__init__(message="Unsupported video format: {}".format(video_format))
-
-
-class UnsupportedTargetVideoFormat(InvalidVideo):
-    def __init__(self, video_format):
-        super().__init__(message="Muxing not supported for video format: {}".format(video_format))
-
-
-class UnsupportedVideoCodec(InvalidVideo):
-    def __init__(self, video_codec, video_format):
-        super().__init__(message="Unsupported video codec: {} for video format: {}".format(video_codec, video_format))
-
-
-class UnsupportedAudioCodec(InvalidVideo):
-    def __init__(self, audio_codec, video_format):
-        super().__init__(message="Unsupported audio codec: {} for video format: {}".format(audio_codec, video_format))
-
-
-class MissingVideoStream(InvalidVideo):
-    def __init__(self):
-        super().__init__(message="Missing video stream")
-
-
-class InvalidFormatMetadata(InvalidVideo):
-    def __init__(self, message):
-        super().__init__(message=message)
-
-
-class InvalidResolution(InvalidVideo):
-    def __init__(self, src_resolution, target_resolution):
-        super().__init__(message="Unsupported resolution conversion from {} to {}.".format(src_resolution, target_resolution))
-
-
-class InvalidFrameRate(InvalidVideo):
-    def __init__(self, src_frame_rate, target_frame_rate):
-        super().__init__(message="Unsupported frame rate conversion from {} to {}.".format(src_frame_rate, target_frame_rate))
-
-
-class UnsupportedVideoCodecConversion(InvalidVideo):
-    def __init__(self, src_codec, dst_codec):
-        super().__init__(message="Unsupported video codec conversion from {} to {}".format(src_codec, dst_codec))
-
-
-class UnsupportedAudioCodecConversion(InvalidVideo):
-    def __init__(self, src_codec, dst_codec):
-        super().__init__(message="Unsupported audio codec conversion from {} to {}".format(src_codec, dst_codec))
-
-
-class UnsupportedAudioChannelLayout(InvalidVideo):
-    def __init__(self, audio_channels):
-        super().__init__(
-            message="Unsupported audio channel layout conversion. "
-                    "Unable to reliably preserve the {}-channel audio found "
-                    "in the input file in combination with other target parameters.".format(audio_channels)
-        )
 
 
 def validate_video(metadata):
@@ -85,11 +25,75 @@ def validate_video(metadata):
             validate_stream(stream, video_format)
 
     except KeyError:
-        raise InvalidVideo(message="Video with invalid metadata")
+        raise exceptions.InvalidVideo(message="Video with invalid metadata")
     return True
 
 
-def validate_transcoding_params(dst_params, src_metadata):
+def _get_src_codec(src_params):
+    if src_params.get("audio", {}).get("codec") is not None:
+        return src_params['audio']['codec']
+    return None
+
+
+def _get_dst_codec(dst_params: dict, dst_muxer_info: Optional[Dict[str, Any]]) -> Optional[str]:
+    assert not formats.Container(dst_params["format"]).is_exclusive_demuxer()
+
+    if dst_params.get("audio", {}).get("codec") is None:
+        if dst_muxer_info is None:
+            return None
+
+        return dst_muxer_info.get('default_audio_codec')
+
+    return dst_params['audio']['codec']
+
+
+def validate_data_and_subtitle_streams(
+    metadata,
+    strip_unsupported_data_streams,
+    strip_unsupported_subtitle_streams,
+):
+    (unsupported_data_streams, unsupported_subtitle_streams) = (
+        commands.get_lists_of_unsupported_stream_numbers(metadata)
+    )
+    if not strip_unsupported_data_streams and len(unsupported_data_streams) != 0:
+        raise exceptions.UnsupportedStream('data', unsupported_data_streams)
+
+    if not strip_unsupported_subtitle_streams and len(unsupported_subtitle_streams) != 0:
+        raise exceptions.UnsupportedStream('subtitle', unsupported_subtitle_streams)
+
+
+def validate_transcoding_params(
+    dst_params,
+    src_metadata,
+    dst_muxer_info = None,
+    strip_unsupported_data_streams=False,
+    strip_unsupported_subtitle_streams=False,
+):
+    """
+    Validates the transcoding parameters. Fails if the operation
+    is not possible or may result in a video that's damaged or not conforming
+    to the specified parameters.
+
+    :param dst_params: dictionary containing transcoding parameters.
+    :param dst_params: dictionary with metadata obtained by running ffprobe on
+        the source video.
+    :param dst_muxer_info: General information about the target container.
+        The function uses it for example to determine the defaults ffmpeg will use
+        for parameters not specified explicitly. Not providing this information
+        makes it impossible to validate those parameters.
+        Note: this should be the result of running query_muxer_info().
+        It needs to be provided by the caller because the validations might
+        not be running on the same machine that does the video processing
+        and might not even have access to ffmpeg.
+        You can opt out of providing this information and validating the parameters
+        whose value was not set explicitly by setting the parameter to None.
+    :param strip_unsupported_data_streams: If true, data streams using
+        codecs not listed in DATA_STREAM_WHITELIST will not be validated because
+        the replace command is going to strip them anyway.
+    :param strip_unsupported_subtitle_streams: If true, subtitle streams using
+        codecs not listed in SUBTITLE_STREAM_WHITELIST will not be validated because
+        the replace command is going to strip them anyway.
+    """
 
     src_params = meta.create_params(
         meta.get_format(src_metadata),
@@ -110,28 +114,35 @@ def validate_transcoding_params(dst_params, src_metadata):
     # Validate audio codec. Audio codec can not be set and ffmpeg should
     # either remain with currently used codec or transcode using default behavior
     # if it is necessary.
-    try:
-        validate_audio_codec(src_params["format"], src_params["audio"]["codec"])
-        validate_audio_codec(dst_params["format"], dst_params["audio"]["codec"])
-        validate_audio_codec_conversion(
-            src_params["audio"]["codec"],
-            dst_params["audio"]["codec"],
-            meta.get_audio_stream(src_metadata)
-        )
-    except KeyError as _:
-        # We accept only KeyError, because it means, there were now value
-        # in dictionary. Note that validate functions can still throw other
-        # exceptions in case of invalid parameters.
-        pass
+    src_audio_codec = _get_src_codec(src_params)
+    audio_stream = meta.get_audio_stream(src_metadata)
+
+    if src_audio_codec is not None:
+        validate_audio_codec(src_params["format"], src_audio_codec)
+
+        dest_audio_codec = _get_dst_codec(dst_params, dst_muxer_info)
+        if dest_audio_codec is not None:
+            validate_audio_codec(dst_params["format"], dest_audio_codec)
+            validate_audio_codec_conversion(
+                src_audio_codec,
+                dest_audio_codec,
+                audio_stream
+            )
+        elif dst_muxer_info is not None:
+            # Treat situations of user opting out of providing muxer info (dst_muxer_info == None)
+            # and ffmpeg not having the info we need ('default_audio_codec' not present in
+            # dst_muxer_info or empty) differently.
+            raise exceptions.UnsupportedAudioCodecConversion(src_audio_codec, dest_audio_codec)
 
     # Validate resolution change
     validate_resolution(src_params["resolution"], dst_params["resolution"])
 
-    # Validate frame rate change
-    if 'frame_rate' in dst_params:
-        validate_frame_rate(src_params["frame_rate"], dst_params["frame_rate"])
+    validate_frame_rate(dst_params, src_params.get("frame_rate"))
 
-    # Throws exception in case of error
+    validate_data_and_subtitle_streams(
+        src_metadata,
+        strip_unsupported_data_streams,
+        strip_unsupported_subtitle_streams)
     return True
 
 
@@ -141,7 +152,7 @@ def _get_extension_from_filename(filename):
 
 def validate_format(video_format):
     if video_format not in formats.list_supported_formats():
-        raise UnsupportedVideoFormat(video_format=video_format)
+        raise exceptions.UnsupportedVideoFormat(video_format=video_format)
     return True
 
 
@@ -149,16 +160,16 @@ def validate_target_format(video_format):
     validate_format(video_format)
 
     if formats.Container(video_format).is_exclusive_demuxer():
-        raise UnsupportedTargetVideoFormat(video_format=video_format)
+        raise exceptions.UnsupportedTargetVideoFormat(video_format=video_format)
     return True
 
 
 def validate_format_metadata(metadata):
     try:
         if meta.get_format(metadata) in ['', None]:
-            raise InvalidFormatMetadata(message="No format names")
+            raise exceptions.InvalidFormatMetadata(message="No format names")
     except KeyError:
-        raise InvalidFormatMetadata("Invalid format metadata")
+        raise exceptions.InvalidFormatMetadata("Invalid format metadata")
     return True
 
 
@@ -168,9 +179,9 @@ def validate_video_stream_existence(metadata):
             if stream["codec_type"].lower() == "video":
                 return True
     except KeyError:
-        raise InvalidVideo("Invalid stream metadata")
+        raise exceptions.InvalidVideo("Invalid stream metadata")
 
-    raise MissingVideoStream()
+    raise exceptions.MissingVideoStream()
     return True
 
 
@@ -186,7 +197,7 @@ def validate_audio_stream(stream_metadata, video_format):
     try:
         validate_audio_codec(video_format=video_format, audio_codec=stream_metadata["codec_name"])
     except KeyError:
-        raise InvalidVideo(message="Audio stream without specified codec")
+        raise exceptions.InvalidVideo(message="Audio stream without specified codec")
     return True
 
 
@@ -194,19 +205,19 @@ def validate_video_stream(stream_metadata, video_format):
     try:
         validate_video_codec(video_format=video_format, video_codec=stream_metadata["codec_name"])
     except KeyError:
-        raise InvalidVideo(message="Video stream without specified codec")
+        raise exceptions.InvalidVideo(message="Video stream without specified codec")
     return True
 
 
 def validate_video_codec(video_format, video_codec):
     if not formats.is_supported_video_codec(vformat=video_format, codec=video_codec):
-        raise UnsupportedVideoCodec(video_codec=video_codec, video_format=video_format)
+        raise exceptions.UnsupportedVideoCodec(video_codec=video_codec, video_format=video_format)
     return True
 
 
 def validate_audio_codec(video_format, audio_codec):
     if not formats.is_supported_audio_codec(vformat=video_format, codec=audio_codec):
-        raise UnsupportedAudioCodec(audio_codec=audio_codec, video_format=video_format)
+        raise exceptions.UnsupportedAudioCodec(audio_codec=audio_codec, video_format=video_format)
     return True
 
 
@@ -218,38 +229,84 @@ def validate_resolution(src_resolution, target_resolution):
     if formats.get_effective_aspect_ratio(src_resolution) == \
             formats.get_effective_aspect_ratio(target_resolution):
         return True
-    raise InvalidResolution(src_resolution, target_resolution)
+    raise exceptions.InvalidResolution(src_resolution, target_resolution)
 
 
-def validate_frame_rate(src_frame_rate, target_frame_rate):
-    target_rate_supported = any(
-        # This validation will accept both 24 and '24' for convenience.
-        # More complex values like '24/1' are not supported unless they're
-        # explicitly present on the supported resolution list.
-        target_frame_rate in [f, str(f)]
-        for f in formats.list_supported_frame_rates()
+def _guess_target_frame_rate_for_special_cases(
+        src_frame_rate: 'frame_rate.FrameRate',
+        dst_video_codec: str) -> Optional['frame_rate.FrameRate']:
+
+    normalized_src_rate = src_frame_rate.normalized()
+
+    if dst_video_codec in codecs.MAX_SUPPORTED_FRAME_RATE:
+        max_supported_fps = codecs.MAX_SUPPORTED_FRAME_RATE[dst_video_codec]
+        if normalized_src_rate.to_float() > max_supported_fps:
+            return frame_rate.FrameRate(max_supported_fps)
+
+    substitution_needed = (
+        dst_video_codec in codecs.FRAME_RATE_SUBSTITUTIONS and
+        normalized_src_rate in codecs.FRAME_RATE_SUBSTITUTIONS[dst_video_codec])
+    if substitution_needed:
+        return codecs.FRAME_RATE_SUBSTITUTIONS[dst_video_codec][normalized_src_rate]
+
+    return None
+
+
+def _guess_target_frame_rate(
+        src_frame_rate: 'frame_rate.FrameRate',
+        dst_params: Dict[str, Any]) -> str:
+
+    target_frame_rate = _guess_target_frame_rate_for_special_cases(
+        src_frame_rate,
+        dst_params['video']['codec'],
     )
-    if not target_rate_supported:
-        raise InvalidFrameRate(src_frame_rate, target_frame_rate)
+    return target_frame_rate if target_frame_rate is not None else src_frame_rate
+
+
+def validate_frame_rate(
+        dst_params: Dict[str, Any],
+        src_frame_rate: Optional[str]) -> bool:
+
+    if 'frame_rate' in dst_params:
+        try:
+            target_frame_rate = frame_rate.FrameRate.decode(dst_params['frame_rate'])
+        except ValueError as exception:
+            raise exceptions.InvalidFrameRate(src_frame_rate, dst_params['frame_rate'])
+    else:
+        if src_frame_rate is None:
+            raise exceptions.InvalidFrameRate(None, dst_params.get('frame_rate'))
+
+        try:
+            decoded_src_frame_rate = frame_rate.FrameRate.decode(src_frame_rate)
+        except ValueError as exception:
+            raise exceptions.InvalidFrameRate(src_frame_rate, None)
+
+        target_frame_rate = _guess_target_frame_rate(
+            decoded_src_frame_rate,
+            dst_params,
+        )
+
+    if target_frame_rate.normalized() not in formats.list_supported_frame_rates():
+        raise exceptions.InvalidFrameRate(src_frame_rate, target_frame_rate)
     return True
 
 
 def validate_video_codec_conversion(src_codec, dst_codec):
     codec = codecs.VideoCodec(src_codec)
     if dst_codec not in codec.get_supported_conversions():
-        raise UnsupportedVideoCodecConversion(src_codec, dst_codec)
+        raise exceptions.UnsupportedVideoCodecConversion(src_codec, dst_codec)
     return True
 
 
 def validate_audio_codec_conversion(src_codec, dst_codec, audio_stream):
     codec = codecs.AudioCodec(src_codec)
     if dst_codec not in codec.get_supported_conversions():
-        raise UnsupportedAudioCodecConversion(src_codec, dst_codec)
+        raise exceptions.UnsupportedAudioCodecConversion(src_codec, dst_codec)
     if src_codec != dst_codec and \
             audio_stream['channels'] > _MAX_SUPPORTED_AUDIO_CHANNELS:
         # Multi-channel audio is not supported by all audio codecs.
         # We want to avoid creating another list to keep this information,
         # so we’ll just assume that if we found multi-channel audio in the input,
         # it’s OK and otherwise it’s not supported.
-        raise UnsupportedAudioChannelLayout(audio_stream['channels'])
+        raise exceptions.UnsupportedAudioChannelLayout(audio_stream['channels'])
     return True

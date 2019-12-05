@@ -34,12 +34,12 @@ class TestGettingEncoder(TestCase):
         assert(ffmpeg.codecs.get_video_encoder("h264") == "libx264")
 
     def test_invalid_video_codec(self):
-        with self.assertRaises(ffmpeg.validation.UnsupportedVideoCodec):
+        with self.assertRaises(ffmpeg.exceptions.UnsupportedVideoCodec):
             ffmpeg.codecs.get_video_encoder("bla")
 
     def test_valid_audio_codec(self):
         assert(ffmpeg.codecs.get_audio_encoder("mp3") == "libmp3lame")
 
     def test_invalid_audio_codec(self):
-        with self.assertRaises(ffmpeg.validation.UnsupportedAudioCodec):
+        with self.assertRaises(ffmpeg.exceptions.UnsupportedAudioCodec):
             ffmpeg.codecs.get_audio_encoder("bla")

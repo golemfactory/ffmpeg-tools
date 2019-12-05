@@ -2,8 +2,10 @@ import os
 import re
 import subprocess
 import json
+from typing import Any, Dict, List
 
 from . import codecs
+from . import exceptions
 from . import meta
 
 
@@ -11,25 +13,6 @@ FFMPEG_COMMAND = "ffmpeg"
 FFPROBE_COMMAND = "ffprobe"
 
 TMP_DIR = "/golem/work/tmp/"
-
-
-class CommandFailed(Exception):
-    def __init__(self, command, error_code):
-        super().__init__()
-        self.command = command
-        self.error_code = error_code
-
-
-class InvalidArgument(Exception):
-    pass
-
-
-class InvalidCommandOutput(Exception):
-    pass
-
-
-class FileAlreadyExists(Exception):
-    pass
 
 
 def flatten_list(list_of_lists):
@@ -44,7 +27,7 @@ def exec_cmd(cmd, file=None):
 
     ret = pc.wait()
     if ret != 0:
-        raise CommandFailed(cmd, ret)
+        raise exceptions.CommandFailed(cmd, ret)
 
 
 def exec_cmd_to_file(cmd, filepath):
@@ -66,7 +49,7 @@ def exec_cmd_to_string(cmd):
     result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     if result.returncode != 0:
-        raise CommandFailed(cmd, result.returncode)
+        raise exceptions.CommandFailed(cmd, result.returncode)
     return result.stdout.decode('utf-8')
 
 
@@ -144,7 +127,7 @@ def strip_suffix_from_segments_and_rename_files(output_list_file_path, suffix):
         if not file_path.endswith(suffix):
             # Should not happen if the list contains what we expect but we
             # can't just assume that.
-            raise InvalidCommandOutput(
+            raise exceptions.InvalidCommandOutput(
                 f"Segment name does not match the expected pattern: {file_path}")
 
         # Segment paths are relative to the location of the list file
@@ -155,7 +138,7 @@ def strip_suffix_from_segments_and_rename_files(output_list_file_path, suffix):
         if os.path.exists(new_path):
             # This should never happen but is not impossible (filesystem is not
             # under our sole control) so an assert is not appropriate.
-            raise FileAlreadyExists(
+            raise exceptions.FileAlreadyExists(
                 f"Renaming '{file_path}' to '{new_path}' would overwrite the other file.")
 
         os.rename(full_file_path, full_new_path)
@@ -238,6 +221,18 @@ def transcode_video_command(track, output_file, targs):
         "-f", targs['container'],
     ] if 'container' in targs else [])
 
+    if 'audio' in targs:
+        # NOTE: It's not guaranteed that the file passed in here by the caller does not
+        # have an audio track unless the file was passed to extract_streams_command() first.
+        # If it wasn't, the audio parameters could actually have effect on the output.
+        # We assume that it was though, because doing otherwise is not useful in practice.
+        # We could inspect the file with ffprobe (again) to be sure but I don't think
+        # it's worth it for such a fringe case.
+        raise exceptions.InvalidArgument(
+            "The 'transcode' command works with a video stream extracted from the input video. "
+            "Audio parameters would have no effect when used here. "
+            "You should pass them to the 'replace' command instead.")
+
     # video settings
     if 'video' in targs and 'codec' in targs['video']:
         vcodec = targs['video']['codec']
@@ -254,17 +249,6 @@ def transcode_video_command(track, output_file, targs):
         vbitrate = targs['video']['bitrate']
         cmd.append("-b:v")
         cmd.append(vbitrate)
-
-    # audio settings
-    if 'audio' in targs and 'codec' in targs['audio']:
-        acodec = targs['audio']['codec']
-        cmd.append("-c:a")
-        cmd.append(codecs.get_audio_encoder(acodec))
-
-    if 'audio' in targs and 'bitrate' in targs['audio']:
-        abitrate = targs['audio']['bitrate']
-        cmd.append("-b:a")
-        cmd.append(abitrate)
 
     if 'resolution' in targs:
         res = targs['resolution']
@@ -310,6 +294,7 @@ def replace_streams(input_file,
                     replacement_source,
                     output_file,
                     stream_type,
+                    targs,
                     container=None,
                     strip_unsupported_data_streams=False,
                     strip_unsupported_subtitle_streams=False):
@@ -323,42 +308,41 @@ def replace_streams(input_file,
         replacement_source,
         output_file,
         stream_type,
+        targs,
         container,
         strip_unsupported_data_streams,
         strip_unsupported_subtitle_streams)
     exec_cmd(cmd)
 
 
-def get_list_of_streams_numbers_to_skip(
+def get_lists_of_unsupported_stream_numbers(
     metadata,
-    strip_unsupported_data_streams,
-    strip_unsupported_subtitle_streams
 ):
-    list_of_streams_to_skip = []
+    unsupported_data_streams = []
+    unsupported_subtitle_streams = []
     for stream_metadata in metadata.get('streams'):
         if (
-            strip_unsupported_data_streams and
             stream_metadata.get('codec_type') == 'data' and
             stream_metadata.get('codec_name') not in
             codecs.DATA_STREAM_WHITELIST
         ):
-            list_of_streams_to_skip.append(stream_metadata.get('index'))
+            unsupported_data_streams.append(stream_metadata.get('index'))
 
         elif (
-            strip_unsupported_subtitle_streams and
             stream_metadata.get('codec_type') == 'subtitle' and
             stream_metadata.get('codec_name') not in
             codecs.SUBTITLE_STREAM_WHITELIST
         ):
-            list_of_streams_to_skip.append(stream_metadata.get('index'))
+            unsupported_subtitle_streams.append(stream_metadata.get('index'))
 
-    return list_of_streams_to_skip
+    return (unsupported_data_streams, unsupported_subtitle_streams)
 
 
 def replace_streams_command(input_file,
                             replacement_source,
                             output_file,
                             stream_type,
+                            targs,
                             container=None,
                             strip_unsupported_data_streams=False,
                             strip_unsupported_subtitle_streams=False):
@@ -373,6 +357,8 @@ def replace_streams_command(input_file,
         type will be taken. Must exist.
     :param output_file: Container to put the streams in. Must not exist.
     :param stream_type: Stream type specifier.
+    :param targs: Dictionary with additional parameters used by command
+    :param container: Container of output file
         See https://ffmpeg.org/ffmpeg.html#Stream-specifiers.
         The following values are supported:
             - `v` - same as `V`.
@@ -385,22 +371,38 @@ def replace_streams_command(input_file,
     """
     VALID_STREAM_TYPES = {'v', 'V', 'a', 's', 'd', 't'}
     if stream_type not in VALID_STREAM_TYPES:
-        raise InvalidArgument(
+        raise exceptions.InvalidArgument(
             f"Invalid value of 'stream_type'. "
             f"Should be one of: {', '.join(VALID_STREAM_TYPES)}"
         )
 
-    metadata = get_metadata_json(input_file)
-    stream_numbers_to_strip = get_list_of_streams_numbers_to_skip(
-        metadata,
-        strip_unsupported_data_streams,
-        strip_unsupported_subtitle_streams,
-    )
+    if 'video' in targs:
+        # The video parameters could have an effect here if we added them to the
+        # ffmpeg command but we don't want to. It could result in video
+        # being transcoded again - i.e. work that was supposed to be already
+        # performed by the 'transcode' command, potentially on a completely
+        # different machine.
+        raise exceptions.InvalidArgument(
+            "The video has already been transcoded so it's too late to specify video parameters. "
+            "Then would have no effect when used here. "
+            "You should pass them to the 'transcode' command instead.")
 
-    map_options = [
-        ["-map", f"-0:{index}"]
-        for index in stream_numbers_to_strip
-    ]
+    metadata = get_metadata_json(input_file)
+    (unsupported_data_streams, unsupported_subtitle_streams) = \
+        get_lists_of_unsupported_stream_numbers(metadata)
+
+    data_map_options = []
+    subtitle_map_options = []
+    if strip_unsupported_data_streams:
+        data_map_options = (
+            ["-map", f"-0:{index}"]
+            for index in unsupported_data_streams
+        )
+    if strip_unsupported_subtitle_streams:
+        subtitle_map_options = (
+            ["-map", f"-0:{index}"]
+            for index in unsupported_subtitle_streams
+        )
 
     cmd = [
         FFMPEG_COMMAND,
@@ -410,13 +412,18 @@ def replace_streams_command(input_file,
         "-map", f"1:{stream_type}",
         "-map", "0",
         "-map", f"-0:{stream_type}",
-    ] + flatten_list(map_options) + [
+    ] + flatten_list(data_map_options) + [
+    ] + flatten_list(subtitle_map_options) + [
         "-copy_unknown",
         "-c:v", "copy",
         "-c:d", "copy",
     ] + ([
         "-f", container,
-    ] if container is not None else []) + [
+    ] if container is not None else []) + ([
+        "-c:a", codecs.get_audio_encoder(targs['audio']['codec']),
+    ] if 'audio' in targs and 'codec' in targs['audio'] else []) + ([
+        "-b:a", targs['audio']['bitrate'],
+    ] if 'audio' in targs and 'bitrate' in targs['audio'] else []) + [
         output_file,
     ]
 
@@ -507,3 +514,65 @@ def get_metadata_json(video):
     cmd = get_metadata_command(video)
     metadata_str = exec_cmd_to_string(cmd)
     return json.loads(metadata_str)
+
+
+def get_query_muxer_info_command(muxer: str) -> List[str]:
+    cmd = [
+        FFMPEG_COMMAND,
+        '-nostdin',
+        '-hide_banner',
+        '-h', f'muxer={muxer}',
+    ]
+    return cmd
+
+
+def _parse_default_audio_codec_out_of_muxer_info(muxer_info: str) -> List[str]:
+    """
+    Looks for audio codec in ffmpeg output.
+    """
+
+    # Sample of expected text passed to the regex:
+    #
+    # Muxer 3g2 [3GP2 (3GPP2 file format)]:
+    #     Common extensions: 3g2.
+    #     Default video codec: h263.
+    #     Default audio codec: amr_nb.
+    # matroska muxer AVOptions:
+    return re.findall(
+        r"""
+        ^\s*                        # Leading whitespace
+        Default\ ?audio\ ?codec:\s* # Label
+        (.*[^\s.])\s*               # Codec name
+        \.?                         # Optional dot at the end of the line
+        \s*$                        # Trailing whitespace
+        """,
+        muxer_info,
+        re.X | re.MULTILINE
+    )
+
+
+def query_muxer_info(muxer: str) -> Dict[str, Any]:
+    """
+    Returns information about a specific muxer, parsed out of the output of `ffmpeg -h`.
+
+    Currently this includes the following fields (more may be added in the future):
+    - `default_audio_codec`: the name of the audio codec ffmpeg uses when creating
+        a video that uses this muxer and the name of the audio codec is not specified explicitly.
+    """
+
+    muxer_info_command = get_query_muxer_info_command(muxer)
+    muxer_info = exec_cmd_to_string(muxer_info_command)
+
+    audio_codecs = _parse_default_audio_codec_out_of_muxer_info(muxer_info)
+
+    if len(audio_codecs) == 0:
+        return {}
+
+    if len(audio_codecs) >= 2:
+        raise exceptions.NoMatchingEncoder(
+            f"Found {len(audio_codecs)} things in ffmpeg output that could be the default audio codec name. "
+            f"Expected exactly one.")
+
+    return {
+        'default_audio_codec': audio_codecs[0],
+    }

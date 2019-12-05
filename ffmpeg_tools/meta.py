@@ -1,6 +1,7 @@
 import json
 
 from . import commands
+from . import exceptions
 
 
 def get_metadata(video):
@@ -8,7 +9,7 @@ def get_metadata(video):
     try:
         metadata_str = commands.get_metadata_str(video)
         return json.loads(metadata_str)
-    except commands.CommandFailed:
+    except exceptions.CommandFailed:
         return {}
 
 
@@ -78,7 +79,8 @@ def create_params(vformat, resolution, vcodec, acodec=None,
         args["frame_rate"] = frame_rate
 
     # Audio parameters
-    args["audio"] = dict()
+    if acodec or audio_bitrate:
+        args["audio"] = {}
 
     if acodec:
         args["audio"]["codec"] = acodec

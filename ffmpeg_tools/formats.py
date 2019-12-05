@@ -1,8 +1,10 @@
 import enum
 from math import gcd
+from typing import NamedTuple
 
-from . import validation
 from . import codecs
+from . import exceptions
+from . import frame_rate
 
 
 
@@ -44,7 +46,7 @@ class Container(enum.Enum):
     # enum when all conversion options failed.
     @classmethod
     def _missing_(cls, value):
-        raise validation.UnsupportedVideoFormat(value)
+        raise exceptions.UnsupportedVideoFormat(value)
 
     @staticmethod
     def from_name(name: str) -> 'Container':
@@ -343,6 +345,7 @@ _aspect_ratio_overrides = {
     ]
 }
 
+
 _frame_rates = {
     # NOTE 1: The same frame rate can often be represented a few slightly
     # different ways. For example 24 FPS could be 24, '24', '24/1', '48/2'
@@ -351,18 +354,27 @@ _frame_rates = {
     # valid.
 
     # NOTE 2: The common values of 23.976 and 29.97 used to refer to the NTSC
-    # frame rates are only approximations. In any situation other than just
-    # presenting them to the user we want to use the exact values: '24000/1001'
-    # and '30000/1001'.
+    # frame rates are only approximations. We want to represent them with exact
+    # values: 24000/1001 and 30000/1001. This is represented as namedtuple with
+    # fields (24000, 1001) and (30000, 1001). All other values are represented
+    # the same way, to keep whole dict unified. Values in tuple are int type,
+    # there are no floats allowed
 
-    '24000/1001', # 23.976 FPS (NTSC)
-    24,
-    25,
-    '30000/1001', # 29.97 FPS (NTSC)
-    30,
-    50,
-    60,
+    frame_rate.FrameRate(24000, 1001),  # 23.976 FPS (NTSC)
+    frame_rate.FrameRate(12),
+    frame_rate.FrameRate(15),
+    frame_rate.FrameRate(24),
+    frame_rate.FrameRate(25),
+    frame_rate.FrameRate(30000, 1001),  # 29.97 FPS (NTSC)
+    frame_rate.FrameRate(30),
+    frame_rate.FrameRate(50),
+    frame_rate.FrameRate(60),
+    frame_rate.FrameRate(240),
+    frame_rate.FrameRate(1000),
 }
+
+assert all(isinstance(x.dividend, int) for x in _frame_rates)
+assert all(isinstance(x.divisor, int) for x in _frame_rates)
 
 
 def list_supported_formats():

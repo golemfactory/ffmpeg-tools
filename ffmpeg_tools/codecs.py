@@ -1,6 +1,8 @@
 import enum
 
-from . import validation
+from . import exceptions
+from . import frame_rate
+
 
 DATA_STREAM_WHITELIST = [
     'bin_data'
@@ -38,7 +40,7 @@ class VideoCodec(enum.Enum):
     # enum when all conversion options failed.
     @classmethod
     def _missing_(cls, value):
-        raise validation.UnsupportedVideoCodec(value, "")
+        raise exceptions.UnsupportedVideoCodec(value, "")
 
     @staticmethod
     def from_name(name: str) -> 'VideoCodec':
@@ -74,7 +76,7 @@ class AudioCodec(enum.Enum):
     # enum when all conversion options failed.
     @classmethod
     def _missing_(cls, value):
-        raise validation.UnsupportedAudioCodec(value, "")
+        raise exceptions.UnsupportedAudioCodec(value, "")
 
     @staticmethod
     def from_name(name: str) -> 'AudioCodec':
@@ -197,3 +199,19 @@ def list_supported_audio_conversions(codec):
         return []
 
     return AudioCodec(codec).get_supported_conversions()
+
+
+MAX_SUPPORTED_FRAME_RATE = {
+    VideoCodec.MPEG_1.value: 60
+}
+
+FRAME_RATE_SUBSTITUTIONS = {
+    VideoCodec.MPEG_2.value: {
+        frame_rate.FrameRate(25, 2): frame_rate.FrameRate(12),
+    }
+}
+assert all(
+    original == original.normalized() and substitute == substitute.normalized()
+    for codec, rules in FRAME_RATE_SUBSTITUTIONS.items()
+    for original, substitute in rules.items()
+)
