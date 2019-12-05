@@ -50,7 +50,7 @@ def validate_transcoding_params(
     dst_params,
     src_metadata,
     dst_muxer_info = None,
-    dst_audio_encoder_info = {},
+    dst_audio_encoder_info = None,
     strip_unsupported_data_streams=False,
     strip_unsupported_subtitle_streams=False,
 ):
@@ -318,10 +318,16 @@ def validate_frame_rate(
 def validate_audio_sample_rates(
         src_metadata: Dict[str, Any],
         dest_audio_codec: str,
-        dst_audio_encoder_info: Dict[str, Any]) -> bool:
+        dst_audio_encoder_info: Optional[Dict[str, Any]]) -> bool:
 
     assert dest_audio_codec in codecs.AudioCodec._value2member_map_
     assert codecs.AudioCodec(dest_audio_codec).get_encoder() is not None
+
+    if dst_audio_encoder_info is None:
+        # If the user has decided not to provide encoder info, there's nothing
+        # we can do. We can't be sure that the target sample rate is supported
+        # but we want this info to be optional so we can't just reject the video.
+        return True
 
     if 'sample_rates' not in dst_audio_encoder_info:
         # NOTE: `ffmpeg -h` unfortunately does not provide sample rates in all
