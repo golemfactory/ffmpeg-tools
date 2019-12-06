@@ -1,9 +1,10 @@
 import enum
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from . import exceptions
 from . import formats
 from . import frame_rate
+from . import utils
 
 
 DATA_STREAM_WHITELIST = [
@@ -89,6 +90,19 @@ class AudioCodec(enum.Enum):
 
     def can_convert(self, audio_codec: str) -> bool:
         return audio_codec in self.get_supported_conversions()
+
+    def is_supported_sample_rate(self, sample_rate: int, encoder_info: Dict[str, Any]=None) -> bool:
+        encoder = self.get_encoder()
+        if encoder is None:
+            # If we cannot encode, we obviously do not support any sample rates.
+            return False
+
+        # First try encoder info. The assumption is that it matches the current
+        # audio codec (though we don't have any way to check that).
+        if encoder_info is not None and 'sample_rates' in encoder_info:
+            return sample_rate in encoder_info['sample_rates']
+
+        return False
 
 
 class SubtitleCodec(enum.Enum):
@@ -263,3 +277,17 @@ assert all(
     for codec, rules in FRAME_RATE_SUBSTITUTIONS.items()
     for original, substitute in rules.items()
 )
+
+
+def is_supported_sample_rate(
+    audio_codec: str,
+    sample_rate: int,
+    encoder_info: Dict[str, Any]=None,
+) -> bool:
+
+    try:
+        codec = AudioCodec(audio_codec)
+    except exceptions.UnsupportedAudioCodec:
+        return False
+
+    return codec.is_supported_sample_rate(sample_rate, encoder_info)

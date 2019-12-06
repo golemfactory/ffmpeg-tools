@@ -3,7 +3,27 @@ from unittest import TestCase, mock
 from ffmpeg_tools import codecs
 from ffmpeg_tools import exceptions
 from ffmpeg_tools import formats
+from ffmpeg_tools import utils
 from ffmpeg_tools import validation
+
+
+class TestAudioCodec(TestCase):
+    @mock.patch.dict('ffmpeg_tools.codecs._AUDIO_ENCODERS', {'aac': None})
+    def test_is_supported_sample_rate_should_return_false_if_codec_does_not_have_encoder(self):
+        self.assertFalse(codecs.AudioCodec.AAC.is_supported_sample_rate(5000, None))
+        self.assertFalse(codecs.AudioCodec.AAC.is_supported_sample_rate(48000, None))
+
+    @mock.patch.dict('ffmpeg_tools.codecs._AUDIO_ENCODERS', {'aac': 'aac'})
+    def test_is_supported_sample_rate_should_use_encoder_info_if_available(self):
+        encoder_info = {'sample_rates': [5000, 48000]}
+        self.assertTrue(codecs.AudioCodec.AAC.is_supported_sample_rate(5000, encoder_info))
+        self.assertTrue(codecs.AudioCodec.AAC.is_supported_sample_rate(48000, encoder_info))
+        self.assertFalse(codecs.AudioCodec.AAC.is_supported_sample_rate(6000, encoder_info))
+
+    @mock.patch.dict('ffmpeg_tools.codecs._AUDIO_ENCODERS', {'aac': 'aac'})
+    def test_is_supported_sample_rate_should_return_false_if_supported_sample_rates_cannot_be_determined(self):
+        self.assertFalse(codecs.AudioCodec.AAC.is_supported_sample_rate(5000, None))
+        self.assertFalse(codecs.AudioCodec.AAC.is_supported_sample_rate(48000, None))
 
 
 class TestSubtitleCodec(TestCase):
@@ -111,3 +131,21 @@ class TestGettingEncoder(TestCase):
     def test_invalid_audio_codec(self):
         with self.assertRaises(exceptions.UnsupportedAudioCodec):
             codecs.get_audio_encoder("bla")
+
+
+class TestIsSupportedSampleRate(TestCase):
+    def test_is_supported_sample_rate_should_ask_audio_codec_if_codec_supported(self):
+        with mock.patch.object(codecs.AudioCodec, 'is_supported_sample_rate', return_value=True):
+            self.assertEqual(codecs.is_supported_sample_rate("aac", 5000, {}), True)
+
+        with mock.patch.object(codecs.AudioCodec, 'is_supported_sample_rate', return_value=False):
+            self.assertEqual(codecs.is_supported_sample_rate("aac", 5000, {}), False)
+
+    def test_is_sample_rate_supported_should_return_false_if_codec_not_supported(self):
+        assert 'abcdef' not in codecs.AudioCodec._value2member_map_
+
+        with mock.patch.object(codecs.AudioCodec, 'is_supported_sample_rate', return_value=True):
+            self.assertEqual(codecs.is_supported_sample_rate("abcdef", 5000, {}), False)
+
+        with mock.patch.object(codecs.AudioCodec, 'is_supported_sample_rate', return_value=False):
+            self.assertEqual(codecs.is_supported_sample_rate("abcdef", 5000, {}), False)
