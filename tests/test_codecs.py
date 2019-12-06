@@ -8,11 +8,13 @@ from ffmpeg_tools import validation
 
 
 class TestAudioCodec(TestCase):
+    @mock.patch.dict('ffmpeg_tools.codecs._SUPPORTED_SAMPLE_RATES', {'aac': utils.SparseRange({48000})})
     @mock.patch.dict('ffmpeg_tools.codecs._AUDIO_ENCODERS', {'aac': None})
     def test_is_supported_sample_rate_should_return_false_if_codec_does_not_have_encoder(self):
         self.assertFalse(codecs.AudioCodec.AAC.is_supported_sample_rate(5000, None))
         self.assertFalse(codecs.AudioCodec.AAC.is_supported_sample_rate(48000, None))
 
+    @mock.patch.dict('ffmpeg_tools.codecs._SUPPORTED_SAMPLE_RATES', {'aac': utils.SparseRange({48000})})
     @mock.patch.dict('ffmpeg_tools.codecs._AUDIO_ENCODERS', {'aac': 'aac'})
     def test_is_supported_sample_rate_should_use_encoder_info_if_available(self):
         encoder_info = {'sample_rates': [5000, 48000]}
@@ -20,10 +22,40 @@ class TestAudioCodec(TestCase):
         self.assertTrue(codecs.AudioCodec.AAC.is_supported_sample_rate(48000, encoder_info))
         self.assertFalse(codecs.AudioCodec.AAC.is_supported_sample_rate(6000, encoder_info))
 
+    @mock.patch.dict('ffmpeg_tools.codecs._SUPPORTED_SAMPLE_RATES', {'aac': utils.SparseRange({48000})})
+    @mock.patch.dict('ffmpeg_tools.codecs._AUDIO_ENCODERS', {'aac': 'aac'})
+    def test_is_supported_sample_rate_should_use_hardcoded_rates_if_encoder_info_does_not_contain_rates(self):
+        encoder_info = {}
+        self.assertFalse(codecs.AudioCodec.AAC.is_supported_sample_rate(5000, encoder_info))
+        self.assertTrue(codecs.AudioCodec.AAC.is_supported_sample_rate(48000, encoder_info))
+
+    @mock.patch.dict('ffmpeg_tools.codecs._SUPPORTED_SAMPLE_RATES', {'aac': utils.SparseRange({48000})})
+    @mock.patch.dict('ffmpeg_tools.codecs._AUDIO_ENCODERS', {'aac': 'aac'})
+    def test_is_supported_sample_rate_should_use_hardcoded_rates_if_encoder_info_not_available(self):
+        self.assertFalse(codecs.AudioCodec.AAC.is_supported_sample_rate(5000, None))
+        self.assertTrue(codecs.AudioCodec.AAC.is_supported_sample_rate(48000, None))
+
+    @mock.patch.dict('ffmpeg_tools.codecs._SUPPORTED_SAMPLE_RATES', {'aac': utils.SparseRange({48000})})
+    @mock.patch.dict('ffmpeg_tools.codecs._AUDIO_ENCODERS', {'aac': 'aac'})
+    def test_is_supported_sample_rate_should_not_use_hardcoded_rates_if_encoder_info_specifies_that_no_rates_are_supported(self):
+        encoder_info = {'sample_rates': []}
+        self.assertFalse(codecs.AudioCodec.AAC.is_supported_sample_rate(5000, encoder_info))
+        self.assertFalse(codecs.AudioCodec.AAC.is_supported_sample_rate(48000, encoder_info))
+
+    @mock.patch.dict('ffmpeg_tools.codecs._SUPPORTED_SAMPLE_RATES', clear=True)
     @mock.patch.dict('ffmpeg_tools.codecs._AUDIO_ENCODERS', {'aac': 'aac'})
     def test_is_supported_sample_rate_should_return_false_if_supported_sample_rates_cannot_be_determined(self):
         self.assertFalse(codecs.AudioCodec.AAC.is_supported_sample_rate(5000, None))
         self.assertFalse(codecs.AudioCodec.AAC.is_supported_sample_rate(48000, None))
+
+    @mock.patch.dict('ffmpeg_tools.codecs._SUPPORTED_SAMPLE_RATES', {
+        'a': utils.SparseRange({48000}),
+        'aac': utils.SparseRange({5000}),
+    })
+    @mock.patch.dict('ffmpeg_tools.codecs._AUDIO_ENCODERS', {'aac': 'a'})
+    def test_is_supported_sample_rate_should_use_encoder_name_rather_than_codec_name(self):
+        self.assertFalse(codecs.AudioCodec.AAC.is_supported_sample_rate(5000, None))
+        self.assertTrue(codecs.AudioCodec.AAC.is_supported_sample_rate(48000, None))
 
 
 class TestSubtitleCodec(TestCase):

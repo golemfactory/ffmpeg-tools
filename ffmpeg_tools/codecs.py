@@ -102,6 +102,14 @@ class AudioCodec(enum.Enum):
         if encoder_info is not None and 'sample_rates' in encoder_info:
             return sample_rate in encoder_info['sample_rates']
 
+        # If encoder info is not available or does not contain sample rates for
+        # our encoder, fall back to hard-coded sample rates.
+
+        if encoder in _SUPPORTED_SAMPLE_RATES:
+            return _SUPPORTED_SAMPLE_RATES[encoder].contains(sample_rate)
+
+        # This is unlikely in typical use. An encoder not in _SUPPORTED_SAMPLE_RATES
+        # is not likely to pass our audio codec validations.
         return False
 
 
@@ -277,6 +285,27 @@ assert all(
     for codec, rules in FRAME_RATE_SUBSTITUTIONS.items()
     for original, substitute in rules.items()
 )
+
+
+_SUPPORTED_SAMPLE_RATES: Dict[str, utils.SparseRange] = {
+    # These rates can be obtained from `ffmpeg -h` and are here for cases where we
+    # can't ask ffmpeg about them.
+    "aac":               utils.SparseRange({96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350}),
+    "mp3":               utils.SparseRange({                     48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000      }),
+    "libmp3lame":        utils.SparseRange({                     48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000      }),
+    "mp2":               utils.SparseRange({                     48000, 44100, 32000, 24000, 22050, 16000                          }),
+    "opus":              utils.SparseRange({                     48000                                                             }),
+    "libopus":           utils.SparseRange({                     48000,               24000,        16000, 12000,        8000      }),
+
+    # These rates are not reported by `ffmpeg -h` and were found empirically by manually running various conversions
+    # and seeing if ffmpeg reports an error.
+    "libopencore_amrnb": utils.SparseRange({                                                                             8000      }),
+    "ac3":               utils.SparseRange({                     48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000      }),
+    "libvorbis":         utils.SparseRange({(1000, 200_000)}), # In theory rates between 1 and 1000 are supported but some specific values crash ffmpeg
+    "wmav2":             utils.SparseRange({(2, 48000)}),
+    "pcm_u8":            utils.SparseRange({(1, None)}),       # Tested up to 1000000 Hz. Likely works for any positive value.
+}
+assert (set(_AUDIO_ENCODERS.values()) - {None}).issubset(set(_SUPPORTED_SAMPLE_RATES))
 
 
 def is_supported_sample_rate(
