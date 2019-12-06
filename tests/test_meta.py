@@ -1,4 +1,4 @@
-from unittest import TestCase
+from unittest import TestCase, mock
 
 from ffmpeg_tools import meta
 
@@ -121,3 +121,106 @@ class TestMetadata(TestCase):
 
     def test_get_metadata_invalid_path(self):
         self.assertEqual(meta.get_metadata("blabla"), {})
+
+    def test_count_streams(self):
+        metadata = {'streams': [
+            {"codec_type": "video"},
+            {"codec_type": "audio"},
+            {"codec_type": "audio"},
+            {"codec_type": "subtitle"},
+            {"codec_type": "data"},
+            {"codec_type": "whatever"},
+            {"codec_type": ""},
+            {"codec_type": None},
+            {},
+        ]}
+        self.assertEqual(meta.count_streams(metadata), 9)
+        self.assertEqual(meta.count_streams(metadata, codec_type=None), 9)
+        self.assertEqual(meta.count_streams(metadata, codec_type='video'), 1)
+        self.assertEqual(meta.count_streams(metadata, codec_type='audio'), 2)
+        self.assertEqual(meta.count_streams(metadata, codec_type='subtitle'), 1)
+        self.assertEqual(meta.count_streams(metadata, codec_type='data'), 1)
+        self.assertEqual(meta.count_streams(metadata, codec_type='whatever'), 1)
+        self.assertEqual(meta.count_streams(metadata, codec_type='nothing'), 0)
+        self.assertEqual(meta.count_streams(metadata, codec_type=''), 1)
+
+    def test_find_stream_indexes(self):
+        metadata = {'streams': [
+            {"codec_type": "video", 'index': 0},
+            {"codec_type": "audio", 'index': 1},
+            {"codec_type": "audio", 'index': 2},
+            {"codec_type": "subtitle", 'index': 3},
+            {"codec_type": "subtitle", 'index': 3},
+            {"codec_type": "data", 'index': 4},
+            {"codec_type": "whatever", 'index': 5},
+            {"codec_type": "", 'index': 6},
+            {"codec_type": None, 'index': 7},
+            {'index': 8},
+            {"codec_type": "audio", 'index': '2'},
+            {"codec_type": "audio", 'index': {}},
+            {"codec_type": "video", 'index': None},
+            {"codec_type": "subtitle"},
+            {},
+        ]}
+        self.assertCountEqual(meta.find_stream_indexes(metadata), [0, 1, 2, 3, 3, 4, 5, 6, 7, 8, '2', {}, None, None, None])
+        self.assertCountEqual(meta.find_stream_indexes(metadata, codec_type='video'), [0, None])
+        self.assertCountEqual(meta.find_stream_indexes(metadata, codec_type='audio'), [1, 2, '2', {}])
+        self.assertCountEqual(meta.find_stream_indexes(metadata, codec_type='subtitle'), [3, 3, None])
+        self.assertCountEqual(meta.find_stream_indexes(metadata, codec_type='data'), [4])
+        self.assertCountEqual(meta.find_stream_indexes(metadata, codec_type='whatever'), [5])
+        self.assertCountEqual(meta.find_stream_indexes(metadata, codec_type='nothing'), [])
+        self.assertCountEqual(meta.find_stream_indexes(metadata, codec_type=''), [6])
+
+    def test_get_attribute_from_all_streams(self):
+        metadata = {'streams': [
+            {"codec_type": "video", 'index': 0},
+            {"codec_type": "audio", 'index': 1},
+            {"codec_type": "audio", 'index': 2},
+            {"codec_type": "subtitle", 'index': 3},
+            {"codec_type": "data", 'index': 4},
+            {"codec_type": "whatever", 'index': 5},
+            {"codec_type": "", 'index': 6},
+            {"codec_type": None, 'index': 7},
+            {'index': 8},
+        ]}
+        self.assertCountEqual(meta.get_attribute_from_all_streams(metadata, 'index'), range(9))
+        self.assertCountEqual(meta.get_attribute_from_all_streams(metadata, 'index', codec_type=None), range(9))
+        self.assertCountEqual(meta.get_attribute_from_all_streams(metadata, 'index', codec_type='video'), [0])
+        self.assertCountEqual(meta.get_attribute_from_all_streams(metadata, 'index', codec_type='audio'), [1, 2])
+        self.assertCountEqual(meta.get_attribute_from_all_streams(metadata, 'index', codec_type='subtitle'), [3])
+        self.assertCountEqual(meta.get_attribute_from_all_streams(metadata, 'index', codec_type='data'), [4])
+        self.assertCountEqual(meta.get_attribute_from_all_streams(metadata, 'index', codec_type='whatever'), [5])
+        self.assertCountEqual(meta.get_attribute_from_all_streams(metadata, 'index', codec_type='nothing'), [])
+        self.assertCountEqual(meta.get_attribute_from_all_streams(metadata, 'index', codec_type=''), [6])
+
+    def test_get_attribute_from_all_streams_should_support_duplicates(self):
+        metadata = {'streams': [
+            {"codec_type": "audio", 'index': 2},
+            {"codec_type": "subtitle", 'index': 2},
+            {"codec_type": "subtitle", 'index': 2},
+        ]}
+        self.assertCountEqual(meta.get_attribute_from_all_streams(metadata, 'index'), [2, 2, 2])
+        self.assertCountEqual(meta.get_attribute_from_all_streams(metadata, 'index', codec_type='video'), [])
+        self.assertCountEqual(meta.get_attribute_from_all_streams(metadata, 'index', codec_type='audio'), [2])
+        self.assertCountEqual(meta.get_attribute_from_all_streams(metadata, 'index', codec_type='subtitle'), [2, 2])
+
+    def test_get_attribute_from_all_streams_should_support_non_integer_values(self):
+        metadata = {'streams': [
+            {"codec_type": "audio", 'index': '2'},
+            {"codec_type": "subtitle", 'index': {}},
+            {"codec_type": "subtitle", 'index': None},
+        ]}
+        self.assertCountEqual(meta.get_attribute_from_all_streams(metadata, 'index'), ['2', {}, None])
+        self.assertCountEqual(meta.get_attribute_from_all_streams(metadata, 'index', codec_type='video'), [])
+        self.assertCountEqual(meta.get_attribute_from_all_streams(metadata, 'index', codec_type='audio'), ['2'])
+        self.assertCountEqual(meta.get_attribute_from_all_streams(metadata, 'index', codec_type='subtitle'), [{}, None])
+
+    def test_get_attribute_from_all_streams_should_support_missing_values(self):
+        metadata = {'streams': [
+            {"codec_type": "subtitle", 'index': 0},
+            {"codec_type": "subtitle", 'index': None},
+            {"codec_type": "subtitle"},
+            {},
+        ]}
+        self.assertCountEqual(meta.get_attribute_from_all_streams(metadata, 'index'), [0, None, None, None])
+        self.assertCountEqual(meta.get_attribute_from_all_streams(metadata, 'index', codec_type='subtitle'), [0, None, None])

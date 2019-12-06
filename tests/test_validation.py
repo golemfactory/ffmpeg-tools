@@ -555,6 +555,82 @@ class TestConversionValidation(TestCase):
         dst_muxer_info = {'default_audio_codec': "aac"}
         self.assertEqual(validation._get_dst_audio_codec(params, dst_muxer_info), 'aac')
 
+    @mock.patch.dict('ffmpeg_tools.formats._CONTAINER_SUPPORTED_CODECS', {
+        "mp4": {'subtitlecodecs': ['subrip', 'ass'], 'videocodecs': ['h264'], 'audiocodecs': 'mp3'},
+        "mov": {'subtitlecodecs': ['mov_text'], 'videocodecs': ['h264'], 'audiocodecs': 'mp3'},
+    })
+    @mock.patch.dict('ffmpeg_tools.codecs._SUBTITLE_SUPPORTED_CONVERSIONS', {
+        'subrip': ['subrip', 'mov_text', 'webvtt'],
+        'ass':    ['mov_text'],
+    })
+    def test_validate_transcoding_params_should_accept_subtitles_if_they_can_be_converted_to_anything_supported_by_the_target_format(self):
+        dst_params = self.create_params("mov", [1920, 1080], "h264", "mp3", 60)
+        metadata = self.modify_metadata_with_passed_values("mp4", [1920, 1080], "h264", "mp3")
+        assert meta.count_streams(metadata, codec_type='subtitle') == 0
+        assert meta.count_streams(metadata) == 2
+
+        metadata['streams'] += [
+            {'index': 2, 'codec_type': 'subtitle', 'codec_name': 'subrip'},
+            {'index': 3, 'codec_type': 'subtitle', 'codec_name': 'ass'},
+        ]
+
+        self.assertTrue(validation.validate_transcoding_params(
+            dst_params,
+            metadata,
+            dst_muxer_info={},
+            strip_unsupported_data_streams=False,
+            strip_unsupported_subtitle_streams=False,
+        ))
+
+    @mock.patch.dict('ffmpeg_tools.formats._CONTAINER_SUPPORTED_CODECS', {
+        "mp4": {'subtitlecodecs': ['subrip', 'ass'], 'videocodecs': ['h264'], 'audiocodecs': 'mp3'},
+        "mov": {'subtitlecodecs': ['mov_text'], 'videocodecs': ['h264'], 'audiocodecs': 'mp3'},
+    })
+    @mock.patch.dict('ffmpeg_tools.codecs._SUBTITLE_SUPPORTED_CONVERSIONS', {
+        'subrip': ['subrip', 'mov_text', 'webvtt'],
+        'ass':    [],
+    })
+    def test_validate_transcoding_params_should_reject_unstripped_subtitles_if_they_cannot_be_converted_to_anything_supported_by_the_target_format(self):
+        dst_params = self.create_params("mov", [1920, 1080], "h264", "mp3", 60)
+        metadata = self.modify_metadata_with_passed_values("mp4", [1920, 1080], "h264", "mp3")
+        assert meta.count_streams(metadata, codec_type='subtitle') == 0
+        assert meta.count_streams(metadata) == 2
+
+        metadata['streams'] += [
+            {'index': 2, 'codec_type': 'subtitle', 'codec_name': 'subrip'},
+            {'index': 3, 'codec_type': 'subtitle', 'codec_name': 'ass'},
+        ]
+
+        with self.assertRaises(exceptions.UnsupportedSubtitleCodecConversion):
+            validation.validate_transcoding_params(
+                dst_params,
+                metadata,
+                dst_muxer_info={},
+                strip_unsupported_data_streams=False,
+                strip_unsupported_subtitle_streams=False,
+            )
+
+    def test_validate_transcoding_params_should_gracefully_handle_subtitle_codecs_not_in_the_subtitle_codec_enum(self):
+        assert 'undefined codec' not in codecs.SubtitleCodec._value2member_map_
+
+        dst_params = self.create_params("mov", [1920, 1080], "h264", "mp3", 60)
+        metadata = self.modify_metadata_with_passed_values("mp4", [1920, 1080], "h264", "mp3")
+        assert meta.count_streams(metadata, codec_type='subtitle') == 0
+        assert meta.count_streams(metadata) == 2
+
+        metadata['streams'] += [
+            {'index': 2, 'codec_type': 'subtitle', 'codec_name': 'undefined codec'},
+        ]
+
+        with self.assertRaises(exceptions.UnsupportedSubtitleCodecConversion):
+            validation.validate_transcoding_params(
+                dst_params,
+                metadata,
+                dst_muxer_info={},
+                strip_unsupported_data_streams=False,
+                strip_unsupported_subtitle_streams=False,
+            )
+
 
 class TestValidateUnsupportedStreams(TestCase):
     @mock.patch('ffmpeg_tools.validation.commands.find_unsupported_data_streams', return_value=[2, 3, 5])
@@ -593,10 +669,11 @@ class TestValidateUnsupportedStreams(TestCase):
         self,
         _mock_find_unsupported_subtitle_streams,
     ):
-        with self.assertRaises(exceptions.UnsupportedStream):
+        with self.assertRaises(exceptions.UnsupportedSubtitleCodecConversion):
             validation.validate_unsupported_subtitle_streams(
                 metadata={},
                 strip_unsupported_subtitle_streams=False,
+                target_container=formats.Container.c_MATROSKA,
             )
 
     @mock.patch('ffmpeg_tools.validation.commands.find_unsupported_subtitle_streams', return_value=[2, 3, 5])
@@ -607,6 +684,7 @@ class TestValidateUnsupportedStreams(TestCase):
         self.assertTrue(validation.validate_unsupported_subtitle_streams(
             metadata={},
             strip_unsupported_subtitle_streams=True,
+            target_container=formats.Container.c_MATROSKA,
         ))
 
     @mock.patch('ffmpeg_tools.validation.commands.find_unsupported_subtitle_streams', return_value=[])
@@ -617,4 +695,13 @@ class TestValidateUnsupportedStreams(TestCase):
         self.assertTrue(validation.validate_unsupported_subtitle_streams(
             metadata={},
             strip_unsupported_subtitle_streams=False,
+            target_container=formats.Container.c_MATROSKA,
         ))
+
+    def test_validate_unsupported_subtitle_streams_needs_a_known_target_container(self):
+        with self.assertRaises(exceptions.InvalidVideo):
+            validation.validate_unsupported_subtitle_streams(
+                metadata={},
+                strip_unsupported_subtitle_streams=False,
+                target_container=None,
+            )

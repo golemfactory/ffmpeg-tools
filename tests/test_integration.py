@@ -1,14 +1,13 @@
 import os
 import tempfile
 import shutil
-
 from unittest import TestCase
 
 from ffmpeg_tools import codecs
 from ffmpeg_tools import commands
 from ffmpeg_tools import formats
 from ffmpeg_tools import meta
-from tests.utils import get_absolute_resource_path
+from tests.utils import get_absolute_resource_path, generate_sample_video
 
 
 class TestIntegration(TestCase):
@@ -140,3 +139,54 @@ class TestIntegration(TestCase):
         self.assertEqual(meta.get_frame_rate(replace_step_output_metadata), '25/1')
         self.assertEqual(meta.get_audio_codec(replace_step_output_metadata), codecs.AudioCodec.MP3.value)
         self.assertEqual(round(meta.get_duration(replace_step_output_metadata)), round(meta.get_duration(input_metadata)))
+
+    def test_replace_streams_converts_subtitles(self):
+        input_path = os.path.join(self.tmp_dir, 'input.mkv')
+        replacement_path = get_absolute_resource_path("ForBiggerBlazes-[codec=h264].mp4")
+        output_path = os.path.join(self.tmp_dir, 'output.mp4')
+        generate_sample_video(
+            [
+                codecs.SubtitleCodec.ASS.value,
+                codecs.VideoCodec.MJPEG.value,
+                codecs.AudioCodec.MP3.value,
+                codecs.SubtitleCodec.SUBRIP.value,
+                codecs.VideoCodec.FLV1.value,
+                codecs.AudioCodec.AAC.value,
+                codecs.SubtitleCodec.WEBVTT.value,
+            ],
+            input_path,
+            container=formats.Container.c_MATROSKA.value)
+
+        assert os.path.isfile(input_path)
+        assert not os.path.isfile(output_path)
+
+        commands.replace_streams(
+            input_path,
+            replacement_path,
+            output_path,
+            stream_type='v',
+            targs={},
+            container=formats.Container.c_MP4.value,
+            strip_unsupported_data_streams=True,
+            strip_unsupported_subtitle_streams=True,
+        )
+
+        self.assertTrue(os.path.isfile(output_path))
+
+        metadata = meta.get_metadata(output_path)
+        self.assertEqual(meta.get_format(metadata), formats.Container.c_QUICK_TIME_DEMUXER.value)
+        self.assertIn('streams', metadata)
+
+        expected_streams = [
+             ('video', codecs.VideoCodec.H_264.value),
+             ('subtitle', codecs.SubtitleCodec.MOV_TEXT.value),
+             ('audio', codecs.AudioCodec.AAC.value),
+             ('subtitle', codecs.SubtitleCodec.MOV_TEXT.value),
+             ('audio', codecs.AudioCodec.AAC.value),
+             ('subtitle', codecs.SubtitleCodec.MOV_TEXT.value),
+        ]
+        streams = [
+            (stream_metadata.get('codec_type'), stream_metadata.get('codec_name'))
+            for stream_metadata in metadata['streams']
+        ]
+        self.assertEqual(streams, expected_streams)

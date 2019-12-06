@@ -70,6 +70,15 @@ class Container(enum.Enum):
 
         return _CONTAINER_SUPPORTED_CODECS[self.value]["audiocodecs"]
 
+    def get_supported_subtitle_codecs(self) -> List[str]:
+        if self in _EXCLUSIVE_DEMUXERS:
+            return _list_supported_subtitle_codecs_for_exclusive_demuxer(self)
+
+        if self.value not in _CONTAINER_SUPPORTED_CODECS:
+            return []
+
+        return _CONTAINER_SUPPORTED_CODECS[self.value]["subtitlecodecs"]
+
     def is_supported_video_codec(self, vcodec: Union['codecs.VideoCodec', str]) -> bool:
         if isinstance(vcodec, codecs.VideoCodec):
             return vcodec.value in self.get_supported_video_codecs()
@@ -83,6 +92,14 @@ class Container(enum.Enum):
             return acodec.value in self.get_supported_audio_codecs()
         elif isinstance(acodec, str):
             return acodec in self.get_supported_audio_codecs()
+
+        assert False, "Invalid type"
+
+    def is_supported_subtitle_codec(self, subtitle_codec: Union['codecs.SubtitleCodec', str]) -> bool:
+        if isinstance(subtitle_codec, codecs.SubtitleCodec):
+            return subtitle_codec.value in self.get_supported_subtitle_codecs()
+        elif isinstance(subtitle_codec, str):
+            return subtitle_codec in self.get_supported_subtitle_codecs()
 
         assert False, "Invalid type"
 
@@ -173,7 +190,9 @@ _ASF_CODECS = {
         "aac",
         "wmav2",
         "wmapro",
-    ]
+    ],
+    'subtitlecodecs': [
+    ],
 }
 
 _MOV_CODECS = {
@@ -190,7 +209,10 @@ _MOV_CODECS = {
         "mp3",
         "aac",
         "pcm_u8",
-    ]
+    ],
+    'subtitlecodecs': [
+        'mov_text'
+    ],
 }
 
 _FLV_CODECS = {
@@ -199,7 +221,9 @@ _FLV_CODECS = {
     ],
     "audiocodecs": [
         "mp3",
-    ]
+    ],
+    'subtitlecodecs': [
+    ],
 }
 
 _M4V_CODECS = {
@@ -211,7 +235,10 @@ _M4V_CODECS = {
         "aac",
         "ac3",
         "mp3",
-    ]
+    ],
+    'subtitlecodecs': [
+        'mov_text',
+    ],
 }
 
 _MP4_CODECS = {
@@ -224,7 +251,10 @@ _MP4_CODECS = {
     "audiocodecs": [
         "aac",
         "mp3",
-    ]
+    ],
+    'subtitlecodecs': [
+        'mov_text',
+    ],
 }
 
 _MKV_CODECS = {
@@ -250,7 +280,12 @@ _MKV_CODECS = {
         "aac",
         "mp3",
         "vorbis",
-    ]
+    ],
+    'subtitlecodecs': [
+        'ass',
+        'subrip',
+        'webvtt',
+    ],
 }
 
 _WEBM_CODECS = {
@@ -263,7 +298,10 @@ _WEBM_CODECS = {
         "opus",
         "vorbis",
         "vp8",
-    ]
+    ],
+    'subtitlecodecs': [
+        'webvtt',
+    ],
 }
 
 _OGG_CODECS = {
@@ -273,7 +311,9 @@ _OGG_CODECS = {
     "audiocodecs": [
         "opus",
         "vorbis",
-    ]
+    ],
+    'subtitlecodecs': [
+    ],
 }
 
 _AVI_CODECS = {
@@ -287,7 +327,9 @@ _AVI_CODECS = {
     "audiocodecs": [
         "mp3",
         "opus",
-    ]
+    ],
+    'subtitlecodecs': [
+    ],
 }
 
 _3GP_CODECS = {
@@ -299,7 +341,10 @@ _3GP_CODECS = {
     "audiocodecs": [
         "aac",
         "amr_nb",
-    ]
+    ],
+    'subtitlecodecs': [
+        'mov_text'
+    ],
 }
 
 _MPEG_CODECS = {
@@ -313,7 +358,9 @@ _MPEG_CODECS = {
         "ac3",
         "mp2",
         "mp3",
-    ]
+    ],
+    'subtitlecodecs': [
+    ],
 }
 
 
@@ -432,6 +479,27 @@ def _list_supported_audio_codecs_for_exclusive_demuxer(demuxer: Container) -> Li
         codec
         for muxer in demuxer.get_matching_muxers()
         for codec in muxer.get_supported_audio_codecs()
+    ))
+
+
+def list_supported_subtitle_codecs(vformat: str) -> List[str]:
+    if vformat not in Container._value2member_map_:
+        return []
+
+    return Container(vformat).get_supported_subtitle_codecs()
+
+
+def is_supported_subtitle_codec(vformat: str, codec: str) -> bool:
+    return codec in list_supported_subtitle_codecs(vformat)
+
+
+def _list_supported_subtitle_codecs_for_exclusive_demuxer(demuxer: Container) -> List[str]:
+    assert demuxer in _EXCLUSIVE_DEMUXERS
+
+    return list(set(
+        codec
+        for muxer in demuxer.get_matching_muxers()
+        for codec in muxer.get_supported_subtitle_codecs()
     ))
 
 

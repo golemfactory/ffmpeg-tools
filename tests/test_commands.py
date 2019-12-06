@@ -104,7 +104,8 @@ class TestCommands(TestCase):
             )
 
 
-    def test_replace_streams_command(self):
+    @mock.patch('ffmpeg_tools.commands.get_metadata_json')
+    def test_replace_streams_command(self, _mock_get_metadata_json):
         command = commands.replace_streams_command(
             get_absolute_resource_path('ForBiggerBlazes-[codec=h264].mp4'),
             get_absolute_resource_path('ForBiggerBlazes-[codec=h264][video-only].mkv'),
@@ -147,12 +148,14 @@ class TestCommands(TestCase):
             )
 
 
+    @mock.patch('ffmpeg_tools.commands.get_metadata_json')
     @mock.patch('ffmpeg_tools.commands.find_unsupported_data_streams', return_value=[2])
     @mock.patch('ffmpeg_tools.commands.find_unsupported_subtitle_streams', return_value=[3])
     def test_replace_streams_command_removes_streams_not_in_whitelist_if_asked_to(
         self,
         _mock_find_unsupported_subtitle_streams,
         _mock_find_unsupported_data_streams,
+        _mock_get_metadata_json,
     ):
         command = commands.replace_streams_command(
             get_absolute_resource_path('ForBiggerBlazes-[codec=h264].mp4'),
@@ -198,6 +201,159 @@ class TestCommands(TestCase):
             )
 
 
+    @mock.patch('ffmpeg_tools.commands.get_metadata_json')
+    @mock.patch('ffmpeg_tools.commands.meta.count_streams', return_value=1)             # number of video streams in the replacement file (will be added)
+    @mock.patch('ffmpeg_tools.commands.meta.find_stream_indexes', return_value=[0, 2])  # video streams from input file (will be removed)
+    @mock.patch('ffmpeg_tools.commands.select_subtitle_conversions', return_value={
+        1: 'subrip',
+        3: 'ass',
+        4: 'mov_text',
+        8: 'ass',
+    })
+    def test_replace_streams_command_should_convert_unstripped_subtitle_streams(
+        self,
+        _mock_select_subtitle_conversions,
+        _mock_find_stream_indexes,
+        _mock_count_streams,
+        _mock_get_metadata_json,
+    ):
+        command = commands.replace_streams_command(
+            input_file='input.mp4',
+            replacement_source='input[video-only].mkv',
+            output_file='output.mkv',
+            stream_type="v",
+            targs={},
+            container='matroska',
+            strip_unsupported_data_streams=False,
+            strip_unsupported_subtitle_streams=False,
+        )
+        expected_command = [
+            "ffmpeg",
+            "-nostdin",
+            "-i", 'input.mp4',
+            "-i", 'input[video-only].mkv',
+            "-map", "1:v",
+            "-map", "0",
+            "-map", "-0:v",
+            "-codec:1", "subrip",
+            "-codec:2", "ass",
+            "-codec:3", "mov_text",
+            "-codec:7", "ass",
+            "-copy_unknown",
+            "-c:v", "copy",
+            "-c:d", "copy",
+            "-f", "matroska",
+            'output.mkv',
+        ]
+
+        self.assertEqual(command, expected_command)
+
+
+    @mock.patch('ffmpeg_tools.commands.get_metadata_json')
+    @mock.patch('ffmpeg_tools.commands.meta.count_streams', return_value=2)                 # number of video streams in the replacement file (will be added)
+    @mock.patch('ffmpeg_tools.commands.meta.find_stream_indexes', return_value=[0, 8, 10])  # video streams from input file (will be removed)
+    @mock.patch('ffmpeg_tools.commands.find_unsupported_data_streams', return_value=[1, 7, 14])
+    @mock.patch('ffmpeg_tools.commands.find_unsupported_subtitle_streams', return_value=[3, 9, 13])
+    @mock.patch('ffmpeg_tools.commands.select_subtitle_conversions', return_value={
+        2: 'subrip',
+        5: 'ass',
+        6: 'mov_text',
+        11: 'ass',
+    })
+    def test_replace_streams_command_should_generate_correct_output_stream_indexes_when_some_streams_are_being_stripped(
+        self,
+        _mock_select_subtitle_conversions,
+        _mock_find_unsupported_subtitle_streams,
+        _mock_find_unsupported_data_streams,
+        _mock_find_stream_indexes,
+        _mock_count_streams,
+        _mock_get_metadata_json,
+    ):
+        command = commands.replace_streams_command(
+            input_file='input.mp4',
+            replacement_source='input[video-only].mkv',
+            output_file='output.mkv',
+            stream_type="v",
+            targs={},
+            container='matroska',
+            strip_unsupported_data_streams=True,
+            strip_unsupported_subtitle_streams=True,
+        )
+        expected_command = [
+            "ffmpeg",
+            "-nostdin",
+            "-i", 'input.mp4',
+            "-i", 'input[video-only].mkv',
+            "-map", "1:v",
+            "-map", "0",
+            "-map", "-0:v",
+            '-map', '-0:1',
+            '-map', '-0:7',
+            '-map', '-0:14',
+            '-map', '-0:3',
+            '-map', '-0:9',
+            '-map', '-0:13',
+            "-codec:2", "subrip",
+            "-codec:4", "ass",
+            "-codec:5", "mov_text",
+            "-codec:6", "ass",
+            "-copy_unknown",
+            "-c:v", "copy",
+            "-c:d", "copy",
+            "-f", "matroska",
+            'output.mkv',
+        ]
+
+        self.assertEqual(command, expected_command)
+
+
+    @mock.patch('ffmpeg_tools.commands.get_metadata_json', return_value={
+        'streams': [
+            {
+                'index': 3,
+                'codec_type': 'subtitle',
+                'codec_name': 'subrip',
+            },
+        ]
+    })
+    @mock.patch('ffmpeg_tools.commands.meta.count_streams', return_value=1)          # number of video streams in the replacement file (will be added)
+    @mock.patch('ffmpeg_tools.commands.meta.find_stream_indexes', return_value=[0])  # video streams from input file (will be removed)
+    @mock.patch.dict('ffmpeg_tools.codecs._SUBTITLE_SUPPORTED_CONVERSIONS', {
+        'subrip': ['subrip', 'ass', 'webvtt'],
+    })
+    def test_replace_streams_command_should_leave_converting_subtitles_up_to_ffmpeg_if_no_container_specified(
+        self,
+        _mock_find_stream_indexes,
+        _mock_count_streams,
+        _mock_get_metadata_json
+    ):
+        command = commands.replace_streams_command(
+            input_file='input.mp4',
+            replacement_source='input[video-only].mkv',
+            output_file='output.mkv',
+            stream_type="v",
+            targs={},
+            container=None,
+            strip_unsupported_data_streams=False,
+            strip_unsupported_subtitle_streams=False,
+        )
+        expected_command = [
+            "ffmpeg",
+            "-nostdin",
+            "-i", 'input.mp4',
+            "-i", 'input[video-only].mkv',
+            "-map", "1:v",
+            "-map", "0",
+            "-map", "-0:v",
+            "-copy_unknown",
+            "-c:v", "copy",
+            "-c:d", "copy",
+            'output.mkv',
+        ]
+
+        self.assertEqual(command, expected_command)
+
+
 class TestUnsupportedStreamDetection(TestCase):
     METADATA_WITH_SUBTITLES = {
         'streams': [
@@ -218,9 +374,106 @@ class TestUnsupportedStreamDetection(TestCase):
     def test_find_unsupported_data_streams_strips_non_whitelisted_streams(self):
         self.assertCountEqual(commands.find_unsupported_data_streams(self.METADATA_WITH_SUBTITLES), [0])
 
-    @mock.patch.object(codecs, 'SUBTITLE_STREAM_WHITELIST', ["subrip", "mov_text"])
-    def test_find_unsupported_subtitle_streams_strips_non_whitelisted_streams(self):
-        self.assertCountEqual(commands.find_unsupported_subtitle_streams(self.METADATA_WITH_SUBTITLES), [8, 1, 9])
+    @mock.patch.dict('ffmpeg_tools.formats._CONTAINER_SUPPORTED_CODECS', {"matroska": {'subtitlecodecs': ['mov_text']}})
+    @mock.patch.dict('ffmpeg_tools.codecs._SUBTITLE_SUPPORTED_CONVERSIONS', {
+        'subrip': ['subrip', 'ass', 'mov_text'],
+        'ass': ['ass', 'mov_text'],
+        'mov_text': ['mov_text'],
+        'webvtt': ['subrip', 'ass'],
+    })
+    def test_find_unsupported_subtitle_streams_strips_streams_not_convertible_to_something_supported_by_target_container(self):
+        self.assertCountEqual(
+            commands.find_unsupported_subtitle_streams(
+                self.METADATA_WITH_SUBTITLES,
+                formats.Container.c_MATROSKA.value,
+             ),
+             [1, 9],
+         )
+
+    def test_find_unsupported_subtitle_streams_does_not_strip_streams_if_target_container_is_not_specified(self):
+        self.assertEqual(
+            commands.find_unsupported_subtitle_streams(self.METADATA_WITH_SUBTITLES, None),
+            [],
+        )
+
+    @mock.patch.dict('ffmpeg_tools.formats._CONTAINER_SUPPORTED_CODECS', {
+        "matroska": {'subtitlecodecs': ['subrip', 'ass', 'mov_text']}
+    })
+    @mock.patch.dict('ffmpeg_tools.codecs._SUBTITLE_SUPPORTED_CONVERSIONS', {
+        'subrip': ['subrip', 'ass', 'webvtt'],
+        'ass': ['ass', 'mov_text'],
+        'mov_text': ['mov_text'],
+        'webvtt': ['subrip', 'webvtt'],
+    })
+    def test_select_subtitle_conversions(self):
+        suggested_conversions = commands.select_subtitle_conversions(self.METADATA_WITH_SUBTITLES, target_container='matroska')
+        expected_conversions = {
+            1: 'subrip',
+            3: 'ass',
+            4: 'mov_text',
+            8: 'ass',
+        }
+
+        self.assertEqual(suggested_conversions, expected_conversions)
+
+    @mock.patch.dict('ffmpeg_tools.formats._CONTAINER_SUPPORTED_CODECS', {
+        "matroska": {'subtitlecodecs': ['subrip', 'ass', 'mov_text']}
+    })
+    @mock.patch.dict('ffmpeg_tools.codecs._SUBTITLE_SUPPORTED_CONVERSIONS', {
+        'subrip': ['subrip', 'ass', 'webvtt'],
+        'ass': ['ass', 'mov_text'],
+        'mov_text': ['mov_text'],
+        'webvtt': ['subrip', 'webvtt'],
+    })
+    def test_select_subtitle_conversions_should_not_suggest_any_conversions_if_target_container_is_not_known(self):
+        self.assertEqual(commands.select_subtitle_conversions(self.METADATA_WITH_SUBTITLES, target_container=None), {})
+
+    def test_adjust_stream_indexes_for_removals(self):
+        indexed_map = {
+            4: 'A',
+            7: 'B',
+            9: 'C',
+        }
+        removed_indexes = [10, 1, 0, 5, 8]
+        expected_result = {
+            2: 'A',
+            4: 'B',
+            5: 'C',
+        }
+        self.assertEqual(commands.adjust_stream_indexes_for_removals(indexed_map, removed_indexes), expected_result)
+
+    def test_adjust_stream_indexes_for_removals_should_handle_empty_collections(self):
+        indexed_map = {
+            4: None,
+            9: None,
+        }
+        removed_indexes = [10, 1]
+
+        self.assertEqual(commands.adjust_stream_indexes_for_removals({}, removed_indexes), {})
+        self.assertEqual(commands.adjust_stream_indexes_for_removals(indexed_map, []), indexed_map)
+        self.assertEqual(commands.adjust_stream_indexes_for_removals({}, []), {})
+
+    def test_shift_stream_indexes(self):
+        indexed_map = {
+            4: 'A',
+            7: 'B',
+            9: 'C',
+        }
+        expected_result = {
+            1: 'A',
+            4: 'B',
+            6: 'C',
+        }
+        self.assertEqual(commands.shift_stream_indexes(indexed_map, -3), expected_result)
+
+    def test_shift_stream_indexes_should_handle_zeros_and_empty_collections(self):
+        indexed_map = {
+            4: 'A',
+            7: 'B',
+            9: 'C',
+        }
+        self.assertEqual(commands.shift_stream_indexes({}, -3), {})
+        self.assertEqual(commands.shift_stream_indexes(indexed_map, 0), indexed_map)
 
 
 class TestQueryMuxerInfo(TestCase):
