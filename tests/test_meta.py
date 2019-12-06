@@ -104,6 +104,10 @@ class TestMetadata(TestCase):
     def test_getting_resolution(self):
         self.assertEqual(meta.get_resolution(example_metadata), [1920, 1080])
 
+    def test_getting_resolution_no_video_streams(self):
+        metadata = {'streams': [{"codec_type": "audio"}]}
+        self.assertEqual(meta.get_resolution(metadata), [0, 0])
+
     def test_get_resolutions(self):
         metadata = {'streams': [
             {"codec_type": "video", 'width': 720, 'height': 576},
@@ -142,6 +146,13 @@ class TestMetadata(TestCase):
 
     def test_get_resolutions_no_streams(self):
         self.assertCountEqual(meta.get_resolutions({'streams': []}), [])
+
+    def test_get_frame_rate(self):
+        self.assertEqual(meta.get_frame_rate(example_metadata), "25/1")
+
+    def test_get_frame_rate_no_video_streams(self):
+        metadata = {'streams': [{"codec_type": "audio"}]}
+        self.assertEqual(meta.get_frame_rate(metadata), None)
 
     def test_get_frame_rates(self):
         metadata = {'streams': [
@@ -206,8 +217,16 @@ class TestMetadata(TestCase):
     def test_get_video_codec(self):
         self.assertEqual(meta.get_video_codec(example_metadata), "vp9")
 
+    def test_get_video_codec_no_video_streams(self):
+        metadata = {'streams': [{"codec_type": "audio"}]}
+        self.assertEqual(meta.get_video_codec(metadata), "")
+
     def test_get_audio_codec(self):
         self.assertEqual(meta.get_audio_codec(example_metadata), "opus")
+
+    def test_get_audio_codec_no_audio_streams(self):
+        metadata = {'streams': [{"codec_type": "video"}]}
+        self.assertEqual(meta.get_audio_codec(metadata), "")
 
     def test_get_sample_rates(self):
         metadata = {'streams': [
@@ -239,6 +258,10 @@ class TestMetadata(TestCase):
 
     def test_get_audio_stream(self):
         self.assertEqual(meta.get_audio_stream(example_metadata), example_metadata['streams'][1])
+
+    def test_get_audio_stream_no_audio_streams(self):
+        metadata = {'streams': [{"codec_type": "video"}]}
+        self.assertEqual(meta.get_audio_stream(metadata), None)
 
     def test_get_metadata_invalid_path(self):
         self.assertEqual(meta.get_metadata("blabla"), {})
