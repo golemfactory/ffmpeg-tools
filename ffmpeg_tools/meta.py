@@ -14,12 +14,26 @@ def get_metadata(video):
         return {}
 
 
+def get_resolution(metadata):
+    for stream in metadata["streams"]:
+        if stream["codec_type"] == "video":
+            return [stream["width"], stream["height"]]
+    return [0, 0]
+
+
 def get_resolutions(metadata: Dict['str', Any]) -> List[List[Any]]:
     return [
         [stream.get('width'), stream.get('height')]
         for stream in metadata.get('streams', [])
         if stream.get('codec_type') == 'video'
     ]
+
+
+def get_frame_rate(metadata):
+    for stream in metadata["streams"]:
+        if stream["codec_type"] == "video":
+            return stream["r_frame_rate"]
+    return None
 
 
 def get_frame_rates(metadata: Dict['str', Any]) -> List[Any]:
@@ -62,8 +76,29 @@ def get_codecs(
     return get_attribute_from_all_streams(metadata, 'codec_name', codec_type)
 
 
+def get_video_codec(metadata):
+    for stream in metadata["streams"]:
+        if stream["codec_type"] == "video":
+            return stream["codec_name"]
+    return ""
+
+
+def get_audio_codec(metadata):
+    for stream in metadata["streams"]:
+        if stream["codec_type"] == "audio":
+            return stream["codec_name"]
+    return ""
+
+
 def get_format(metadata):
     return metadata["format"]["format_name"]
+
+
+def get_audio_stream(metadata):
+    for stream in metadata['streams']:
+        if stream["codec_type"] == "audio":
+            return stream
+    return None
 
 
 def get_streams(

@@ -101,6 +101,9 @@ example_metadata = {
 
 class TestMetadata(TestCase):
 
+    def test_getting_resolution(self):
+        self.assertEqual(meta.get_resolution(example_metadata), [1920, 1080])
+
     def test_get_resolutions(self):
         metadata = {'streams': [
             {"codec_type": "video", 'width': 720, 'height': 576},
@@ -200,6 +203,12 @@ class TestMetadata(TestCase):
         self.assertCountEqual(meta.get_codecs(metadata, codec_type='nothing'), [])
         self.assertCountEqual(meta.get_codecs(metadata, codec_type=''), ['ac3'])
 
+    def test_get_video_codec(self):
+        self.assertEqual(meta.get_video_codec(example_metadata), "vp9")
+
+    def test_get_audio_codec(self):
+        self.assertEqual(meta.get_audio_codec(example_metadata), "opus")
+
     def test_get_sample_rates(self):
         metadata = {'streams': [
             {"codec_type": "video", 'sample_rate': 44100},
@@ -228,6 +237,8 @@ class TestMetadata(TestCase):
     def test_get_format(self):
         self.assertEqual(meta.get_format(example_metadata), "matroska,webm")
 
+    def test_get_audio_stream(self):
+        self.assertEqual(meta.get_audio_stream(example_metadata), example_metadata['streams'][1])
 
     def test_get_metadata_invalid_path(self):
         self.assertEqual(meta.get_metadata("blabla"), {})
