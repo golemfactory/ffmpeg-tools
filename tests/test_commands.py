@@ -1,7 +1,6 @@
 import copy
 import os
 import tempfile
-
 from unittest import TestCase, mock
 
 from parameterized import parameterized
@@ -12,6 +11,8 @@ from ffmpeg_tools import exceptions
 from ffmpeg_tools import formats
 from ffmpeg_tools import meta
 from tests.test_meta import example_metadata
+from tests.utils import get_absolute_resource_path
+
 
 BIN_DATA_EXAMPLE_STREAM = {
     'index': 2,
@@ -22,13 +23,13 @@ BIN_DATA_EXAMPLE_STREAM = {
     'codec_tag_string': '[6][0][0][0]',
     'codec_tag': '0x0006',
     'id': '0x102',
-    'r_frame_rate': '0 / 0',
-    'avg_frame_rate': '0 / 0',
-    'time_base': 1 / 90000,
+    'r_frame_rate': '0/0',
+    'avg_frame_rate': '0/0',
+    'time_base': '1/90000',
     'start_pts': 131920,
-    'start_time': 1.465778,
+    'start_time': '1.465778',
     'duration_ts': 475200,
-    'duration': 5.280000,
+    'duration': '5.280000',
     'bit_rate': 'N/A',
     'max_bit_rate': 'N/A',
     'bits_per_raw_sample': 'N/A',
@@ -48,20 +49,28 @@ SUBTITLES_EXAMPLE_STREAM = {
     'r_frame_rate': '0/0',
     'avg_frame_rate': '0/0',
     'time_base': '1/1000',
-    'start_pts': 0, 'start_time': '0.000000',
+    'start_pts': 0,
+    'start_time': '0.000000',
     'duration_ts': 46665,
     'duration': '46.665000',
     'disposition': {
-        'default': 1, 'dub': 0,
-        'original': 0, 'comment': 0,
-        'lyrics': 0, 'karaoke': 0,
+        'default': 1,
+        'dub': 0,
+        'original': 0,
+        'comment': 0,
+        'lyrics': 0,
+        'karaoke': 0,
         'forced': 0,
         'hearing_impaired': 0,
         'visual_impaired': 0,
         'clean_effects': 0,
         'attached_pic': 0,
-        'timed_thumbnails': 0},
-    'tags': {'language': 'eng'}}
+        'timed_thumbnails': 0
+    },
+    'tags': {
+        'language': 'eng',
+    }
+}
 
 
 class TestCommands(TestCase):
@@ -69,7 +78,7 @@ class TestCommands(TestCase):
     def test_transcoding(self):
         params = meta.create_params("mp4", [1280, 800], "h265")
 
-        input_video = "tests/resources/ForBiggerBlazes-[codec=h264].mp4"
+        input_video = get_absolute_resource_path('ForBiggerBlazes-[codec=h264].mp4')
         output_video = os.path.join(tempfile.gettempdir(), "ForBiggerBlazes-[codec=h265].mp4")
 
         if os.path.exists(output_video):
@@ -81,7 +90,7 @@ class TestCommands(TestCase):
 
 
     def test_get_video_length(self):
-        input_video = "tests/resources/ForBiggerBlazes-[codec=h264].mp4"
+        input_video = get_absolute_resource_path('ForBiggerBlazes-[codec=h264].mp4')
         length = commands.get_video_len(input_video)
 
         assert length == 15.021667
@@ -156,9 +165,9 @@ class TestCommands(TestCase):
 
     def test_replace_streams_command(self):
         command = commands.replace_streams_command(
-            "tests/resources/ForBiggerBlazes-[codec=h264].mp4",
-            "tests/resources/ForBiggerBlazes-[codec=h264][video-only].mkv",
-            "tests/resources/ForBiggerBlazes-[codec=h264].mkv",
+            get_absolute_resource_path('ForBiggerBlazes-[codec=h264].mp4'),
+            get_absolute_resource_path('ForBiggerBlazes-[codec=h264][video-only].mkv'),
+            get_absolute_resource_path('ForBiggerBlazes-[codec=h264].mkv'),
             "v",
             {
                 'audio': {
@@ -171,8 +180,8 @@ class TestCommands(TestCase):
         expected_command = [
             "ffmpeg",
             "-nostdin",
-            "-i", "tests/resources/ForBiggerBlazes-[codec=h264].mp4",
-            "-i", "tests/resources/ForBiggerBlazes-[codec=h264][video-only].mkv",
+            "-i", get_absolute_resource_path('ForBiggerBlazes-[codec=h264].mp4'),
+            "-i", get_absolute_resource_path('ForBiggerBlazes-[codec=h264][video-only].mkv'),
             "-map", "1:v",
             "-map", "0",
             "-map", "-0:v",
@@ -181,7 +190,7 @@ class TestCommands(TestCase):
             "-c:d", "copy",
             "-c:a", codecs.AudioCodec.get_encoder(codecs.AudioCodec.MP3),
             "-b:a", "128k",
-            "tests/resources/ForBiggerBlazes-[codec=h264].mkv",
+            get_absolute_resource_path('ForBiggerBlazes-[codec=h264].mkv'),
         ]
         self.assertEqual(command, expected_command)
 
@@ -189,9 +198,9 @@ class TestCommands(TestCase):
     def test_replace_streams_command_validates_stream_type(self):
         with self.assertRaises(exceptions.InvalidArgument):
             commands.replace_streams_command(
-                "tests/resources/ForBiggerBlazes-[codec=h264].mp4",
-                "tests/resources/ForBiggerBlazes-[codec=h264][video-only].mkv",
-                "tests/resources/ForBiggerBlazes-[codec=h264].mkv",
+                get_absolute_resource_path('ForBiggerBlazes-[codec=h264].mp4'),
+                get_absolute_resource_path('ForBiggerBlazes-[codec=h264][video-only].mkv'),
+                get_absolute_resource_path('ForBiggerBlazes-[codec=h264].mkv'),
                 "v:1",
                 {},
             )
@@ -202,9 +211,9 @@ class TestCommands(TestCase):
             _get_lists_of_unsupported_streams_numbers.return_value = ([2], [3])
 
             command = commands.replace_streams_command(
-                "tests/resources/ForBiggerBlazes-[codec=h264].mp4",
-                "tests/resources/ForBiggerBlazes-[codec=h264][video-only].mkv",
-                "tests/resources/ForBiggerBlazes-[codec=h264].mkv",
+                get_absolute_resource_path('ForBiggerBlazes-[codec=h264].mp4'),
+                get_absolute_resource_path('ForBiggerBlazes-[codec=h264][video-only].mkv'),
+                get_absolute_resource_path('ForBiggerBlazes-[codec=h264].mkv'),
                 "v",
                 {},
                 strip_unsupported_data_streams=True,
@@ -214,8 +223,8 @@ class TestCommands(TestCase):
             expected_command = [
                 "ffmpeg",
                 "-nostdin",
-                "-i", "tests/resources/ForBiggerBlazes-[codec=h264].mp4",
-                "-i", "tests/resources/ForBiggerBlazes-[codec=h264][video-only].mkv",  # noqa pylint:disable=line-too-long
+                "-i", get_absolute_resource_path('ForBiggerBlazes-[codec=h264].mp4'),
+                "-i", get_absolute_resource_path('ForBiggerBlazes-[codec=h264][video-only].mkv'),
                 "-map", "1:v",
                 "-map", "0",
                 "-map", "-0:v",
@@ -224,7 +233,7 @@ class TestCommands(TestCase):
                 "-copy_unknown",
                 "-c:v", "copy",
                 "-c:d", "copy",
-                "tests/resources/ForBiggerBlazes-[codec=h264].mkv",
+                get_absolute_resource_path('ForBiggerBlazes-[codec=h264].mkv'),
             ]
             self.assertEqual(command, expected_command)
 
@@ -232,9 +241,9 @@ class TestCommands(TestCase):
     def test_replace_streams_command_does_not_accept_video_parameters(self):
         with self.assertRaises(exceptions.InvalidArgument):
             commands.replace_streams_command(
-                "tests/resources/ForBiggerBlazes-[codec=h264].mp4",
-                "tests/resources/ForBiggerBlazes-[codec=h264][video-only].mkv",
-                "tests/resources/ForBiggerBlazes-[codec=h264].mkv",
+                get_absolute_resource_path('ForBiggerBlazes-[codec=h264].mp4'),
+                get_absolute_resource_path('ForBiggerBlazes-[codec=h264][video-only].mkv'),
+                get_absolute_resource_path('ForBiggerBlazes-[codec=h264].mkv'),
                 "v",
                 {
                     'video': {

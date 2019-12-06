@@ -1,28 +1,26 @@
 import copy
 from unittest import TestCase
 
-from tests.test_commands import MetadataWithSupportedAndUnsupportedStreamsBase
-
-from ffmpeg_tools.formats import list_supported_formats, list_supported_video_codecs, list_supported_audio_codecs
-from ffmpeg_tools.meta import get_metadata
-
-import ffmpeg_tools.codecs as codecs
-import ffmpeg_tools.commands as commands
-import ffmpeg_tools.exceptions as exceptions
-import ffmpeg_tools.frame_rate as frame_rate
-import ffmpeg_tools.validation as validation
-import ffmpeg_tools.formats as formats
-import ffmpeg_tools.meta as meta
 from parameterized import parameterized
+
+from ffmpeg_tools import codecs
+from ffmpeg_tools import commands
+from ffmpeg_tools import exceptions
+from ffmpeg_tools import validation
+from ffmpeg_tools import formats
+from ffmpeg_tools import frame_rate
+from ffmpeg_tools import meta
+from tests.test_commands import MetadataWithSupportedAndUnsupportedStreamsBase
+from tests.utils import get_absolute_resource_path
 
 
 class TestInputValidation(TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
-        cls._filename = "tests/resources/ForBiggerBlazes-[codec=h264].mp4"
-        cls._metadata = get_metadata(cls._filename)
-        cls._supported_formats = list_supported_formats()
+        cls._filename = get_absolute_resource_path('ForBiggerBlazes-[codec=h264].mp4')
+        cls._metadata = meta.get_metadata(cls._filename)
+        cls._supported_formats = formats.list_supported_formats()
         cls._format_metadata = {"format_name": "mov", "duration": "10"}
         cls._audio_stream = {"codec_name": "mp3", "codec_type": "audio"}
         cls._video_stream = {"codec_name": "h264", "codec_type": "video", "width": 800, "height": 600}
@@ -60,7 +58,7 @@ class TestInputValidation(TestCase):
 
     def test_validate_valid_video_codecs(self):
         for video_format in self._supported_formats:
-            supported_video_codecs = list_supported_video_codecs(video_format)
+            supported_video_codecs = formats.list_supported_video_codecs(video_format)
             for video_codec in supported_video_codecs:
                 self.assertTrue(validation.validate_video_codec(video_codec=video_codec, video_format=video_format))
 
@@ -72,7 +70,7 @@ class TestInputValidation(TestCase):
 
     def test_validate_valid_audio_codecs(self):
         for video_format in self._supported_formats:
-            supported_audio_codecs = list_supported_audio_codecs(video_format)
+            supported_audio_codecs = formats.list_supported_audio_codecs(video_format)
             for audio_codec in supported_audio_codecs:
                 self.assertTrue(validation.validate_audio_codec(audio_codec=audio_codec, video_format=video_format))
 
@@ -84,7 +82,7 @@ class TestInputValidation(TestCase):
 
     def test_validate_audio_stream_valid_codecs(self):
         for video_format in self._supported_formats:
-            supported_audio_codecs = list_supported_audio_codecs(video_format)
+            supported_audio_codecs = formats.list_supported_audio_codecs(video_format)
             for audio_codec in supported_audio_codecs:
                 self.assertTrue(validation.validate_audio_stream(stream_metadata={"codec_name": "{}".format(audio_codec)},
                                                       video_format=video_format))
@@ -102,7 +100,7 @@ class TestInputValidation(TestCase):
 
     def test_validate_video_stream_valid_codecs(self):
         for video_format in self._supported_formats:
-            supported_video_codecs = list_supported_video_codecs(video_format)
+            supported_video_codecs = formats.list_supported_video_codecs(video_format)
             for video_codec in supported_video_codecs:
                 self.assertTrue(validation.validate_video_stream(stream_metadata={"codec_name": "{}".format(video_codec)},
                                                       video_format=video_format))
@@ -158,8 +156,8 @@ class TestInputValidation(TestCase):
 
     def test_validate_video_valid_codecs(self):
         for video_format in self._supported_formats:
-            video_codecs = list_supported_video_codecs(video_format)
-            audio_codecs = list_supported_audio_codecs(video_format)
+            video_codecs = formats.list_supported_video_codecs(video_format)
+            audio_codecs = formats.list_supported_audio_codecs(video_format)
             for video_codec in video_codecs:
                 for audio_codec in audio_codecs:
                     metadata = {
@@ -231,7 +229,7 @@ class TestConversionValidation(TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
-        cls._metadata = get_metadata("tests/resources/ForBiggerBlazes-[codec=h264].mp4")
+        cls._metadata = meta.get_metadata(get_absolute_resource_path("ForBiggerBlazes-[codec=h264].mp4"))
 
     def setUp(self) -> None:
         pass

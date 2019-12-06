@@ -1,7 +1,4 @@
-import sys
-import pytest
-
-import ffmpeg_tools as ffmpeg
+from ffmpeg_tools import meta
 
 
 example_metadata = {
@@ -44,8 +41,8 @@ example_metadata = {
                 "visual_impaired": 0,
                 "clean_effects": 0,
                 "attached_pic": 0,
-                "timed_thumbnails": 0
-            }
+                "timed_thumbnails": 0,
+            },
         },
         {
             "index": 1,
@@ -77,9 +74,9 @@ example_metadata = {
                 "visual_impaired": 0,
                 "clean_effects": 0,
                 "attached_pic": 0,
-                "timed_thumbnails": 0
-            }
-        }
+                "timed_thumbnails": 0,
+            },
+        },
     ],
     "format": {
         "filename": "/home/nieznanysprawiciel/Data/Transcoding/different-codecs/Panasonic-[codec=vp9].webm",
@@ -93,9 +90,9 @@ example_metadata = {
         "bit_rate": "389715",
         "probe_score": 100,
         "tags": {
-            "encoder": "Lavf57.66.105"
-        }
-    }
+            "encoder": "Lavf57.66.105",
+        },
+    },
 }
 
 
@@ -103,24 +100,24 @@ example_metadata = {
 class TestMetadata(object):
 
     def test_getting_resolution(self):
-        assert(ffmpeg.meta.get_resolution(example_metadata) == [1920, 1080])
+        assert meta.get_resolution(example_metadata) == [1920, 1080]
 
     def test_get_duration(self):
-        assert(ffmpeg.meta.get_duration(example_metadata) == 46.120000 )
+        assert meta.get_duration(example_metadata) == 46.120000
 
     def test_get_video_codec(self):
-        assert(ffmpeg.meta.get_video_codec(example_metadata) == "vp9" )
+        assert meta.get_video_codec(example_metadata) == "vp9"
 
     def test_get_audio_codec(self):
-        assert(ffmpeg.meta.get_audio_codec(example_metadata) == "opus" )
+        assert meta.get_audio_codec(example_metadata) == "opus"
 
     def test_get_format(self):
-        assert(ffmpeg.meta.get_format(example_metadata) == "matroska,webm" )
+        assert meta.get_format(example_metadata) == "matroska,webm"
 
     def test_get_audio_stream(self):
-        assert (ffmpeg.meta.get_audio_stream(example_metadata) == example_metadata['streams'][1])
+        assert meta.get_audio_stream(example_metadata) == example_metadata['streams'][1]
 
     def test_get_metadata_invalid_path(self):
-        assert(ffmpeg.meta.get_metadata("blabla") == {})
+        assert meta.get_metadata("blabla") == {}
 
 
