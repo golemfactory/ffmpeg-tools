@@ -1,6 +1,5 @@
 import os
-from math import gcd
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional
 
 from . import meta
 from . import formats
@@ -29,13 +28,13 @@ def validate_video(metadata):
     return True
 
 
-def _get_src_codec(src_params):
+def _get_src_audio_codec(src_params):
     if src_params.get("audio", {}).get("codec") is not None:
         return src_params['audio']['codec']
     return None
 
 
-def _get_dst_codec(dst_params: dict, dst_muxer_info: Optional[Dict[str, Any]]) -> Optional[str]:
+def _get_dst_audio_codec(dst_params: dict, dst_muxer_info: Optional[Dict[str, Any]]) -> Optional[str]:
     assert not formats.Container(dst_params["format"]).is_exclusive_demuxer()
 
     if dst_params.get("audio", {}).get("codec") is None:
@@ -45,21 +44,6 @@ def _get_dst_codec(dst_params: dict, dst_muxer_info: Optional[Dict[str, Any]]) -
         return dst_muxer_info.get('default_audio_codec')
 
     return dst_params['audio']['codec']
-
-
-def validate_data_and_subtitle_streams(
-    metadata,
-    strip_unsupported_data_streams,
-    strip_unsupported_subtitle_streams,
-):
-    (unsupported_data_streams, unsupported_subtitle_streams) = (
-        commands.get_lists_of_unsupported_stream_numbers(metadata)
-    )
-    if not strip_unsupported_data_streams and len(unsupported_data_streams) != 0:
-        raise exceptions.UnsupportedStream('data', unsupported_data_streams)
-
-    if not strip_unsupported_subtitle_streams and len(unsupported_subtitle_streams) != 0:
-        raise exceptions.UnsupportedStream('subtitle', unsupported_subtitle_streams)
 
 
 def validate_transcoding_params(
@@ -114,13 +98,13 @@ def validate_transcoding_params(
     # Validate audio codec. Audio codec can not be set and ffmpeg should
     # either remain with currently used codec or transcode using default behavior
     # if it is necessary.
-    src_audio_codec = _get_src_codec(src_params)
+    src_audio_codec = _get_src_audio_codec(src_params)
     audio_stream = meta.get_audio_stream(src_metadata)
 
     if src_audio_codec is not None:
         validate_audio_codec(src_params["format"], src_audio_codec)
 
-        dest_audio_codec = _get_dst_codec(dst_params, dst_muxer_info)
+        dest_audio_codec = _get_dst_audio_codec(dst_params, dst_muxer_info)
         if dest_audio_codec is not None:
             validate_audio_codec(dst_params["format"], dest_audio_codec)
             validate_audio_codec_conversion(
@@ -139,9 +123,11 @@ def validate_transcoding_params(
 
     validate_frame_rate(dst_params, src_params.get("frame_rate"))
 
-    validate_data_and_subtitle_streams(
+    validate_unsupported_data_streams(
         src_metadata,
-        strip_unsupported_data_streams,
+        strip_unsupported_data_streams)
+    validate_unsupported_subtitle_streams(
+        src_metadata,
         strip_unsupported_subtitle_streams)
     return True
 
@@ -209,6 +195,24 @@ def validate_video_stream(stream_metadata, video_format):
     return True
 
 
+def validate_unsupported_data_streams(metadata: dict, strip_unsupported_data_streams: bool):
+    unsupported_data_streams = commands.find_unsupported_data_streams(metadata)
+
+    if not strip_unsupported_data_streams and len(unsupported_data_streams) != 0:
+        raise exceptions.UnsupportedStream('data', unsupported_data_streams)
+
+    return True
+
+
+def validate_unsupported_subtitle_streams(metadata: dict, strip_unsupported_subtitle_streams: bool):
+    unsupported_subtitle_streams = commands.find_unsupported_subtitle_streams(metadata)
+
+    if not strip_unsupported_subtitle_streams and len(unsupported_subtitle_streams) != 0:
+        raise exceptions.UnsupportedStream('subtitle', unsupported_subtitle_streams)
+
+    return True
+
+
 def validate_video_codec(video_format, video_codec):
     if not formats.is_supported_video_codec(vformat=video_format, codec=video_codec):
         raise exceptions.UnsupportedVideoCodec(video_codec=video_codec, video_format=video_format)
@@ -254,7 +258,7 @@ def _guess_target_frame_rate_for_special_cases(
 
 def _guess_target_frame_rate(
         src_frame_rate: 'frame_rate.FrameRate',
-        dst_params: Dict[str, Any]) -> str:
+        dst_params: Dict[str, Any]) -> 'frame_rate.FrameRate':
 
     target_frame_rate = _guess_target_frame_rate_for_special_cases(
         src_frame_rate,

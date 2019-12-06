@@ -1,4 +1,4 @@
-from unittest import TestCase
+from unittest import TestCase, mock
 
 from ffmpeg_tools import codecs
 from ffmpeg_tools import exceptions
@@ -19,13 +19,21 @@ class TestSupportedConversions(TestCase):
     def test_list_audio_conversion_invalid_codec(self):
         assert len(codecs.list_supported_audio_conversions("blabla")) == 0
 
+    @mock.patch.dict('ffmpeg_tools.codecs._VIDEO_SUPPORTED_CONVERSIONS', {"h264": ["h264", "mjpeg", "vp9"]})
     def test_can_convert_correct_video_codec(self):
-        assert "h264" in codecs._VIDEO_SUPPORTED_CONVERSIONS["h264"]
         self.assertTrue(codecs.VideoCodec("h264").can_convert("h264"))
 
+    @mock.patch.dict('ffmpeg_tools.codecs._VIDEO_SUPPORTED_CONVERSIONS', {"h264": ["h264", "mjpeg", "vp9"]})
     def test_can_convert_unsupported_video_codec(self):
-        assert "msmpeg4v2" not in codecs._VIDEO_SUPPORTED_CONVERSIONS["h264"]
         self.assertFalse(codecs.VideoCodec("h264").can_convert("msmpeg4v2"))
+
+    @mock.patch.dict('ffmpeg_tools.codecs._AUDIO_SUPPORTED_CONVERSIONS', {"aac": ["aac", "mp3", "vorbis"]})
+    def test_can_convert_correct_audio_codec(self):
+        self.assertTrue(codecs.AudioCodec("aac").can_convert("aac"))
+
+    @mock.patch.dict('ffmpeg_tools.codecs._AUDIO_SUPPORTED_CONVERSIONS', {"aac": ["aac", "mp3", "vorbis"]})
+    def test_can_convert_unsupported_audio_codec(self):
+        self.assertFalse(codecs.AudioCodec("aac").can_convert("wmapro"))
 
 
 class TestGettingEncoder(TestCase):

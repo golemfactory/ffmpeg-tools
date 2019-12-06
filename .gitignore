@@ -1,7 +1,10 @@
-ffmpeg_tools/__pycache__
-tests/__pycache__
-.pytest_cache
-ffmpeg_tools.egg-info
-build/
-dist/
+# Files cached by Python and tools
+__pycache__/
+.pytest_cache/
 .cache
+/.mypy_cache/
+
+# Build artifacts
+/ffmpeg_tools.egg-info
+/build/
+/dist/

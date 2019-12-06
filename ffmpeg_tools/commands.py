@@ -315,27 +315,26 @@ def replace_streams(input_file,
     exec_cmd(cmd)
 
 
-def get_lists_of_unsupported_stream_numbers(
-    metadata,
-):
-    unsupported_data_streams = []
-    unsupported_subtitle_streams = []
-    for stream_metadata in metadata.get('streams'):
+def find_unsupported_data_streams(metadata):
+    return [
+        stream_metadata.get('index')
+        for stream_metadata in metadata.get('streams', [])
         if (
             stream_metadata.get('codec_type') == 'data' and
-            stream_metadata.get('codec_name') not in
-            codecs.DATA_STREAM_WHITELIST
-        ):
-            unsupported_data_streams.append(stream_metadata.get('index'))
+            stream_metadata.get('codec_name') not in codecs.DATA_STREAM_WHITELIST
+        )
+    ]
 
-        elif (
+
+def find_unsupported_subtitle_streams(metadata):
+    return [
+        stream_metadata.get('index')
+        for stream_metadata in metadata.get('streams', [])
+        if (
             stream_metadata.get('codec_type') == 'subtitle' and
-            stream_metadata.get('codec_name') not in
-            codecs.SUBTITLE_STREAM_WHITELIST
-        ):
-            unsupported_subtitle_streams.append(stream_metadata.get('index'))
-
-    return (unsupported_data_streams, unsupported_subtitle_streams)
+            stream_metadata.get('codec_name') not in codecs.SUBTITLE_STREAM_WHITELIST
+        )
+    ]
 
 
 def replace_streams_command(input_file,
@@ -357,19 +356,38 @@ def replace_streams_command(input_file,
         type will be taken. Must exist.
     :param output_file: Container to put the streams in. Must not exist.
     :param stream_type: Stream type specifier.
-    :param targs: Dictionary with additional parameters used by command
-    :param container: Container of output file
         See https://ffmpeg.org/ffmpeg.html#Stream-specifiers.
         The following values are supported:
             - `v` - same as `V`.
             - `V` - video streams which are not attached pictures, video
                     thumbnails or cover arts.
             - `a` - audio streams.
-            - `s` - subtitle streams.
-            - `d` - data streams.
             - `t` - attachments.
+    :param targs: Dictionary with additional transcoding parameters.
+        The following parameters are supported:
+            - `audio`: dict with parameters for audio stream transcoding.
+                Same parameters are applied to all audio streams.
+                Transcoding different audio streams differently is currently
+                not supported.
+                Can include the following keys:`bitrate`, `codec`.
+    :param container: Container type to use for the output file.
+        Optional, but highly recommended. If you don't specify it, ffmpeg will
+        try to guess based the extension of the output file.
+    :param strip_unsupported_data_streams: If true, all data streams using
+        codecs not listed in DATA_STREAM_WHITELIST will not be included in the
+        output file. If your input_file contains such streams but you don't
+        care about them, you can use this option to force a conversion that
+        would otherwise fail.
+    :param strip_unsupported_subtitle_streams: If true, all subtitle streams using
+        codecs not listed in SUBTITLE_STREAM_WHITELIST will not be included in the
+        output file. If your input_file contains such streams but you don't
+        care about them, you can use this option to force a conversion that
+        would otherwise fail.
     """
-    VALID_STREAM_TYPES = {'v', 'V', 'a', 's', 'd', 't'}
+    # NOTE: We could support 's' (subtitle streams) or 'd' (data streams) as well
+    # but it would complicate the implementation and we currently don't use them
+    # so implementing it was not worth the hassle.
+    VALID_STREAM_TYPES = {'v', 'V', 'a', 't'}
     if stream_type not in VALID_STREAM_TYPES:
         raise exceptions.InvalidArgument(
             f"Invalid value of 'stream_type'. "
@@ -388,21 +406,26 @@ def replace_streams_command(input_file,
             "You should pass them to the 'transcode' command instead.")
 
     metadata = get_metadata_json(input_file)
-    (unsupported_data_streams, unsupported_subtitle_streams) = \
-        get_lists_of_unsupported_stream_numbers(metadata)
 
-    data_map_options = []
-    subtitle_map_options = []
     if strip_unsupported_data_streams:
-        data_map_options = (
-            ["-map", f"-0:{index}"]
-            for index in unsupported_data_streams
-        )
+        data_streams_to_strip = find_unsupported_data_streams(metadata)
+    else:
+        data_streams_to_strip = []
+
+    data_map_options = [
+        ["-map", f"-0:{index}"]
+        for index in data_streams_to_strip
+    ]
+
     if strip_unsupported_subtitle_streams:
-        subtitle_map_options = (
-            ["-map", f"-0:{index}"]
-            for index in unsupported_subtitle_streams
-        )
+        subtitle_streams_to_strip = find_unsupported_subtitle_streams(metadata)
+    else:
+        subtitle_streams_to_strip = []
+
+    subtitle_map_options = [
+        ["-map", f"-0:{index}"]
+        for index in subtitle_streams_to_strip
+    ]
 
     cmd = [
         FFMPEG_COMMAND,
@@ -421,9 +444,9 @@ def replace_streams_command(input_file,
         "-f", container,
     ] if container is not None else []) + ([
         "-c:a", codecs.get_audio_encoder(targs['audio']['codec']),
-    ] if 'audio' in targs and 'codec' in targs['audio'] else []) + ([
+    ] if 'codec' in targs.get('audio', {}) else []) + ([
         "-b:a", targs['audio']['bitrate'],
-    ] if 'audio' in targs and 'bitrate' in targs['audio'] else []) + [
+    ] if 'bitrate' in targs.get('audio', {}) else []) + [
         output_file,
     ]
 

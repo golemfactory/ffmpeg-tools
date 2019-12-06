@@ -1,17 +1,15 @@
 import copy
-from unittest import TestCase
+from unittest import TestCase, mock
 
 from parameterized import parameterized
 
 from ffmpeg_tools import codecs
-from ffmpeg_tools import commands
 from ffmpeg_tools import exceptions
 from ffmpeg_tools import validation
 from ffmpeg_tools import formats
 from ffmpeg_tools import frame_rate
 from ffmpeg_tools import meta
-from tests.test_commands import MetadataWithSupportedAndUnsupportedStreamsBase
-from tests.utils import get_absolute_resource_path
+from tests.utils import get_absolute_resource_path, make_parameterized_test_name_generator_for_scalar_values
 
 
 class TestInputValidation(TestCase):
@@ -205,9 +203,9 @@ class TestInputValidation(TestCase):
             })
 
 
-    def validate_video_missing_video_stream(self):
+    def test_validate_video_missing_video_stream(self):
         with self.assertRaises(exceptions.MissingVideoStream):
-            validation.validate_video(filename=self._filename, metadata={
+            validation.validate_video(metadata={
                 "format": self._format_metadata,
                 "streams": [self._audio_stream]
             })
@@ -324,12 +322,15 @@ class TestConversionValidation(TestCase):
         with self.assertRaises(exceptions.InvalidResolution):
             validation.validate_transcoding_params(dst_params, metadata, {})
 
-    @parameterized.expand([
-        ([333, 333], [333, 333]),
-        ([333, 666], [666, 1332]),
-        ([1920, 1080], [1366, 768]),
-        ([3840, 2160], [2560, 1440]),
-    ])
+    @parameterized.expand(
+        [
+            ([333, 333], [333, 333]),
+            ([333, 666], [666, 1332]),
+            ([1920, 1080], [1366, 768]),
+            ([3840, 2160], [2560, 1440]),
+        ],
+        name_func=make_parameterized_test_name_generator_for_scalar_values(['source', 'target']),
+    )
     def test_nonstandard_resolution_change(
             self,
             src_resolution,
@@ -393,58 +394,111 @@ class TestConversionValidation(TestCase):
         dst_muxer_info = None
         self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, dst_muxer_info))
 
-    def test_target_frame_rate_based_on_src_value_corner_case_mpeg1video(self):
-        assert frame_rate.FrameRate(122) not in formats._frame_rates
-        metadata = self.modify_metadata_with_passed_values("mov", [1920, 1080], "mpeg1video", "aac", frame_rate=122)
-        dst_params = self.create_params("mov", [1920, 1080], "mpeg1video", "aac", frame_rate=None)
+    @parameterized.expand(
+        [
+            ('121/2',),
+            ('61',),
+            ('122',),
+            ('100000',),
+        ],
+        name_func=make_parameterized_test_name_generator_for_scalar_values(['rate']),
+    )
+    def test_source_frame_rate_when_capped_is_validated_as_max_when_implicitly_used_as_target_frame_rate(self, src_frame_rate):
+        assert codecs.MAX_SUPPORTED_FRAME_RATE[codecs.VideoCodec.MPEG_1.value] == 60
+        assert frame_rate.FrameRate.from_string(src_frame_rate).normalized() not in formats.list_supported_frame_rates()
+        assert frame_rate.FrameRate(60) in formats.list_supported_frame_rates()
+
+        metadata = self.modify_metadata_with_passed_values("mov", [1920, 1080], codecs.VideoCodec.MPEG_1.value, "aac", frame_rate=src_frame_rate)
+        dst_params = self.create_params("mov", [1920, 1080], codecs.VideoCodec.MPEG_1.value, "aac", frame_rate=None)
         self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, {}))
 
-    def test_target_frame_rate_based_on_src_value_corner_case_mpeg2video(self):
-        assert frame_rate.FrameRate(122) not in formats._frame_rates
+    @parameterized.expand(
+        [
+            ('121/2',),
+            ('61',),
+            ('122',),
+            ('100000',),
+        ],
+        name_func=make_parameterized_test_name_generator_for_scalar_values(['rate']),
+    )
+    def test_explicitly_set_target_frame_rate_is_not_capped(self, dst_frame_rate):
+        assert codecs.MAX_SUPPORTED_FRAME_RATE[codecs.VideoCodec.MPEG_1.value] == 60
+        assert frame_rate.FrameRate.from_string(dst_frame_rate).normalized() not in formats.list_supported_frame_rates()
+        assert frame_rate.FrameRate(60) in formats.list_supported_frame_rates()
+
+        metadata = self.modify_metadata_with_passed_values("mov", [1920, 1080], codecs.VideoCodec.MPEG_1.value, "aac", frame_rate=30)
+        dst_params = self.create_params("mov", [1920, 1080], codecs.VideoCodec.MPEG_1.value, "aac", frame_rate=dst_frame_rate)
+        with self.assertRaises(exceptions.InvalidFrameRate):
+            validation.validate_transcoding_params(dst_params, metadata, {})
+
+    def test_source_frame_rate_when_substituted_is_validated_as_the_resulting_value_when_implicitly_used_as_target_frame_rate(self):
+        assert frame_rate.FrameRate(25, 2) in codecs.FRAME_RATE_SUBSTITUTIONS.get(codecs.VideoCodec.MPEG_2.value, {})
+        assert frame_rate.FrameRate(25, 2) not in formats.list_supported_frame_rates()
+        assert frame_rate.FrameRate(12) in formats.list_supported_frame_rates()
+
         metadata = self.modify_metadata_with_passed_values("mov", [1920, 1080], "mpeg2video", "aac", frame_rate='25/2')
-        dst_params = self.create_params("mov", [1920, 1080], "mpeg2video", "aac")
+        dst_params = self.create_params("mov", [1920, 1080], "mpeg2video", "aac", frame_rate=None)
         self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, {}))
+
+    def test_explicitly_set_target_frame_rate_is_not_substituted(self):
+        assert frame_rate.FrameRate(25, 2) in codecs.FRAME_RATE_SUBSTITUTIONS.get(codecs.VideoCodec.MPEG_2.value, {})
+        assert frame_rate.FrameRate(25, 2) not in formats.list_supported_frame_rates()
+        assert frame_rate.FrameRate(12) in formats.list_supported_frame_rates()
+
+        metadata = self.modify_metadata_with_passed_values("mov", [1920, 1080], "mpeg2video", "aac", frame_rate=30)
+        dst_params = self.create_params("mov", [1920, 1080], "mpeg2video", "aac", frame_rate='25/2')
+        with self.assertRaises(exceptions.InvalidFrameRate):
+            self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, {}))
 
     def test_target_frame_rate_not_specified(self):
         metadata = self.modify_metadata_with_passed_values("mp4", [1920, 1080], "h264", "aac", frame_rate=60)
         dst_params = self.create_params("mp4", [1920, 1080], "h264", "aac", frame_rate=None)
         self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, {}))
 
-    @parameterized.expand([
-        ('-1/-1', None),   # Should use source rate which is malformed
-        ('33', None),      # Should use source rate which is unsupported
-        (60, 33),          # Should use target rate which is malformed
-        (60, '-1/-1'),     # Should use target rate which is unsupported
-        (None, None),      # Should use source rate which is missing
-    ])
+    @parameterized.expand(
+        [
+            ('-1/-1', None),   # Should use source rate which is malformed
+            ('33', None),      # Should use source rate which is unsupported
+            (60, 33),          # Should use target rate which is malformed
+            (60, '-1/-1'),     # Should use target rate which is unsupported
+            (None, None),      # Should use source rate which is missing
+        ],
+        name_func=make_parameterized_test_name_generator_for_scalar_values(['source', 'target']),
+    )
     def test_validate_frame_rate_should_reject_invalid_target_frame_rates(self, src_frame_rate, target_frame_rate):
         dst_params = self.create_params("mp4", [1920, 1080], "h264", frame_rate=target_frame_rate)
         with self.assertRaises(exceptions.InvalidFrameRate):
             validation.validate_frame_rate(dst_params, src_frame_rate)
 
-    @parameterized.expand([
-        (60, 30),   # Should use target rate
-        (60, None), # Should use source rate
-        (None, 60), # Should use target rate and ignore missing source rate
-    ])
+    @parameterized.expand(
+        [
+            (60, 30),   # Should use target rate
+            (60, None), # Should use source rate
+            (None, 60), # Should use target rate and ignore missing source rate
+        ],
+        name_func=make_parameterized_test_name_generator_for_scalar_values(['source', 'target']),
+    )
     def test_validate_frame_rate_should_accept_supported_conversions(self, src_frame_rate, target_frame_rate):
         dst_params = self.create_params("mp4", [1920, 1080], "h264", frame_rate=target_frame_rate)
         self.assertTrue(validation.validate_frame_rate(dst_params, src_frame_rate))
 
-    @parameterized.expand([
-        (frame_rate.FrameRate(122), 'h264', frame_rate.FrameRate(122)),
-        (frame_rate.FrameRate(60), 'h264', frame_rate.FrameRate(60)),
-        (frame_rate.FrameRate(122), 'mpeg1video', frame_rate.FrameRate(60)),
-        (frame_rate.FrameRate(244, 2), 'mpeg1video', frame_rate.FrameRate(60)),
-        (frame_rate.FrameRate(44, 2), 'mpeg1video', frame_rate.FrameRate(44, 2)),
-        (frame_rate.FrameRate(22), 'mpeg1video', frame_rate.FrameRate(22)),
-        (frame_rate.FrameRate(60), 'mpeg1video', frame_rate.FrameRate(60)),
-        (frame_rate.FrameRate(61), 'mpeg1video', frame_rate.FrameRate(60)),
-        (frame_rate.FrameRate(24, 2), 'mpeg1video', frame_rate.FrameRate(24, 2)),
-        (frame_rate.FrameRate(25, 2), 'mpeg1video', frame_rate.FrameRate(25, 2)),
-        (frame_rate.FrameRate(24, 2), 'mpeg2video', frame_rate.FrameRate(24, 2)),
-        (frame_rate.FrameRate(25, 2), 'mpeg2video', frame_rate.FrameRate(12, 1)),
-    ])
+    @parameterized.expand(
+        [
+            (frame_rate.FrameRate(122), 'h264', frame_rate.FrameRate(122)),
+            (frame_rate.FrameRate(60), 'h264', frame_rate.FrameRate(60)),
+            (frame_rate.FrameRate(122), 'mpeg1video', frame_rate.FrameRate(60)),
+            (frame_rate.FrameRate(244, 2), 'mpeg1video', frame_rate.FrameRate(60)),
+            (frame_rate.FrameRate(44, 2), 'mpeg1video', frame_rate.FrameRate(44, 2)),
+            (frame_rate.FrameRate(22), 'mpeg1video', frame_rate.FrameRate(22)),
+            (frame_rate.FrameRate(60), 'mpeg1video', frame_rate.FrameRate(60)),
+            (frame_rate.FrameRate(61), 'mpeg1video', frame_rate.FrameRate(60)),
+            (frame_rate.FrameRate(24, 2), 'mpeg1video', frame_rate.FrameRate(24, 2)),
+            (frame_rate.FrameRate(25, 2), 'mpeg1video', frame_rate.FrameRate(25, 2)),
+            (frame_rate.FrameRate(24, 2), 'mpeg2video', frame_rate.FrameRate(24, 2)),
+            (frame_rate.FrameRate(25, 2), 'mpeg2video', frame_rate.FrameRate(12, 1)),
+        ],
+        name_func=make_parameterized_test_name_generator_for_scalar_values(['source', 'codec', 'target']),
+    )
     def test_guess_target_frame_rate(self, src_frame_rate, dst_video_codec, expected_frame_rate):
         dst_params = self.create_params("mp4", [1920, 1080], dst_video_codec, frame_rate=None)
         self.assertEqual(
@@ -452,21 +506,23 @@ class TestConversionValidation(TestCase):
             expected_frame_rate,
         )
 
-    @parameterized.expand([
-        (frame_rate.FrameRate(122), 'h264', None),
-        (frame_rate.FrameRate(60), 'h264', None),
-        (frame_rate.FrameRate(122), 'mpeg1video', frame_rate.FrameRate(60)),
-        (frame_rate.FrameRate(244, 2), 'mpeg1video', frame_rate.FrameRate(60)),
-        (frame_rate.FrameRate(44, 2), 'mpeg1video', None),
-        (frame_rate.FrameRate(22), 'mpeg1video', None),
-        (frame_rate.FrameRate(60), 'mpeg1video', None),
-        (frame_rate.FrameRate(61), 'mpeg1video', frame_rate.FrameRate(60)),
-        (frame_rate.FrameRate(24, 2), 'mpeg1video', None),
-        (frame_rate.FrameRate(25, 2), 'mpeg1video', None),
-        (frame_rate.FrameRate(24, 2), 'mpeg2video', None),
-        (frame_rate.FrameRate(25, 2), 'mpeg2video', frame_rate.FrameRate(12, 1)),
-
-    ])
+    @parameterized.expand(
+        [
+            (frame_rate.FrameRate(122), 'h264', None),
+            (frame_rate.FrameRate(60), 'h264', None),
+            (frame_rate.FrameRate(122), 'mpeg1video', frame_rate.FrameRate(60)),
+            (frame_rate.FrameRate(244, 2), 'mpeg1video', frame_rate.FrameRate(60)),
+            (frame_rate.FrameRate(44, 2), 'mpeg1video', None),
+            (frame_rate.FrameRate(22), 'mpeg1video', None),
+            (frame_rate.FrameRate(60), 'mpeg1video', None),
+            (frame_rate.FrameRate(61), 'mpeg1video', frame_rate.FrameRate(60)),
+            (frame_rate.FrameRate(24, 2), 'mpeg1video', None),
+            (frame_rate.FrameRate(25, 2), 'mpeg1video', None),
+            (frame_rate.FrameRate(24, 2), 'mpeg2video', None),
+            (frame_rate.FrameRate(25, 2), 'mpeg2video', frame_rate.FrameRate(12, 1)),
+        ],
+        name_func=make_parameterized_test_name_generator_for_scalar_values(['source', 'codec', 'target']),
+    )
     def test_guess_target_frame_rate_for_special_cases(self, src_frame_rate, dst_video_codec, expected_value):
         self.assertEqual(
             validation._guess_target_frame_rate_for_special_cases(
@@ -476,59 +532,89 @@ class TestConversionValidation(TestCase):
             expected_value
         )
 
-    def test_get_dst_codec_returns_audio_codec_from_dst_params_if_present(self):
+    def test_get_dst_audio_codec_returns_audio_codec_from_dst_params_if_present(self):
         params = self.create_params("mp4", [333, 333], "h264", acodec="mp3")
         dst_muxer_info = {'default_audio_codec': "aac"}
-        self.assertEqual(validation._get_dst_codec(params, dst_muxer_info), 'mp3')
+        self.assertEqual(validation._get_dst_audio_codec(params, dst_muxer_info), 'mp3')
 
-    def test_get_dst_codec_returns_default_audio_codec_if_no_dst_audio_params(self):
+    def test_get_dst_audio_codec_returns_default_audio_codec_if_no_dst_audio_params(self):
         params = self.create_params("mp4", [333, 333], "h264", acodec=None)
         assert 'audio' not in params
         dst_muxer_info = {'default_audio_codec': "aac"}
-        self.assertEqual(validation._get_dst_codec(params, dst_muxer_info), 'aac')
+        self.assertEqual(validation._get_dst_audio_codec(params, dst_muxer_info), 'aac')
 
-    def test_get_dst_codec_returns_default_audio_codec_if_no_codec_in_dst_audio_params(self):
+    def test_get_dst_audio_codec_returns_default_audio_codec_if_no_codec_in_dst_audio_params(self):
         params = self.create_params("mp4", [333, 333], "h264", audio_bitrate="192k")
         assert 'codec' not in params['audio']
         dst_muxer_info = {'default_audio_codec': "aac"}
-        self.assertEqual(validation._get_dst_codec(params, dst_muxer_info), 'aac')
+        self.assertEqual(validation._get_dst_audio_codec(params, dst_muxer_info), 'aac')
 
-    def test_get_dst_codec_returns_default_audio_codec_if_codec_missing_from_dst_params(self):
+    def test_get_dst_audio_codec_returns_default_audio_codec_if_codec_missing_from_dst_params(self):
         params = self.create_params("mp4", [333, 333], "h264", acodec="mp3")
         params['audio']['codec'] = None
         dst_muxer_info = {'default_audio_codec': "aac"}
-        self.assertEqual(validation._get_dst_codec(params, dst_muxer_info), 'aac')
+        self.assertEqual(validation._get_dst_audio_codec(params, dst_muxer_info), 'aac')
 
 
-class TestValidateUnsupportedStreams(
-    MetadataWithSupportedAndUnsupportedStreamsBase
-):
-
-    def test_function_raises_exception_if_unsupported_stream_with_no_strip(self):
+class TestValidateUnsupportedStreams(TestCase):
+    @mock.patch('ffmpeg_tools.validation.commands.find_unsupported_data_streams', return_value=[2, 3, 5])
+    def test_validate_unsupported_data_streams_raises_exception_if_unsupported_data_streams_cant_be_stripped(
+        self,
+        _mock_find_unsupported_data_streams,
+    ):
         with self.assertRaises(exceptions.UnsupportedStream):
-            validation.validate_data_and_subtitle_streams(
-                metadata=self.metadata_with_unsupported_streams,
+            validation.validate_unsupported_data_streams(
+                metadata={},
                 strip_unsupported_data_streams=False,
+            )
+
+    @mock.patch('ffmpeg_tools.validation.commands.find_unsupported_data_streams', return_value=[2, 3, 5])
+    def test_validate_unsupported_data_streams_does_not_raise_if_unsupported_data_streams_can_be_stripped(
+        self,
+        _mock_find_unsupported_data_streams,
+    ):
+        self.assertTrue(validation.validate_unsupported_data_streams(
+            metadata={},
+            strip_unsupported_data_streams=True,
+        ))
+
+    @mock.patch('ffmpeg_tools.validation.commands.find_unsupported_data_streams', return_value=[])
+    def test_validate_unsupported_data_streams_does_not_raise_if_no_unsupported_data_streams(
+        self,
+        _mock_find_unsupported_data_streams,
+    ):
+        self.assertTrue(validation.validate_unsupported_data_streams(
+            metadata={},
+            strip_unsupported_data_streams=False,
+        ))
+
+    @mock.patch('ffmpeg_tools.validation.commands.find_unsupported_subtitle_streams', return_value=[2, 3, 5])
+    def test_validate_unsupported_subtitle_streams_raises_exception_if_unsupported_subtitle_streams_cant_be_stripped(
+        self,
+        _mock_find_unsupported_subtitle_streams,
+    ):
+        with self.assertRaises(exceptions.UnsupportedStream):
+            validation.validate_unsupported_subtitle_streams(
+                metadata={},
                 strip_unsupported_subtitle_streams=False,
             )
 
-    def test_function_passes_if_unsupported_stream_strip_streams_is_true(self):
-        validation.validate_data_and_subtitle_streams(
-            metadata=self.metadata_with_unsupported_streams,
-            strip_unsupported_data_streams=True,
+    @mock.patch('ffmpeg_tools.validation.commands.find_unsupported_subtitle_streams', return_value=[2, 3, 5])
+    def test_validate_unsupported_subtitle_streams_does_not_raise_if_unsupported_subtitle_streams_can_be_stripped(
+        self,
+        _mock_find_unsupported_subtitle_streams,
+    ):
+        self.assertTrue(validation.validate_unsupported_subtitle_streams(
+            metadata={},
             strip_unsupported_subtitle_streams=True,
-        )
+        ))
 
-    def test_function_passes_if_only_supported_streams_strip_is_false(self):
-        validation.validate_data_and_subtitle_streams(
-            metadata=self.metadata_without_unsupported_streams,
-            strip_unsupported_data_streams=False,
+    @mock.patch('ffmpeg_tools.validation.commands.find_unsupported_subtitle_streams', return_value=[])
+    def test_validate_unsupported_subtitle_streams_does_not_raise_if_no_unsupported_subtitle_streams(
+        self,
+        _mock_find_unsupported_subtitle_streams,
+    ):
+        self.assertTrue(validation.validate_unsupported_subtitle_streams(
+            metadata={},
             strip_unsupported_subtitle_streams=False,
-        )
-
-    def test_function_passes_if_only_supported_streams_strip_is_true(self):
-        validation.validate_data_and_subtitle_streams(
-            metadata=self.metadata_without_unsupported_streams,
-            strip_unsupported_data_streams=True,
-            strip_unsupported_subtitle_streams=True,
-        )
+        ))

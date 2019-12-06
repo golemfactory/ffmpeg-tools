@@ -1,6 +1,6 @@
 import enum
 from math import gcd
-from typing import NamedTuple
+from typing import List, NamedTuple, Union, Set
 
 from . import codecs
 from . import exceptions
@@ -52,7 +52,7 @@ class Container(enum.Enum):
     def from_name(name: str) -> 'Container':
         return Container(name.lower())
 
-    def get_supported_video_codecs(self):
+    def get_supported_video_codecs(self) -> List[str]:
         if self in _EXCLUSIVE_DEMUXERS:
             return _list_supported_video_codecs_for_exclusive_demuxer(self)
 
@@ -61,7 +61,7 @@ class Container(enum.Enum):
 
         return _CONTAINER_SUPPORTED_CODECS[self.value]["videocodecs"]
 
-    def get_supported_audio_codecs(self):
+    def get_supported_audio_codecs(self) -> List[str]:
         if self in _EXCLUSIVE_DEMUXERS:
             return _list_supported_audio_codecs_for_exclusive_demuxer(self)
 
@@ -70,36 +70,40 @@ class Container(enum.Enum):
 
         return _CONTAINER_SUPPORTED_CODECS[self.value]["audiocodecs"]
 
-    def is_supported_video_codec(self, vcodec):
+    def is_supported_video_codec(self, vcodec: Union['codecs.VideoCodec', str]) -> bool:
         if isinstance(vcodec, codecs.VideoCodec):
             return vcodec.value in self.get_supported_video_codecs()
         elif isinstance(vcodec, str):
             return vcodec in self.get_supported_video_codecs()
 
-    def is_supported_audio_codec(self, acodec):
+        assert False, "Invalid type"
+
+    def is_supported_audio_codec(self, acodec: Union['codecs.AudioCodec', str]) -> bool:
         if isinstance(acodec, codecs.AudioCodec):
             return acodec.value in self.get_supported_audio_codecs()
         elif isinstance(acodec, str):
             return acodec in self.get_supported_audio_codecs()
 
+        assert False, "Invalid type"
+
     @staticmethod
-    def is_supported(vformat):
+    def is_supported(vformat: str) -> bool:
         return vformat in list_supported_formats()
 
     @staticmethod
-    def list_supported_formats(vformat):
+    def list_supported_formats() -> List[str]:
         return list_supported_formats()
 
-    def get_demuxer(self):
+    def get_demuxer(self) -> str:
         if self not in _DEMUXER_MAP:
             return self.value
 
         return _DEMUXER_MAP[self].value
 
-    def is_exclusive_demuxer(self):
+    def is_exclusive_demuxer(self) -> bool:
         return self in _EXCLUSIVE_DEMUXERS
 
-    def get_matching_muxers(self):
+    def get_matching_muxers(self) -> Set['Container']:
         muxers = {
             muxer
             for muxer, demuxer in _DEMUXER_MAP.items()
@@ -111,7 +115,7 @@ class Container(enum.Enum):
         else:
             return muxers | {self}
 
-    def get_intermediate_muxer(self):
+    def get_intermediate_muxer(self) -> str:
         if self not in _SAFE_INTERMEDIATE_FORMATS:
             return self.value
 
@@ -377,30 +381,30 @@ assert all(isinstance(x.dividend, int) for x in _frame_rates)
 assert all(isinstance(x.divisor, int) for x in _frame_rates)
 
 
-def list_supported_formats():
+def list_supported_formats() -> List[str]:
     return [c.value for c in Container]
 
 
-def is_supported(vformat):
+def is_supported(vformat: str) -> bool:
     return Container.is_supported(vformat)
 
 
-def get_safe_intermediate_format_for_demuxer(demuxer):
+def get_safe_intermediate_format_for_demuxer(demuxer: str) -> str:
     return Container(demuxer).get_intermediate_muxer()
 
 
-def list_supported_video_codecs(vformat):
+def list_supported_video_codecs(vformat: str) -> List[str]:
     if vformat not in Container._value2member_map_:
         return []
 
     return Container(vformat).get_supported_video_codecs()
 
 
-def is_supported_video_codec(vformat, codec):
+def is_supported_video_codec(vformat: str, codec: str) -> bool:
     return codec in list_supported_video_codecs(vformat)
 
 
-def _list_supported_video_codecs_for_exclusive_demuxer(demuxer: Container):
+def _list_supported_video_codecs_for_exclusive_demuxer(demuxer: Container) -> List[str]:
     assert demuxer in _EXCLUSIVE_DEMUXERS
 
     return list(set(
@@ -410,18 +414,18 @@ def _list_supported_video_codecs_for_exclusive_demuxer(demuxer: Container):
     ))
 
 
-def list_supported_audio_codecs(vformat):
+def list_supported_audio_codecs(vformat: str) -> List[str]:
     if vformat not in Container._value2member_map_:
         return []
 
     return Container(vformat).get_supported_audio_codecs()
 
 
-def is_supported_audio_codec(vformat, codec):
+def is_supported_audio_codec(vformat: str, codec: str) -> bool:
     return codec in list_supported_audio_codecs(vformat)
 
 
-def _list_supported_audio_codecs_for_exclusive_demuxer(demuxer: Container):
+def _list_supported_audio_codecs_for_exclusive_demuxer(demuxer: Container) -> List[str]:
     assert demuxer in _EXCLUSIVE_DEMUXERS
 
     return list(set(
@@ -444,5 +448,5 @@ def calculate_aspect_ratio(resolution: list) -> str:
     return f"{resolution[0] // resolution_gcd}:{resolution[1] // resolution_gcd}"
 
 
-def list_supported_frame_rates():
+def list_supported_frame_rates() -> Set[frame_rate.FrameRate]:
     return _frame_rates
