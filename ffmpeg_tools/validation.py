@@ -323,41 +323,14 @@ def validate_audio_sample_rates(
     assert dest_audio_codec in codecs.AudioCodec._value2member_map_
     assert codecs.AudioCodec(dest_audio_codec).get_encoder() is not None
 
-    if dst_audio_encoder_info is None:
-        # If the user has decided not to provide encoder info, there's nothing
-        # we can do. We can't be sure that the target sample rate is supported
-        # but we want this info to be optional so we can't just reject the video.
-        return True
-
-    if 'sample_rates' not in dst_audio_encoder_info:
-        # NOTE: `ffmpeg -h` unfortunately does not provide sample rates in all
-        # cases. The following encoders we support do not have this info:
-        # libopencore_amrnb, ac3, libvorbis, wmav2, pcm_u8.
-        #
-        # From emprical testing with ffmpeg I discovered the following:
-        # - pcm_u8 supports any value (tried up to 100 000 kHz).
-        # - libvorbis supports any value up to 200 kHz but crashes
-        #    on some unusual values (especially between 70 and 520 Hz).
-        # - wmav2 supports everything between 2 and 48 kHz.
-        # - ac3 supports only a few specific values, same as mp3.
-        # - libopencore_amrnb supports only 8 kHz.
-        #
-        # We'll need to find a way to get this info from ffmpeg or just hard-code
-        # these values. Until then we'll assume that no information means that
-        # every value is supported. This means that an input stream with an
-        # unsupported value can crash the replace step which runs on requestor's
-        # machine after the transcoding. This is bad but no worse than what we
-        # had before sample rate validation was introduced and just blocking these
-        # codecs altogether is not a good idea at the library level.
-        return True
-
-    unsupported_sample_rates = (
-        set(meta.get_sample_rates(src_metadata)) -
-        set(dst_audio_encoder_info['sample_rates'])
-    )
-
-    if len(unsupported_sample_rates) > 0:
-        raise exceptions.UnsupportedSampleRate(unsupported_sample_rates, dest_audio_codec)
+    for src_sample_rate in meta.get_sample_rates(src_metadata):
+        supported = codecs.is_supported_sample_rate(
+            dest_audio_codec,
+            src_sample_rate,
+            dst_audio_encoder_info,
+        )
+        if not supported:
+            raise exceptions.UnsupportedSampleRate(src_sample_rate, dest_audio_codec)
 
     return True
 

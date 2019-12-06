@@ -9,6 +9,7 @@ from ffmpeg_tools import validation
 from ffmpeg_tools import formats
 from ffmpeg_tools import frame_rate
 from ffmpeg_tools import meta
+from ffmpeg_tools import utils
 from tests.utils import get_absolute_resource_path, make_parameterized_test_name_generator_for_scalar_values
 
 
@@ -329,16 +330,24 @@ class TestConversionValidation(TestCase):
             self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, dst_muxer_info, dst_audio_encoder_info))
 
 
-    def test_validate_transcoding_params_should_not_reject_sample_rate_if_audio_encoder_info_not_available(self):
+    @mock.patch.dict('ffmpeg_tools.codecs._AUDIO_ENCODERS', {'aac': 'aac'})
+    def test_validate_transcoding_params_should_fall_back_to_hardcoded_sample_rates_if_audio_encoder_info_not_available(self):
         metadata = self.modify_metadata_for_sample_rate_validation_tests("webm", "vp8", [
             ('opus', 5000),
         ])
         dst_params = self.create_params("mp4", [640, 480], "h264", "aac")
 
-        self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, {}, None))
+        with mock.patch.dict('ffmpeg_tools.codecs._SUPPORTED_SAMPLE_RATES', {"aac": utils.SparseRange({5000})}):
+            self.assertTrue(validation.validate_transcoding_params(dst_params, metadata, {}, None))
+
+        with mock.patch.dict('ffmpeg_tools.codecs._SUPPORTED_SAMPLE_RATES', {"aac": utils.SparseRange({8000})}):
+            with self.assertRaises(exceptions.UnsupportedSampleRate):
+                validation.validate_transcoding_params(dst_params, metadata, {}, None)
 
 
-    def test_validate_transcoding_params_should_not_reject_sample_rate_if_audio_codec_not_specified_and_muxer_info_not_available(self):
+    @mock.patch.dict('ffmpeg_tools.codecs._AUDIO_ENCODERS', {'opus': 'libopus'})
+    @mock.patch.dict('ffmpeg_tools.codecs._SUPPORTED_SAMPLE_RATES', {'libopus': utils.SparseRange({8000})})
+    def test_validate_transcoding_params_should_not_validate_sample_rate_if_target_audio_codec_cannot_be_determined(self):
         metadata = self.modify_metadata_for_sample_rate_validation_tests("webm", "vp8", [
             ('opus', 5000),
         ])
@@ -871,21 +880,31 @@ class TestValidateAudioSampleRates(TestCase):
         with self.assertRaises(exceptions.UnsupportedSampleRate):
             validation.validate_audio_sample_rates(metadata, 'mp3', dst_encoder_info)
 
-    def test_should_allow_everything_if_encoder_does_not_provide_information_about_sample_rates(self):
+    @mock.patch.dict('ffmpeg_tools.codecs._AUDIO_ENCODERS', {'mp3': 'libmp3lame'})
+    def test_should_fall_back_to_hardcoded_rates_if_encoder_does_not_provide_information_about_sample_rates(self):
         metadata = {'streams': [
             {'index': 0, 'codec_type': 'audio', 'codec_name': 'mp3', 'sample_rate': 44100},
         ]}
-        dst_encoder_info = {}
 
-        self.assertTrue(validation.validate_audio_sample_rates(metadata, 'mp3', dst_encoder_info))
+        with mock.patch.dict('ffmpeg_tools.codecs._SUPPORTED_SAMPLE_RATES', {'libmp3lame': utils.SparseRange({44100})}):
+            self.assertTrue(validation.validate_audio_sample_rates(metadata, 'mp3', {}))
 
-    def test_should_allow_everything_if_encoder_info_is_not_available_at_all(self):
+        with mock.patch.dict('ffmpeg_tools.codecs._SUPPORTED_SAMPLE_RATES', {'libmp3lame': utils.SparseRange(set())}):
+            with self.assertRaises(exceptions.UnsupportedSampleRate):
+                validation.validate_audio_sample_rates(metadata, 'mp3', {})
+
+    @mock.patch.dict('ffmpeg_tools.codecs._AUDIO_ENCODERS', {'mp3': 'libmp3lame'})
+    def test_should_fall_back_to_hardcoded_rates_if_encoder_info_is_not_available_at_all(self):
         metadata = {'streams': [
             {'index': 0, 'codec_type': 'audio', 'codec_name': 'mp3', 'sample_rate': 44100},
         ]}
-        dst_encoder_info = None
 
-        self.assertTrue(validation.validate_audio_sample_rates(metadata, 'mp3', dst_encoder_info))
+        with mock.patch.dict('ffmpeg_tools.codecs._SUPPORTED_SAMPLE_RATES', {'libmp3lame': utils.SparseRange({44100})}):
+            self.assertTrue(validation.validate_audio_sample_rates(metadata, 'mp3', None))
+
+        with mock.patch.dict('ffmpeg_tools.codecs._SUPPORTED_SAMPLE_RATES', {'libmp3lame': utils.SparseRange(set())}):
+            with self.assertRaises(exceptions.UnsupportedSampleRate):
+                validation.validate_audio_sample_rates(metadata, 'mp3', None)
 
     def test_should_not_allow_files_with_unknown_sample_rate(self):
         metadata = {'streams': [
@@ -896,13 +915,15 @@ class TestValidateAudioSampleRates(TestCase):
         with self.assertRaises(exceptions.UnsupportedSampleRate):
             validation.validate_audio_sample_rates(metadata, 'mp3', dst_encoder_info)
 
-    def test_should_allow_files_with_unknown_sample_rate_if_encoder_does_not_provide_information_about_sample_rates(self):
+    @mock.patch.dict('ffmpeg_tools.codecs._SUPPORTED_SAMPLE_RATES', {})
+    @mock.patch.dict('ffmpeg_tools.codecs._AUDIO_ENCODERS', {'aac': 'aac'})
+    def test_should_not_allow_files_with_unknown_sample_rate_even_if_supported_sample_rates_cannot_be_determined(self):
         metadata = {'streams': [
             {'index': 0, 'codec_type': 'audio', 'codec_name': 'aac'},
         ]}
-        dst_encoder_info = {}
 
-        self.assertTrue(validation.validate_audio_sample_rates(metadata, 'mp3', dst_encoder_info))
+        with self.assertRaises(exceptions.UnsupportedSampleRate):
+            validation.validate_audio_sample_rates(metadata, 'mp3', None)
 
     def test_should_not_confuse_audio_with_other_types_of_streams(self):
         metadata = {'streams': [
