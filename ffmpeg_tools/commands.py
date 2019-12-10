@@ -1,6 +1,7 @@
 import os
 import re
 import subprocess
+import sys
 import json
 from typing import Any, Dict, List
 
@@ -682,8 +683,8 @@ def _parse_default_audio_codec_out_of_muxer_info(muxer_info: str) -> List[str]:
     return re.findall(
         r"""
         ^\s*                        # Leading whitespace
-        Default\ ?audio\ ?codec:\s* # Label
-        (.*[^\s.])\s*               # Codec name
+        Default\ ?audio\ ?codec:\ * # Label
+        (.*[^\s.]|)\s*              # Codec name
         \.?                         # Optional dot at the end of the line
         \s*$                        # Trailing whitespace
         """,
@@ -717,3 +718,59 @@ def query_muxer_info(muxer: str) -> Dict[str, Any]:
     return {
         'default_audio_codec': audio_codecs[0],
     }
+
+
+def get_query_encoder_info_command(encoder: str) -> List[str]:
+    return [
+        FFMPEG_COMMAND,
+        '-nostdin',
+        '-hide_banner',
+        '-h', f'encoder={encoder}',
+    ]
+
+
+def _parse_supported_sample_rates_out_of_encoder_info(codec_info):
+    """
+    Looks for supported sample rates in ffmpeg output.
+
+    Currently this includes the following fields (more may be added in the future):
+    - `sample_rates`: list of the sampling rates supported by the codec.
+    """
+
+    # Sample of expected text passed to the regex:
+    #
+    # Threading capabilities: none
+    # Supported sample rates: 44100 48000 32000 22050 24000 16000 11025
+    # Supported sample formats: s32p fltp s16p
+    return re.findall(
+        r"""
+        ^\s*                           # Leading whitespace
+        Supported\ ?sample\ ?rates:\ * # Label
+        (.*[^\s]|)\s*$                 # Sample rate list
+        """,
+        codec_info,
+        re.X | re.MULTILINE
+    )
+
+
+def query_encoder_info(encoder):
+    ffmpeg_output = exec_cmd_to_string(get_query_encoder_info_command(encoder))
+    matches = _parse_supported_sample_rates_out_of_encoder_info(ffmpeg_output)
+
+    if len(matches) == 0:
+        # We won't be able to validate target sample rate without this information
+        print(f"WARNING: ffmpeg does not provide information about sample rates for encoder '{encoder}'.", file=sys.stderr)
+        return {}
+
+    if len(matches) >= 2:
+        raise exceptions.InvalidSampleRateInfo(
+            f"Found {len(matches)} things in ffmpeg output that could be the sample rate list for '{encoder}'. "
+            f"Expected exactly one.")
+
+    if len(matches) == 1:
+        rate_strings = [s for s in matches[0].strip().split(" ") if s != '']
+        try:
+            return {'sample_rates': [int(s) for s in rate_strings]}
+        except (ValueError, TypeError):
+            raise exceptions.InvalidSampleRateInfo(f"Failed to parse sample rates reported by ffmpeg as integers.")
+

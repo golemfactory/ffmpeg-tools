@@ -1,5 +1,5 @@
 import json
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
 
 from . import commands
 from . import exceptions
@@ -26,6 +26,31 @@ def get_frame_rate(metadata):
         if stream["codec_type"] == "video":
             return stream["r_frame_rate"]
     return None
+
+
+def _try_int(value: Any) -> Any:
+    if isinstance(value, str):
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            pass
+
+    return value
+
+
+def get_sample_rates(metadata: Dict[str, Any]) -> List[Union[str, int]]:
+    return [
+        # Sample rates should always be integers but just in case we get a weird
+        # file for which ffprobe reports garbage, we'll return raw values if
+        # they cannot be converted. That's more useful that just refusing to work
+        # and it's the job of validations to reject these values if they're invalid.
+        _try_int(s)
+        for s in get_attribute_from_all_streams(
+            metadata,
+            'sample_rate',
+            'audio'
+        )
+    ]
 
 
 def get_duration(metadata, stream=0):
@@ -86,15 +111,23 @@ def get_attribute_from_all_streams(
     ]
 
 
-def create_params(vformat, resolution, vcodec, acodec=None,
-                  frame_rate=None, video_bitrate=None,
-                  audio_bitrate=None, scaling_algorithm=None):
-    args = dict()
+def create_params(
+    vformat,
+    resolution,
+    vcodec,
+    acodec=None,
+    frame_rate=None,
+    video_bitrate=None,
+    audio_bitrate=None,
+    scaling_algorithm=None,
+):
+
+    args = {}
 
     args["format"] = vformat
 
     # Video parameters
-    args["video"] = dict()
+    args["video"] = {}
 
     args["resolution"] = resolution
     args["video"]["codec"] = vcodec

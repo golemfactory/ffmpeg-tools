@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, Set, Union
 
 from . import meta
 from . import formats
@@ -50,6 +50,7 @@ def validate_transcoding_params(
     dst_params,
     src_metadata,
     dst_muxer_info = None,
+    dst_audio_encoder_info = None,
     strip_unsupported_data_streams=False,
     strip_unsupported_subtitle_streams=False,
 ):
@@ -112,6 +113,11 @@ def validate_transcoding_params(
                 dest_audio_codec,
                 audio_stream
             )
+
+            validate_audio_sample_rates(
+                src_metadata,
+                dest_audio_codec,
+                dst_audio_encoder_info)
         elif dst_muxer_info is not None:
             # Treat situations of user opting out of providing muxer info (dst_muxer_info == None)
             # and ffmpeg not having the info we need ('default_audio_codec' not present in
@@ -306,6 +312,26 @@ def validate_frame_rate(
 
     if target_frame_rate.normalized() not in formats.list_supported_frame_rates():
         raise exceptions.InvalidFrameRate(src_frame_rate, target_frame_rate)
+    return True
+
+
+def validate_audio_sample_rates(
+        src_metadata: Dict[str, Any],
+        dest_audio_codec: str,
+        dst_audio_encoder_info: Optional[Dict[str, Any]]) -> bool:
+
+    assert dest_audio_codec in codecs.AudioCodec._value2member_map_
+    assert codecs.AudioCodec(dest_audio_codec).get_encoder() is not None
+
+    for src_sample_rate in meta.get_sample_rates(src_metadata):
+        supported = codecs.is_supported_sample_rate(
+            dest_audio_codec,
+            src_sample_rate,
+            dst_audio_encoder_info,
+        )
+        if not supported:
+            raise exceptions.UnsupportedSampleRate(src_sample_rate, dest_audio_codec)
+
     return True
 
 

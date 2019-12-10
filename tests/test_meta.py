@@ -113,6 +113,31 @@ class TestMetadata(TestCase):
     def test_get_audio_codec(self):
         self.assertEqual(meta.get_audio_codec(example_metadata), "opus")
 
+    def test_get_sample_rates(self):
+        metadata = {'streams': [
+            {"codec_type": "video", 'sample_rate': 44100},
+            {"codec_type": "audio", 'sample_rate': 48000},
+            {"codec_type": "audio", 'sample_rate': 8000},
+            {"codec_type": "audio", 'sample_rate': 8000},
+            {"codec_type": "data", 'sample_rate': 555},
+            {"codec_type": "whatever", 'sample_rate': 666},
+            {"codec_type": "", 'sample_rate': 777},
+            {"codec_type": None, 'sample_rate': 888},
+            {'sample_rate': 999},
+            {"codec_type": "audio", 'sample_rate': '96000'},
+            {"codec_type": "audio", 'sample_rate': 32000.0},
+            {"codec_type": "audio", 'sample_rate': '16000.0'},
+            {"codec_type": "audio", 'sample_rate': 10.5},
+            {"codec_type": "audio", 'sample_rate': {}},
+            {"codec_type": "audio", 'sample_rate': [1, 2, 3]},
+            {"codec_type": "audio", 'sample_rate': None},
+            {"codec_type": "audio"},
+            {},
+        ]}
+        self.assertCountEqual(meta.get_sample_rates(metadata), [
+            48000, 8000, 8000, 96000, 32000.0, '16000.0', 10.5, {}, [1, 2, 3], None, None,
+        ])
+
     def test_get_format(self):
         self.assertEqual(meta.get_format(example_metadata), "matroska,webm")
 

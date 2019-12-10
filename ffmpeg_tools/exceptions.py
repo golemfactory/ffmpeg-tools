@@ -2,6 +2,10 @@ class NoMatchingEncoder(Exception):
     pass
 
 
+class InvalidSampleRateInfo(Exception):
+    pass
+
+
 class CommandFailed(Exception):
     def __init__(self, command, error_code):
         super().__init__()
@@ -91,6 +95,12 @@ class UnsupportedStream(InvalidVideo):
     def __init__(self, stream_type, index):
         super().__init__(message="Unsupported {} stream. Stream index: {}."
                          .format(stream_type, index))
+
+
+class UnsupportedSampleRate(InvalidVideo):
+    def __init__(self, sample_rate, codec):
+        super().__init__(message="Codec {} does not the support sample rate {}."
+                         .format(codec, sample_rate))
 
 
 class UnsupportedAudioChannelLayout(InvalidVideo):
