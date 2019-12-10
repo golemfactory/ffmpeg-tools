@@ -112,7 +112,7 @@ def get_attribute_from_all_streams(
 
 
 def create_params(
-    vformat,
+    container,
     resolution,
     vcodec,
     acodec=None,
@@ -124,7 +124,7 @@ def create_params(
 
     args = {}
 
-    args["format"] = vformat
+    args["container"] = container
 
     # Video parameters
     args["video"] = {}
