@@ -7,6 +7,7 @@ from ffmpeg_tools import codecs
 from ffmpeg_tools import commands
 from ffmpeg_tools import formats
 from ffmpeg_tools import meta
+from ffmpeg_tools import validation
 from tests.utils import get_absolute_resource_path, generate_sample_video
 
 
@@ -175,6 +176,10 @@ class TestIntegration(TestCase):
         self.assertEqual(round(meta.get_duration(transcoded_metadata)), round(meta.get_duration(source_metadata)))
 
     def test_extract_split_transcoding_merge_replace(self):
+        input_path = get_absolute_resource_path("ForBiggerBlazes-[codec=h264].mp4")
+        input_metadata = commands.get_metadata_json(input_path)
+        validation.validate_video(input_metadata)
+
         transcode_step_targs = {
             'container': formats.Container.c_MATROSKA.value,
             'frame_rate': '25/1',
@@ -182,7 +187,7 @@ class TestIntegration(TestCase):
                 'codec': codecs.VideoCodec.VP8.value,
                 'bitrate': '1000k',
             },
-            'resolution': [200, 100],
+            'resolution': [160, 90],
             'scaling_alg': 'neighbor',
         }
         replace_step_targs = {
@@ -192,9 +197,16 @@ class TestIntegration(TestCase):
             },
         }
 
+        validation.validate_transcoding_params(
+            {**transcode_step_targs, **replace_step_targs},
+            input_metadata,
+            commands.query_muxer_info(transcode_step_targs['container']),
+            commands.query_encoder_info(codecs.VideoCodec.VP8.get_encoder()),
+        )
+
         self.run_extract_split_transcoding_merge_replace_test(
             num_segments=3,
-            input_path=get_absolute_resource_path("ForBiggerBlazes-[codec=h264].mp4"),
+            input_path=input_path,
             extract_step_output_path=os.path.join(self.work_dirs['extract'], "ForBiggerBlazes-[codec=h264][video-only].mp4"),
             split_step_basename_template="ForBiggerBlazes-[codec=h264][video-only]_{}.mp4",
             transcode_step_basename_template="ForBiggerBlazes-[codec=h264][video-only]_{}_TC.mkv",
@@ -220,15 +232,25 @@ class TestIntegration(TestCase):
 
         assert os.path.isfile(input_path)
 
+        input_metadata = commands.get_metadata_json(input_path)
+        validation.validate_video(input_metadata)
+
         transcode_step_targs = {
             'container': formats.Container.c_MATROSKA.value,
             'frame_rate': '30/1',
             'video': {'codec': codecs.VideoCodec.H_264.value},
-            'resolution': [100, 50],
+            'resolution': [160, 90],
         }
         replace_step_targs = {
             'audio': {'codec': codecs.AudioCodec.MP3.value},
         }
+
+        validation.validate_transcoding_params(
+            {**transcode_step_targs, **replace_step_targs},
+            input_metadata,
+            commands.query_muxer_info(transcode_step_targs['container']),
+            commands.query_encoder_info(codecs.VideoCodec.VP8.get_encoder()),
+        )
 
         self.run_extract_split_transcoding_merge_replace_test(
             num_segments=5,
