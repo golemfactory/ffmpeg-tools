@@ -205,6 +205,44 @@ class TestIntegration(TestCase):
             replace_step_targs=replace_step_targs,
         )
 
+    def test_extract_split_transcoding_merge_replace_with_multiple_video_and_audio_streams(self):
+        input_path = os.path.join(self.tmp_dir, 'video.mkv')
+        generate_sample_video(
+            [
+                codecs.VideoCodec.VP8.value,
+                codecs.VideoCodec.MJPEG.value,
+                codecs.AudioCodec.MP3.value,
+                codecs.AudioCodec.AAC.value,
+                codecs.SubtitleCodec.SUBRIP.value,
+            ],
+            input_path,
+            container=formats.Container.c_MATROSKA.value)
+
+        assert os.path.isfile(input_path)
+
+        transcode_step_targs = {
+            'container': formats.Container.c_MATROSKA.value,
+            'frame_rate': '30/1',
+            'video': {'codec': codecs.VideoCodec.H_264.value},
+            'resolution': [100, 50],
+        }
+        replace_step_targs = {
+            'audio': {'codec': codecs.AudioCodec.MP3.value},
+        }
+
+        self.run_extract_split_transcoding_merge_replace_test(
+            num_segments=5,
+            input_path=input_path,
+            extract_step_output_path=os.path.join(self.work_dirs['extract'], "video[video-only].mkv"),
+            split_step_basename_template="video[video-only]_{}.mkv",
+            transcode_step_basename_template="video[video-only]_{}_TC.mkv",
+            merge_step_output_path=os.path.join(self.work_dirs['merge'], "video[video-only]_TC.mkv"),
+            replace_step_output_path=os.path.join(self.work_dirs['replace'], "video_TC.mkv"),
+            ffconcat_list_path=os.path.join(self.work_dirs['transcode'], "merge-input.ffconcat"),
+            transcode_step_targs=transcode_step_targs,
+            replace_step_targs=replace_step_targs,
+        )
+
     def test_replace_streams_converts_subtitles(self):
         input_path = os.path.join(self.tmp_dir, 'input.mkv')
         replacement_path = get_absolute_resource_path("ForBiggerBlazes-[codec=h264].mp4")
