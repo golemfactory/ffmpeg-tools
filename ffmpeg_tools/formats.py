@@ -276,7 +276,6 @@ _MKV_CODECS = {
         "wmv2",
     ],
     "audiocodecs": [
-        "mp3",
         "aac",
         "mp3",
         "vorbis",
