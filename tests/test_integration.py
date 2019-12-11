@@ -56,6 +56,62 @@ class TestIntegration(TestCase):
             transcode_step_targs,
             transcoded_segment_path)
 
+    def run_extract_split_transcoding_merge_replace_test(
+        self,
+        num_segments,
+        input_path,
+        extract_step_output_path,
+        split_step_basename_template,
+        transcode_step_basename_template,
+        merge_step_output_path,
+        replace_step_output_path,
+        ffconcat_list_path,
+        transcode_step_targs,
+        replace_step_targs,
+    ):
+        with self.subTest(step='EXTRACT'):
+            self.run_extract_step(input_path, extract_step_output_path)
+            self.assert_extract_step_successful(input_path, extract_step_output_path)
+
+        with self.subTest(step='SPLIT'):
+            segment_list_path = self.run_split_step(extract_step_output_path, self.work_dirs['split'], num_segments)
+
+            self.assert_split_step_successful(extract_step_output_path, segment_list_path)
+            segment_basenames = self.read_segment_basenames(segment_list_path)
+            self.assert_segments_correct(segment_basenames, self.work_dirs['split'], split_step_basename_template)
+
+        for i, segment_basename in enumerate(segment_basenames):
+            with self.subTest(step='TRANSCODE', segment_basename=segment_basename):
+                segment_path = os.path.join(self.work_dirs['split'], segment_basename)
+                transcoded_segment_path = os.path.join(
+                    self.work_dirs['transcode'],
+                    transcode_step_basename_template.format(i))
+
+                self.run_transcode_step(segment_path, transcoded_segment_path, transcode_step_targs)
+                self.assert_transcoding_step_successful(segment_path, transcoded_segment_path, self.work_dirs['transcode'])
+
+        self.assertTrue(not os.path.exists(merge_step_output_path))
+
+        with self.subTest(step='MERGE'):
+            self.create_ffconcat_list_file(segment_basenames, ffconcat_list_path, transcode_step_basename_template)
+            commands.merge_videos(ffconcat_list_path, merge_step_output_path, formats.Container.c_MATROSKA.value)
+
+            self.assert_merge_step_successful(merge_step_output_path, ffconcat_list_path)
+
+        with self.subTest(step='REPLACE'):
+            commands.replace_streams(
+                input_path,
+                merge_step_output_path,
+                replace_step_output_path,
+                'v',
+                replace_step_targs,
+                formats.Container.c_MATROSKA.value)
+
+            self.assert_replace_step_successful(merge_step_output_path, replace_step_output_path)
+
+        self.assert_video_metadata(replace_step_output_path, transcode_step_targs, replace_step_targs)
+        self.assert_same_video_duration(input_path, replace_step_output_path)
+
     def create_ffconcat_list_file(self, segment_basenames, ffconcat_list_path, segment_basename_template):
         with open(ffconcat_list_path, 'w') as file:
             for i in range(len(segment_basenames)):
@@ -119,15 +175,6 @@ class TestIntegration(TestCase):
         self.assertEqual(round(meta.get_duration(transcoded_metadata)), round(meta.get_duration(source_metadata)))
 
     def test_extract_split_transcoding_merge_replace(self):
-        num_segments = 3
-        input_path = get_absolute_resource_path("ForBiggerBlazes-[codec=h264].mp4")
-        extract_step_output_path = os.path.join(self.work_dirs['extract'], "ForBiggerBlazes-[codec=h264][video-only].mp4")
-        split_step_basename_template = "ForBiggerBlazes-[codec=h264][video-only]_{}.mp4"
-        transcode_step_basename_template = "ForBiggerBlazes-[codec=h264][video-only]_{}_TC.mkv"
-        merge_step_output_path = os.path.join(self.work_dirs['merge'], "ForBiggerBlazes-[codec=h264][video-only]_TC.mkv")
-        replace_step_output_path = os.path.join(self.work_dirs['replace'], "ForBiggerBlazes-[codec=h264]_TC.mkv")
-        ffconcat_list_path = os.path.join(self.work_dirs['transcode'], "merge-input.ffconcat")
-
         transcode_step_targs = {
             'container': formats.Container.c_MATROSKA.value,
             'frame_rate': '25/1',
@@ -145,48 +192,18 @@ class TestIntegration(TestCase):
             },
         }
 
-        with self.subTest(step='EXTRACT'):
-            self.run_extract_step(input_path, extract_step_output_path)
-            self.assert_extract_step_successful(input_path, extract_step_output_path)
-
-        with self.subTest(step='SPLIT'):
-            segment_list_path = self.run_split_step(extract_step_output_path, self.work_dirs['split'], num_segments)
-
-            self.assert_split_step_successful(extract_step_output_path, segment_list_path)
-            segment_basenames = self.read_segment_basenames(segment_list_path)
-            self.assert_segments_correct(segment_basenames, self.work_dirs['split'], split_step_basename_template)
-
-        for i, segment_basename in enumerate(segment_basenames):
-            with self.subTest(step='TRANSCODE', segment_basename=segment_basename):
-                segment_path = os.path.join(self.work_dirs['split'], segment_basename)
-                transcoded_segment_path = os.path.join(
-                    self.work_dirs['transcode'],
-                    transcode_step_basename_template.format(i))
-
-                self.run_transcode_step(segment_path, transcoded_segment_path, transcode_step_targs)
-                self.assert_transcoding_step_successful(segment_path, transcoded_segment_path, self.work_dirs['transcode'])
-
-        self.assertTrue(not os.path.exists(merge_step_output_path))
-
-        with self.subTest(step='MERGE'):
-            self.create_ffconcat_list_file(segment_basenames, ffconcat_list_path, transcode_step_basename_template)
-            commands.merge_videos(ffconcat_list_path, merge_step_output_path, formats.Container.c_MATROSKA.value)
-
-            self.assert_merge_step_successful(merge_step_output_path, ffconcat_list_path)
-
-        with self.subTest(step='REPLACE'):
-            commands.replace_streams(
-                input_path,
-                merge_step_output_path,
-                replace_step_output_path,
-                'v',
-                replace_step_targs,
-                formats.Container.c_MATROSKA.value)
-
-            self.assert_replace_step_successful(merge_step_output_path, replace_step_output_path)
-
-        self.assert_video_metadata(replace_step_output_path, transcode_step_targs, replace_step_targs)
-        self.assert_same_video_duration(input_path, replace_step_output_path)
+        self.run_extract_split_transcoding_merge_replace_test(
+            num_segments=3,
+            input_path=get_absolute_resource_path("ForBiggerBlazes-[codec=h264].mp4"),
+            extract_step_output_path=os.path.join(self.work_dirs['extract'], "ForBiggerBlazes-[codec=h264][video-only].mp4"),
+            split_step_basename_template="ForBiggerBlazes-[codec=h264][video-only]_{}.mp4",
+            transcode_step_basename_template="ForBiggerBlazes-[codec=h264][video-only]_{}_TC.mkv",
+            merge_step_output_path=os.path.join(self.work_dirs['merge'], "ForBiggerBlazes-[codec=h264][video-only]_TC.mkv"),
+            replace_step_output_path=os.path.join(self.work_dirs['replace'], "ForBiggerBlazes-[codec=h264]_TC.mkv"),
+            ffconcat_list_path=os.path.join(self.work_dirs['transcode'], "merge-input.ffconcat"),
+            transcode_step_targs=transcode_step_targs,
+            replace_step_targs=replace_step_targs,
+        )
 
     def test_replace_streams_converts_subtitles(self):
         input_path = os.path.join(self.tmp_dir, 'input.mkv')
