@@ -36,6 +36,7 @@ SAMPLE_STREAM_SOURCES = {
     'h264': SampleStreamSource('ForBiggerBlazes-[codec=h264].mp4', 0),
     'mjpeg': SampleStreamSource('ForBiggerBlazes-[codec=h264].mp4', 0),
     'flv1': SampleStreamSource('ForBiggerBlazes-[codec=h264].mp4', 0),
+    'vp8': SampleStreamSource('ForBiggerBlazes-[codec=h264].mp4', 0),
     'aac': SampleStreamSource('ForBiggerBlazes-[codec=h264].mp4', 1),
     'mp3': SampleStreamSource('ForBiggerBlazes-[codec=h264].mp4', 1),
     'subrip': SampleStreamSource('sample.srt', 0),
