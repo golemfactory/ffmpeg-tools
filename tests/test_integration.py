@@ -7,6 +7,7 @@ from ffmpeg_tools import codecs
 from ffmpeg_tools import commands
 from ffmpeg_tools import formats
 from ffmpeg_tools import meta
+from ffmpeg_tools import validation
 from tests.utils import get_absolute_resource_path, generate_sample_video
 
 
@@ -28,95 +29,75 @@ class TestIntegration(TestCase):
         if os.path.exists(self.tmp_dir):
             shutil.rmtree(self.tmp_dir)
 
-    def test_extract_split_transcoding_merge_replace(self):
-        num_segments = 3
-        input_path = get_absolute_resource_path("ForBiggerBlazes-[codec=h264].mp4")
-        extract_step_output_path = os.path.join(self.work_dirs['extract'], "ForBiggerBlazes-[codec=h264][video-only].mp4")
-        merge_step_output_path = os.path.join(self.work_dirs['merge'], "ForBiggerBlazes-[codec=h264][video-only]_TC.mkv")
-        replace_step_output_path = os.path.join(self.work_dirs['replace'], "ForBiggerBlazes-[codec=h264]_TC.mkv")
-        ffconcat_list_path = os.path.join(self.work_dirs['transcode'], "merge-input.ffconcat")
+    def run_extract_step(self, input_path, output_path):
+        commands.extract_streams(
+            input_path,
+            output_path,
+            ['v'])
 
-        transcode_step_targs = {
-            'container': formats.Container.c_MATROSKA.value,
-            'frame_rate': '25/1',
-            'video': {
-                'codec': codecs.VideoCodec.VP8.value,
-                'bitrate': '1000k',
-            },
-            'resolution': [200, 100],
-            'scaling_alg': 'neighbor',
-        }
-        replace_step_targs = {
-            'audio': {
-                'codec': codecs.AudioCodec.MP3.value,
-                'bitrate': '128k',
-            },
-        }
+    def run_split_step(self, input_path, work_dir, num_segments):
+        input_metadata = commands.get_metadata_json(input_path)
+        input_duration = meta.get_duration(input_metadata)
+        input_demuxer = meta.get_format(input_metadata)
+        output_muxer = formats.get_safe_intermediate_format_for_demuxer(input_demuxer)
 
+        segment_list_path = commands.split_video(
+            input_path,
+            work_dir,
+            input_duration / num_segments,
+            output_muxer)
+
+        return segment_list_path
+
+    def run_transcode_step(self, segment_path, transcoded_segment_path, transcode_step_targs):
+        assert transcoded_segment_path != segment_path
+
+        commands.transcode_video(
+            segment_path,
+            transcode_step_targs,
+            transcoded_segment_path)
+
+    def run_extract_split_transcoding_merge_replace_test(
+        self,
+        num_segments,
+        input_path,
+        extract_step_output_path,
+        split_step_basename_template,
+        transcode_step_basename_template,
+        merge_step_output_path,
+        replace_step_output_path,
+        ffconcat_list_path,
+        transcode_step_targs,
+        replace_step_targs,
+    ):
         with self.subTest(step='EXTRACT'):
-            commands.extract_streams(
-                input_path,
-                extract_step_output_path,
-                ['v'])
-
-            self.assertTrue(os.path.isfile(extract_step_output_path))
-            self.assertTrue(os.path.isfile(input_path))
+            self.run_extract_step(input_path, extract_step_output_path)
+            self.assert_extract_step_successful(input_path, extract_step_output_path)
 
         with self.subTest(step='SPLIT'):
-            extract_step_output_metadata = commands.get_metadata_json(extract_step_output_path)
-            extract_step_output_duration = meta.get_duration(extract_step_output_metadata)
-            extract_step_output_demuxer = meta.get_format(extract_step_output_metadata)
-            split_step_output_muxer = formats.get_safe_intermediate_format_for_demuxer(extract_step_output_demuxer)
+            segment_list_path = self.run_split_step(extract_step_output_path, self.work_dirs['split'], num_segments)
 
-            segment_list_path = commands.split_video(
-                extract_step_output_path,
-                self.work_dirs['split'],
-                extract_step_output_duration / num_segments,
-                split_step_output_muxer)
-
-            self.assertTrue(os.path.isfile(extract_step_output_path))
-            self.assertTrue(os.path.isfile(segment_list_path))
-
-            with open(segment_list_path) as segment_list_file:
-                segment_basenames = segment_list_file.read().splitlines()
-
-            self.assertTrue(len(set(segment_basenames)), len(segment_basenames))
-            for i, segment_basename in enumerate(segment_basenames):
-                self.assertTrue(os.path.isfile(os.path.join(self.work_dirs['split'], segment_basename)))
-                self.assertEqual(segment_basename, f"ForBiggerBlazes-[codec=h264][video-only]_{i}.mp4")
+            self.assert_split_step_successful(extract_step_output_path, segment_list_path)
+            segment_basenames = self.read_segment_basenames(segment_list_path)
+            self.assert_segments_correct(segment_basenames, self.work_dirs['split'], split_step_basename_template)
 
         for i, segment_basename in enumerate(segment_basenames):
             with self.subTest(step='TRANSCODE', segment_basename=segment_basename):
                 segment_path = os.path.join(self.work_dirs['split'], segment_basename)
                 transcoded_segment_path = os.path.join(
                     self.work_dirs['transcode'],
-                    f"ForBiggerBlazes-[codec=h264][video-only]_{i}_TC.mkv")
-                assert transcoded_segment_path != segment_path
+                    transcode_step_basename_template.format(i))
 
-                commands.transcode_video(
-                    segment_path,
-                    transcode_step_targs,
-                    transcoded_segment_path)
-
-                self.assertTrue(transcoded_segment_path.startswith(self.work_dirs['transcode']))
-                self.assertTrue(os.path.isfile(transcoded_segment_path))
-                self.assertTrue(os.path.isfile(segment_path))
+                self.run_transcode_step(segment_path, transcoded_segment_path, transcode_step_targs)
+                self.assert_transcoding_step_successful(segment_path, transcoded_segment_path, self.work_dirs['transcode'])
 
         self.assertTrue(not os.path.exists(merge_step_output_path))
 
         with self.subTest(step='MERGE'):
-            with open(ffconcat_list_path, 'w') as file:
-                for i in range(len(segment_basenames)):
-                    file.write(f"file 'ForBiggerBlazes-[codec=h264][video-only]_{i}_TC.mkv'\n")
+            self.create_ffconcat_list_file(segment_basenames, ffconcat_list_path, transcode_step_basename_template)
+            commands.merge_videos(ffconcat_list_path, merge_step_output_path, formats.Container.c_MATROSKA.value)
 
-            commands.merge_videos(
-                ffconcat_list_path,
-                merge_step_output_path,
-                formats.Container.c_MATROSKA.value)
-
-            self.assertTrue(os.path.isfile(merge_step_output_path))
-            self.assertTrue(os.path.isfile(ffconcat_list_path))
-            self.assertTrue(not os.path.exists(replace_step_output_path))
+            self.assert_merge_step_successful(merge_step_output_path, ffconcat_list_path)
 
         with self.subTest(step='REPLACE'):
             commands.replace_streams(
@@ -127,18 +108,162 @@ class TestIntegration(TestCase):
                 replace_step_targs,
                 formats.Container.c_MATROSKA.value)
 
-            self.assertTrue(os.path.isfile(replace_step_output_path))
-            self.assertTrue(os.path.isfile(merge_step_output_path))
+            self.assert_replace_step_successful(merge_step_output_path, replace_step_output_path)
 
-        input_metadata               = commands.get_metadata_json(input_path)
-        replace_step_output_metadata = commands.get_metadata_json(replace_step_output_path)
+        self.assert_video_metadata(replace_step_output_path, transcode_step_targs, replace_step_targs)
+        self.assert_same_video_duration(input_path, replace_step_output_path)
 
-        self.assertEqual(meta.get_format(replace_step_output_metadata), formats.Container.c_MATROSKA_WEBM_DEMUXER.value)
-        self.assertEqual(meta.get_video_codec(replace_step_output_metadata), codecs.VideoCodec.VP8.value)
-        self.assertEqual(meta.get_resolution(replace_step_output_metadata), [200, 100])
-        self.assertEqual(meta.get_frame_rate(replace_step_output_metadata), '25/1')
-        self.assertEqual(meta.get_audio_codec(replace_step_output_metadata), codecs.AudioCodec.MP3.value)
-        self.assertEqual(round(meta.get_duration(replace_step_output_metadata)), round(meta.get_duration(input_metadata)))
+    def create_ffconcat_list_file(self, segment_basenames, ffconcat_list_path, segment_basename_template):
+        with open(ffconcat_list_path, 'w') as file:
+            for i in range(len(segment_basenames)):
+                segment_basename = segment_basename_template.format(i)
+                file.write(f"file '{segment_basename}'\n")
+
+    def read_segment_basenames(self, segment_list_path):
+        with open(segment_list_path) as segment_list_file:
+            return segment_list_file.read().splitlines()
+
+    def assert_extract_step_successful(self, input_path, output_path):
+        self.assertTrue(os.path.isfile(input_path))
+        self.assertTrue(os.path.isfile(output_path))
+
+    def assert_split_step_successful(self, input_path, segment_list_path):
+        self.assertTrue(os.path.isfile(input_path))
+        self.assertTrue(os.path.isfile(segment_list_path))
+
+    def assert_segments_correct(self, segment_basenames, work_dir, segment_name_template):
+        self.assertTrue(len(set(segment_basenames)), len(segment_basenames))
+
+        for i, segment_basename in enumerate(segment_basenames):
+            self.assertTrue(os.path.isfile(os.path.join(work_dir, segment_basename)))
+            self.assertEqual(segment_basename, segment_name_template.format(i))
+
+    def assert_transcoding_step_successful(self, segment_path, transcoded_segment_path, work_dir):
+        self.assertTrue(transcoded_segment_path.startswith(work_dir))
+        self.assertTrue(os.path.isfile(transcoded_segment_path))
+        self.assertTrue(os.path.isfile(segment_path))
+
+    def assert_merge_step_successful(self, output_path, ffconcat_list_path):
+        self.assertTrue(os.path.isfile(output_path))
+        self.assertTrue(os.path.isfile(ffconcat_list_path))
+
+    def assert_replace_step_successful(self, input_path, output_path):
+        self.assertTrue(os.path.isfile(input_path))
+        self.assertTrue(os.path.isfile(output_path))
+
+    def assert_video_metadata(
+        self,
+        video_path,
+        transcode_step_targs,
+        replace_step_targs,
+    ):
+        metadata = commands.get_metadata_json(video_path)
+
+        num_video_streams = meta.count_streams(metadata, 'video')
+        num_audio_streams = meta.count_streams(metadata, 'audio')
+
+        expected_demuxer = formats.Container(transcode_step_targs['container']).get_demuxer()
+        self.assertEqual(meta.get_format(metadata), expected_demuxer)
+        self.assertEqual(meta.get_codecs(metadata, 'video'), [transcode_step_targs['video']['codec']] * num_video_streams)
+        self.assertEqual(meta.get_resolutions(metadata), [transcode_step_targs['resolution']] * num_video_streams)
+        self.assertEqual(meta.get_frame_rates(metadata), [transcode_step_targs['frame_rate']] * num_video_streams)
+        self.assertEqual(meta.get_codecs(metadata, 'audio'), [replace_step_targs['audio']['codec']] * num_audio_streams)
+
+    def assert_same_video_duration(self, source_video_path, transcoded_video_path):
+        source_metadata = commands.get_metadata_json(source_video_path)
+        transcoded_metadata = commands.get_metadata_json(transcoded_video_path)
+
+        self.assertEqual(round(meta.get_duration(transcoded_metadata)), round(meta.get_duration(source_metadata)))
+
+    def test_extract_split_transcoding_merge_replace(self):
+        input_path = get_absolute_resource_path("ForBiggerBlazes-[codec=h264].mp4")
+        input_metadata = commands.get_metadata_json(input_path)
+        validation.validate_video(input_metadata)
+
+        transcode_step_targs = {
+            'container': formats.Container.c_MATROSKA.value,
+            'frame_rate': '25/1',
+            'video': {
+                'codec': codecs.VideoCodec.VP8.value,
+                'bitrate': '1000k',
+            },
+            'resolution': [160, 90],
+            'scaling_alg': 'neighbor',
+        }
+        replace_step_targs = {
+            'audio': {
+                'codec': codecs.AudioCodec.MP3.value,
+                'bitrate': '128k',
+            },
+        }
+
+        validation.validate_transcoding_params(
+            {**transcode_step_targs, **replace_step_targs},
+            input_metadata,
+            commands.query_muxer_info(transcode_step_targs['container']),
+            commands.query_encoder_info(codecs.VideoCodec.VP8.get_encoder()),
+        )
+
+        self.run_extract_split_transcoding_merge_replace_test(
+            num_segments=3,
+            input_path=input_path,
+            extract_step_output_path=os.path.join(self.work_dirs['extract'], "ForBiggerBlazes-[codec=h264][video-only].mp4"),
+            split_step_basename_template="ForBiggerBlazes-[codec=h264][video-only]_{}.mp4",
+            transcode_step_basename_template="ForBiggerBlazes-[codec=h264][video-only]_{}_TC.mkv",
+            merge_step_output_path=os.path.join(self.work_dirs['merge'], "ForBiggerBlazes-[codec=h264][video-only]_TC.mkv"),
+            replace_step_output_path=os.path.join(self.work_dirs['replace'], "ForBiggerBlazes-[codec=h264]_TC.mkv"),
+            ffconcat_list_path=os.path.join(self.work_dirs['transcode'], "merge-input.ffconcat"),
+            transcode_step_targs=transcode_step_targs,
+            replace_step_targs=replace_step_targs,
+        )
+
+    def test_extract_split_transcoding_merge_replace_with_multiple_video_and_audio_streams(self):
+        input_path = os.path.join(self.tmp_dir, 'video.mkv')
+        generate_sample_video(
+            [
+                codecs.VideoCodec.VP8.value,
+                codecs.VideoCodec.MJPEG.value,
+                codecs.AudioCodec.MP3.value,
+                codecs.AudioCodec.AAC.value,
+                codecs.SubtitleCodec.SUBRIP.value,
+            ],
+            input_path,
+            container=formats.Container.c_MATROSKA.value)
+
+        assert os.path.isfile(input_path)
+
+        input_metadata = commands.get_metadata_json(input_path)
+        validation.validate_video(input_metadata)
+
+        transcode_step_targs = {
+            'container': formats.Container.c_MATROSKA.value,
+            'frame_rate': '30/1',
+            'video': {'codec': codecs.VideoCodec.H_264.value},
+            'resolution': [160, 90],
+        }
+        replace_step_targs = {
+            'audio': {'codec': codecs.AudioCodec.MP3.value},
+        }
+
+        validation.validate_transcoding_params(
+            {**transcode_step_targs, **replace_step_targs},
+            input_metadata,
+            commands.query_muxer_info(transcode_step_targs['container']),
+            commands.query_encoder_info(codecs.VideoCodec.VP8.get_encoder()),
+        )
+
+        self.run_extract_split_transcoding_merge_replace_test(
+            num_segments=5,
+            input_path=input_path,
+            extract_step_output_path=os.path.join(self.work_dirs['extract'], "video[video-only].mkv"),
+            split_step_basename_template="video[video-only]_{}.mkv",
+            transcode_step_basename_template="video[video-only]_{}_TC.mkv",
+            merge_step_output_path=os.path.join(self.work_dirs['merge'], "video[video-only]_TC.mkv"),
+            replace_step_output_path=os.path.join(self.work_dirs['replace'], "video_TC.mkv"),
+            ffconcat_list_path=os.path.join(self.work_dirs['transcode'], "merge-input.ffconcat"),
+            transcode_step_targs=transcode_step_targs,
+            replace_step_targs=replace_step_targs,
+        )
 
     def test_replace_streams_converts_subtitles(self):
         input_path = os.path.join(self.tmp_dir, 'input.mkv')

@@ -1,5 +1,5 @@
 import json
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
 
 from . import commands
 from . import exceptions
@@ -14,18 +14,26 @@ def get_metadata(video):
         return {}
 
 
-def get_resolution(metadata):
-    for stream in metadata["streams"]:
-        if stream["codec_type"] == "video":
-            return [stream["width"], stream["height"]]
-    return [0, 0]
+def get_resolution(metadata: Dict['str', Any]) -> List[Any]:
+    resolutions = get_resolutions(metadata)
+    return resolutions[0] if len(resolutions) > 0 else [0, 0]
 
 
-def get_frame_rate(metadata):
-    for stream in metadata["streams"]:
-        if stream["codec_type"] == "video":
-            return stream["r_frame_rate"]
-    return None
+def get_resolutions(metadata: Dict['str', Any]) -> List[List[Any]]:
+    return [
+        [stream.get('width'), stream.get('height')]
+        for stream in metadata.get('streams', [])
+        if stream.get('codec_type') == 'video'
+    ]
+
+
+def get_frame_rate(metadata: Dict['str', Any]) -> Optional[Any]:
+    frame_rates = get_frame_rates(metadata)
+    return frame_rates[0] if len(frame_rates) > 0 else None
+
+
+def get_frame_rates(metadata: Dict['str', Any]) -> List[Any]:
+    return get_attribute_from_all_streams(metadata, 'r_frame_rate', 'video')
 
 
 def _try_int(value: Any) -> Any:
@@ -57,29 +65,44 @@ def get_duration(metadata, stream=0):
     return float(metadata["format"]["duration"])
 
 
-def get_video_codec(metadata):
-    for stream in metadata["streams"]:
-        if stream["codec_type"] == "video":
-            return stream["codec_name"]
-    return ""
+def get_codecs(
+    metadata: Dict['str', Any],
+    codec_type: str=None) -> List[Any]:
+
+    return get_attribute_from_all_streams(metadata, 'codec_name', codec_type)
 
 
-def get_audio_codec(metadata):
-    for stream in metadata["streams"]:
-        if stream["codec_type"] == "audio":
-            return stream["codec_name"]
-    return ""
+def get_video_codec(metadata: Dict['str', Any]) -> Any:
+    codecs = get_codecs(metadata, 'video')
+    return codecs[0] if len(codecs) > 0 else ""
+
+
+def get_audio_codec(metadata: Dict['str', Any]) -> Any:
+    codecs = get_codecs(metadata, 'audio')
+    return codecs[0] if len(codecs) > 0 else ""
 
 
 def get_format(metadata):
     return metadata["format"]["format_name"]
 
 
-def get_audio_stream(metadata):
-    for stream in metadata['streams']:
-        if stream["codec_type"] == "audio":
-            return stream
-    return None
+def get_audio_stream(metadata: Dict['str', Any]) -> Optional[Any]:
+    streams = get_streams(metadata, 'audio')
+    return streams[0] if len(streams) > 0 else None
+
+
+def get_streams(
+    metadata: Dict['str', Any],
+    codec_type: str=None) -> Dict['str', Any]:
+
+    return [
+        stream
+        for stream in metadata.get('streams', [])
+        if (
+            codec_type is None or
+            stream.get('codec_type') == codec_type
+        )
+    ]
 
 
 def count_streams(

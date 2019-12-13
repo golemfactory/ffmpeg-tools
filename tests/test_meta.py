@@ -104,14 +104,129 @@ class TestMetadata(TestCase):
     def test_getting_resolution(self):
         self.assertEqual(meta.get_resolution(example_metadata), [1920, 1080])
 
+    def test_getting_resolution_no_video_streams(self):
+        metadata = {'streams': [{"codec_type": "audio"}]}
+        self.assertEqual(meta.get_resolution(metadata), [0, 0])
+
+    def test_get_resolutions(self):
+        metadata = {'streams': [
+            {"codec_type": "video", 'width': 720, 'height': 576},
+            {"codec_type": "video", 'width': 1920, 'height': 1080},
+            {"codec_type": "video", 'width': 1920, 'height': 1080},
+            {"codec_type": "audio", 'width': 1920, 'height': 1080},
+            {"codec_type": "data", 'width': 200, 'height': 200},
+            {"codec_type": "subtitle", 'width': 300, 'height': 300},
+            {"codec_type": "whatever", 'width': 400, 'height': 400},
+            {"codec_type": "", 'width': 500, 'height': 500},
+            {"codec_type": None, 'width': 600, 'height': 600},
+            {'width': 700, 'height': 700},
+            {"codec_type": "video", 'width': {}, 'height': '2'},
+            {"codec_type": "video", 'width': None, 'height': 1080},
+            {"codec_type": "video", 'width': 1920, 'height': None},
+            {"codec_type": "video", 'width': None, 'height': None},
+            {"codec_type": "video", 'width': 640},
+            {"codec_type": "video", 'height': 480},
+            {"codec_type": "video"},
+            {},
+        ]}
+
+        expected_resolutions = [
+            [720,  576],
+            [1920, 1080],
+            [1920, 1080],
+            [{},   '2'],
+            [None, 1080],
+            [1920, None],
+            [None, None],
+            [640,  None],
+            [None, 480],
+            [None, None],
+        ]
+        self.assertCountEqual(meta.get_resolutions(metadata), expected_resolutions)
+
+    def test_get_resolutions_no_streams(self):
+        self.assertCountEqual(meta.get_resolutions({'streams': []}), [])
+
+    def test_get_frame_rate(self):
+        self.assertEqual(meta.get_frame_rate(example_metadata), "25/1")
+
+    def test_get_frame_rate_no_video_streams(self):
+        metadata = {'streams': [{"codec_type": "audio"}]}
+        self.assertEqual(meta.get_frame_rate(metadata), None)
+
+    def test_get_frame_rates(self):
+        metadata = {'streams': [
+            {"codec_type": "video", 'r_frame_rate': '25/2', 'avg_frame_rate': 30},
+            {"codec_type": "video", 'r_frame_rate': '33/2', 'avg_frame_rate': 12},
+            {"codec_type": "video", 'r_frame_rate': '33/2', 'avg_frame_rate': 12},
+            {"codec_type": "audio", 'r_frame_rate': '50/3', 'avg_frame_rate': '60/3'},
+            {"codec_type": "data", 'r_frame_rate': '25/2', 'avg_frame_rate': '60/5'},
+            {"codec_type": "subtitle", 'r_frame_rate': '40'},
+            {"codec_type": "whatever", 'r_frame_rate': '120'},
+            {"codec_type": "", 'r_frame_rate': '150'},
+            {"codec_type": None, 'r_frame_rate': '240'},
+            {'r_frame_rate': '30', 'avg_frame_rate': '15.0'},
+            {"codec_type": "video", 'r_frame_rate': {}, 'avg_frame_rate': '2'},
+            {"codec_type": "video", 'r_frame_rate': None, 'avg_frame_rate': '15.0'},
+            {"codec_type": "video", 'r_frame_rate': '30', 'avg_frame_rate': None},
+            {"codec_type": "video", 'r_frame_rate': None, 'avg_frame_rate': None},
+            {"codec_type": "video", 'r_frame_rate': 25},
+            {"codec_type": "video", 'avg_frame_rate': '60/1'},
+            {"codec_type": "video"},
+            {},
+        ]}
+
+        expected_frame_rates = ['25/2', '33/2', '33/2', {}, None, '30', None, 25, None, None]
+        self.assertCountEqual(meta.get_frame_rates(metadata), expected_frame_rates)
+
+    def test_get_frame_rates_no_streams(self):
+        self.assertCountEqual(meta.get_frame_rates({'streams': []}), [])
+
     def test_get_duration(self):
         self.assertEqual(meta.get_duration(example_metadata), 46.120000)
+
+    def test_get_codecs(self):
+        metadata = {'streams': [
+            {"codec_type": "video", 'codec_name': 'h264'},
+            {"codec_type": "audio", 'codec_name': 'aac'},
+            {"codec_type": "audio", 'codec_name': 'mp3'},
+            {"codec_type": "subtitle", 'codec_name': 'subrip'},
+            {"codec_type": "subtitle", 'codec_name': 'subrip'},
+            {"codec_type": "data", 'codec_name': 'bin_data'},
+            {"codec_type": "whatever", 'codec_name': 'amr_nb'},
+            {"codec_type": "", 'codec_name': 'ac3'},
+            {"codec_type": None, 'codec_name': 'vp9'},
+            {'codec_name': 'mjpeg'},
+            {"codec_type": "audio", 'codec_name': 2},
+            {"codec_type": "audio", 'codec_name': {}},
+            {"codec_type": "video", 'codec_name': None},
+            {"codec_type": "subtitle"},
+            {},
+        ]}
+        self.assertCountEqual(meta.get_codecs(metadata), [
+            'h264', 'aac', 'mp3', 'subrip', 'subrip', 'bin_data', 'amr_nb', 'ac3', 'vp9', 'mjpeg', 2, {}, None, None, None,
+        ])
+        self.assertCountEqual(meta.get_codecs(metadata, codec_type='video'), ['h264', None])
+        self.assertCountEqual(meta.get_codecs(metadata, codec_type='audio'), ['aac', 'mp3', 2, {}])
+        self.assertCountEqual(meta.get_codecs(metadata, codec_type='subtitle'), ['subrip', 'subrip', None])
+        self.assertCountEqual(meta.get_codecs(metadata, codec_type='data'), ['bin_data'])
+        self.assertCountEqual(meta.get_codecs(metadata, codec_type='whatever'), ['amr_nb'])
+        self.assertCountEqual(meta.get_codecs(metadata, codec_type='nothing'), [])
+        self.assertCountEqual(meta.get_codecs(metadata, codec_type=''), ['ac3'])
 
     def test_get_video_codec(self):
         self.assertEqual(meta.get_video_codec(example_metadata), "vp9")
 
+    def test_get_video_codec_no_video_streams(self):
+        metadata = {'streams': [{"codec_type": "audio"}]}
+        self.assertEqual(meta.get_video_codec(metadata), "")
+
     def test_get_audio_codec(self):
         self.assertEqual(meta.get_audio_codec(example_metadata), "opus")
+
+    def test_get_audio_codec_no_audio_streams(self):
+        metadata = {'streams': [{"codec_type": "video"}]}
+        self.assertEqual(meta.get_audio_codec(metadata), "")
 
     def test_get_sample_rates(self):
         metadata = {'streams': [
@@ -144,8 +259,46 @@ class TestMetadata(TestCase):
     def test_get_audio_stream(self):
         self.assertEqual(meta.get_audio_stream(example_metadata), example_metadata['streams'][1])
 
+    def test_get_audio_stream_no_audio_streams(self):
+        metadata = {'streams': [{"codec_type": "video"}]}
+        self.assertEqual(meta.get_audio_stream(metadata), None)
+
     def test_get_metadata_invalid_path(self):
         self.assertEqual(meta.get_metadata("blabla"), {})
+
+    def test_get_streams(self):
+        metadata = {'streams': [
+            {"codec_type": "video", 'index': 0},
+            {"codec_type": "audio", 'index': 1},
+            {"codec_type": "subtitle", 'index': 3},
+            {"codec_type": "subtitle", 'index': 3},
+            {"codec_type": "data", 'index': 4},
+            {"codec_type": "whatever", 'index': 5},
+            {"codec_type": "", 'index': 6},
+            {"codec_type": None, 'index': 7},
+            {'index': 8},
+            {},
+        ]}
+
+        self.assertEqual(meta.get_streams(metadata), [
+            {"codec_type": "video", 'index': 0},
+            {"codec_type": "audio", 'index': 1},
+            {"codec_type": "subtitle", 'index': 3},
+            {"codec_type": "subtitle", 'index': 3},
+            {"codec_type": "data", 'index': 4},
+            {"codec_type": "whatever", 'index': 5},
+            {"codec_type": "", 'index': 6},
+            {"codec_type": None, 'index': 7},
+            {'index': 8},
+            {},
+        ])
+        self.assertEqual(meta.get_streams(metadata, codec_type='video'), [
+            {"codec_type": "video", 'index': 0},
+        ])
+        self.assertEqual(meta.get_streams(metadata, codec_type='subtitle'), [
+            {"codec_type": "subtitle", 'index': 3},
+            {"codec_type": "subtitle", 'index': 3},
+        ])
 
     def test_count_streams(self):
         metadata = {'streams': [
