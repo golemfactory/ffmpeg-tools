@@ -415,6 +415,7 @@ _frame_rates = {
     frame_rate.FrameRate(24),
     frame_rate.FrameRate(25),
     frame_rate.FrameRate(30000, 1001),  # 29.97 FPS (NTSC)
+    frame_rate.FrameRate(2997, 100),
     frame_rate.FrameRate(30),
     frame_rate.FrameRate(50),
     frame_rate.FrameRate(60),
